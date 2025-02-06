@@ -10,7 +10,14 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
@@ -19,13 +26,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <BrowserRouter>
     <AuthProvider>
-      <TooltipProvider>
-        <SidebarProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <SidebarProvider>
+            <Toaster />
+            <Sonner />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route
@@ -38,11 +45,11 @@ const App = () => (
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </SidebarProvider>
-      </TooltipProvider>
+          </SidebarProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
     </AuthProvider>
-  </QueryClientProvider>
+  </BrowserRouter>
 );
 
 export default App;
