@@ -46,7 +46,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-md p-4 animate-fade-in">
-        <Card className="glass border-0 shadow-lg">
+        <Card className="rounded-2xl border-0 shadow-xl backdrop-blur-lg bg-white/90 dark:bg-gray-950/90">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">
               {isSignUp ? "Criar conta" : "Entrar"}
@@ -63,6 +63,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="rounded-xl"
                 />
               </div>
               <div className="space-y-2">
@@ -74,11 +75,12 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  className="rounded-xl"
                 />
               </div>
               <Button 
                 type="submit" 
-                className="w-full"
+                className="w-full rounded-xl"
                 disabled={isLoading}
               >
                 {isLoading 
@@ -88,7 +90,7 @@ const Login = () => {
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full"
+                className="w-full rounded-xl"
                 onClick={() => setIsSignUp(!isSignUp)}
               >
                 {isSignUp 
