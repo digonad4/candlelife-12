@@ -1,35 +1,101 @@
 
-import { useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 
 const Login = () => {
-  const { user, signIn } = useAuth();
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  useEffect(() => {
-    if (user) {
-      navigate("/");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      if (isSignUp) {
+        await signUp(email, password);
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Por favor, verifique seu email para confirmar sua conta.",
+        });
+      } else {
+        await signIn(email, password);
+        navigate("/");
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [user, navigate]);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-md p-4 animate-fade-in">
         <Card className="glass border-0 shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
+            <CardTitle className="text-2xl text-center">
+              {isSignUp ? "Criar conta" : "Entrar"}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4">
-            <Button
-              onClick={signIn}
-              className="w-full"
-              variant="outline"
-            >
-              Continue with Google
-            </Button>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading 
+                  ? "Carregando..." 
+                  : (isSignUp ? "Criar conta" : "Entrar")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setIsSignUp(!isSignUp)}
+              >
+                {isSignUp 
+                  ? "Já tem uma conta? Entre aqui" 
+                  : "Não tem uma conta? Cadastre-se"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
