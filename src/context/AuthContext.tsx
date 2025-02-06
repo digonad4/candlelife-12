@@ -1,12 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  "https://YOUR_PROJECT_URL.supabase.co",
-  "YOUR_PUBLIC_ANON_KEY"
-);
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextType {
   user: User | null;
