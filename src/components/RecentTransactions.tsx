@@ -1,14 +1,39 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export function RecentTransactions() {
-  const transactions = [
-    { id: 1, description: "Groceries", amount: -50, category: "Food" },
-    { id: 2, description: "Bus Ticket", amount: -2.5, category: "Transportation" },
-    { id: 3, description: "Movie", amount: -15, category: "Entertainment" },
-    { id: 4, description: "Salary", amount: 2000, category: "Income" },
-    { id: 5, description: "Dinner", amount: -30, category: "Food" },
-  ];
+  const { data: transactions, isLoading } = useQuery({
+    queryKey: ["recent-transactions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Transactions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+            <div className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+            <div className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -17,24 +42,27 @@ export function RecentTransactions() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {transactions.map((transaction) => (
+          {transactions?.map((transaction) => (
             <div
               key={transaction.id}
-              className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800"
+              className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-gray-800 shadow hover:shadow-md transition-shadow duration-200"
             >
-              <div>
+              <div className="space-y-1">
                 <p className="font-medium">{transaction.description}</p>
                 <p className="text-sm text-gray-500">{transaction.category}</p>
+                <p className="text-xs text-gray-400">
+                  {new Date(transaction.date).toLocaleDateString()}
+                </p>
               </div>
               <span
                 className={`font-mono font-medium ${
-                  transaction.amount >= 0
+                  transaction.type === "income"
                     ? "text-green-600 dark:text-green-400"
                     : "text-red-600 dark:text-red-400"
                 }`}
               >
-                {transaction.amount >= 0 ? "+" : ""}
-                {transaction.amount.toFixed(2)}
+                {transaction.type === "income" ? "+" : "-"}
+                R$ {Math.abs(transaction.amount).toFixed(2)}
               </span>
             </div>
           ))}

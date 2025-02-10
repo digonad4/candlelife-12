@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const categories = [
   "Food",
@@ -18,23 +20,57 @@ const categories = [
 export function ExpenseModal({
   open,
   onOpenChange,
+  onTransactionAdded,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onTransactionAdded?: () => void;
 }) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Handle expense submission
-    onOpenChange(false);
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.from("transactions").insert({
+        description,
+        amount: Number(amount),
+        category: category.toLowerCase(),
+        type: "expense",
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Transaction added successfully",
+      });
+
+      onTransactionAdded?.();
+      onOpenChange(false);
+      setAmount("");
+      setDescription("");
+      setCategory("");
+    } catch (error) {
+      console.error("Error adding transaction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add transaction",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
         </DialogHeader>
@@ -47,6 +83,7 @@ export function ExpenseModal({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Enter amount"
+              required
             />
           </div>
           <div>
@@ -56,11 +93,12 @@ export function ExpenseModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter description"
+              required
             />
           </div>
           <div>
             <Label htmlFor="category">Category</Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={category} onValueChange={setCategory} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
@@ -73,8 +111,8 @@ export function ExpenseModal({
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" className="w-full">
-            Add Expense
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Adding..." : "Add Expense"}
           </Button>
         </form>
       </DialogContent>

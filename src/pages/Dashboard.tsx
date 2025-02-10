@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -7,10 +7,32 @@ import { ExpenseModal } from "@/components/ExpenseModal";
 import { RecentTransactions } from "@/components/RecentTransactions";
 import { TopCategories } from "@/components/TopCategories";
 import { ExpenseChart } from "@/components/ExpenseChart";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const { signOut } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("public:transactions")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
+          queryClient.invalidateQueries({ queryKey: ["top-categories"] });
+          queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
@@ -38,7 +60,13 @@ const Dashboard = () => {
             +
           </Button>
 
-          <ExpenseModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+          <ExpenseModal 
+            open={isModalOpen} 
+            onOpenChange={setIsModalOpen} 
+            onTransactionAdded={() => {
+              queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
+            }}
+          />
         </div>
       </main>
     </div>
