@@ -2,20 +2,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 export function RecentTransactions() {
+  const { user } = useAuth();
+
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ["recent-transactions"],
+    queryKey: ["recent-transactions", user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from("transactions")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5);
 
       if (error) throw error;
       return data;
     },
+    enabled: !!user
   });
 
   if (isLoading) {
@@ -66,6 +73,11 @@ export function RecentTransactions() {
               </span>
             </div>
           ))}
+          {(!transactions || transactions.length === 0) && (
+            <div className="text-center py-4 text-gray-500">
+              No transactions found
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

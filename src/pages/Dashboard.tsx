@@ -9,18 +9,30 @@ import { TopCategories } from "@/components/TopCategories";
 import { ExpenseChart } from "@/components/ExpenseChart";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
     const channel = supabase
       .channel("public:transactions")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "transactions" },
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          filter: `user_id=eq.${user.id}`
+        },
         () => {
           queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
           queryClient.invalidateQueries({ queryKey: ["top-categories"] });
@@ -32,7 +44,9 @@ const Dashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, user, navigate]);
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
