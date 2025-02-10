@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 const categories = [
   "Food",
@@ -31,9 +32,11 @@ export function ExpenseModal({
   const [category, setCategory] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setIsLoading(true);
 
     try {
@@ -42,6 +45,8 @@ export function ExpenseModal({
         amount: Number(amount),
         category: category.toLowerCase(),
         type: "expense",
+        user_id: user.id,
+        date: new Date().toISOString()
       });
 
       if (error) throw error;
