@@ -11,17 +11,48 @@ import {
   Tooltip,
   Legend,
   CartesianGrid,
-  Bar,
-  Line,
+  Scatter,
 } from "recharts";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, parseISO, startOfDay, endOfDay } from "date-fns";
 
 type DailyData = {
   date: string;
-  expenses: number;
-  income: number;
-  balance: number;
-  cumulativeBalance: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+};
+
+const CustomCandlestick = (props: any) => {
+  const { x, y, fill, width, low, high, open, close } = props;
+
+  const isRising = close > open;
+  const color = isRising ? "#22c55e" : "#ef4444";
+  const bodyHeight = Math.abs(open - close);
+  const bodyY = Math.min(open, close);
+
+  return (
+    <g>
+      {/* Wick */}
+      <line
+        x1={x + width / 2}
+        y1={y + high}
+        x2={x + width / 2}
+        y2={y + low}
+        stroke={color}
+        strokeWidth={1}
+      />
+      {/* Body */}
+      <rect
+        x={x}
+        y={y + bodyY}
+        width={width}
+        height={bodyHeight || 1}
+        fill={color}
+        stroke={color}
+      />
+    </g>
+  );
 };
 
 export function ExpenseChart() {
@@ -48,37 +79,36 @@ export function ExpenseChart() {
       // Create a date range for the current month
       const dates = eachDayOfInterval({ start: startDate, end: endDate });
 
-      // Initialize data for each day
+      // Process data for candlestick chart
       const dailyData: DailyData[] = dates.map(date => {
-        const dateStr = format(date, "dd/MM");
-        return {
-          date: dateStr,
-          expenses: 0,
-          income: 0,
-          balance: 0,
-          cumulativeBalance: 0
-        };
-      });
+        const dayStart = startOfDay(date);
+        const dayEnd = endOfDay(date);
+        
+        const dayTransactions = transactions.filter(t => {
+          const transactionDate = parseISO(t.date);
+          return transactionDate >= dayStart && transactionDate <= dayEnd;
+        });
 
-      // Populate with actual transaction data
-      transactions.forEach(transaction => {
-        const dateStr = format(new Date(transaction.date), "dd/MM");
-        const dayData = dailyData.find(d => d.date === dateStr);
-        if (dayData) {
-          if (transaction.type === "expense") {
-            dayData.expenses += Math.abs(transaction.amount);
-          } else {
-            dayData.income += transaction.amount;
-          }
-          dayData.balance = dayData.income - dayData.expenses;
+        if (dayTransactions.length === 0) {
+          return {
+            date: format(date, "dd/MM"),
+            open: 0,
+            high: 0,
+            low: 0,
+            close: 0
+          };
         }
-      });
 
-      // Calculate cumulative balance
-      let runningBalance = 0;
-      dailyData.forEach(day => {
-        runningBalance += day.balance;
-        day.cumulativeBalance = runningBalance;
+        const values = dayTransactions.map(t => t.amount);
+        const netValue = values.reduce((sum, val) => sum + val, 0);
+
+        return {
+          date: format(date, "dd/MM"),
+          open: dayTransactions[0].amount,
+          high: Math.max(...values),
+          low: Math.min(...values),
+          close: dayTransactions[dayTransactions.length - 1].amount
+        };
       });
 
       return dailyData;
@@ -90,7 +120,7 @@ export function ExpenseChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Overview</CardTitle>
+          <CardTitle>Visão Mensal</CardTitle>
         </CardHeader>
         <CardContent className="h-[400px] flex items-center justify-center">
           <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg" />
@@ -102,34 +132,24 @@ export function ExpenseChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Monthly Overview</CardTitle>
+        <CardTitle>Visão Mensal</CardTitle>
       </CardHeader>
       <CardContent className="h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData}>
             <XAxis dataKey="date" />
             <YAxis />
-            <Tooltip />
+            <Tooltip 
+              formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+              labelFormatter={(label) => `Data: ${label}`}
+            />
             <Legend />
             <CartesianGrid strokeDasharray="3 3" />
-            <Bar
-              dataKey="expenses"
-              fill="#ef4444"
-              name="Expenses"
-              opacity={0.6}
-            />
-            <Bar
-              dataKey="income"
-              fill="#22c55e"
-              name="Income"
-              opacity={0.6}
-            />
-            <Line
-              type="monotone"
-              dataKey="cumulativeBalance"
-              stroke="#8884d8"
-              name="Balance"
-              strokeWidth={2}
+            <Scatter
+              data={chartData}
+              shape={<CustomCandlestick width={20} />}
+              name="Transações"
+              fill="#8884d8"
             />
           </ComposedChart>
         </ResponsiveContainer>
