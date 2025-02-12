@@ -50,10 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
-      password,
-      options: {
-        persistSession: true // Explicitly set session persistence
-      }
+      password
     });
     if (error) throw error;
   };
@@ -63,9 +60,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
-        persistSession: true // Explicitly set session persistence
-      },
+        emailRedirectTo: window.location.origin
+      }
     });
     if (error) throw error;
   };
