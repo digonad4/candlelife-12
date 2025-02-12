@@ -53,7 +53,7 @@ export function ExpenseChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Visão Mensal Acumulada</CardTitle>
+        <CardTitle>Seu desempenho</CardTitle>
       </CardHeader>
       <CardContent className="h-[400px] flex items-center justify-center">
         {isLoading ? (

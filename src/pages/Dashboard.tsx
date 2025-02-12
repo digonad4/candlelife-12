@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,7 @@ const Dashboard = () => {
     }
 
     const channel = supabase
-      .channel("public:transactions")
+      .channel(`transactions-${user.id}`) // Nome do canal agora é único por usuário
       .on(
         "postgres_changes",
         {
@@ -35,6 +34,7 @@ const Dashboard = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
+          console.log("📢 Alteração detectada no banco de dados. Atualizando dashboard...");
           queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
           queryClient.invalidateQueries({ queryKey: ["top-categories"] });
           queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
@@ -43,9 +43,10 @@ const Dashboard = () => {
       .subscribe();
 
     return () => {
+      console.log("🛑 Removendo canal do Supabase.");
       supabase.removeChannel(channel);
     };
-  }, [queryClient, user, navigate]);
+  }, [queryClient, user?.id, navigate]);
 
   if (!user) return null;
 
@@ -80,7 +81,10 @@ const Dashboard = () => {
             open={isModalOpen} 
             onOpenChange={setIsModalOpen} 
             onTransactionAdded={() => {
+              console.log("📌 Nova transação adicionada. Invalidando cache...");
               queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
+              queryClient.invalidateQueries({ queryKey: ["top-categories"] });
+              queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
             }}
           />
         </div>
