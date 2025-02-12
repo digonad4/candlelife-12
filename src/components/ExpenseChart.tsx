@@ -3,57 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import {
-  ResponsiveContainer,
-  ComposedChart,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid,
-  Scatter,
-} from "recharts";
+import { Chart } from "react-google-charts";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, parseISO, startOfDay, endOfDay } from "date-fns";
-
-type DailyData = {
-  date: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-};
-
-const CustomCandlestick = (props: any) => {
-  const { x, y, fill, width, low, high, open, close } = props;
-
-  const isRising = close > open;
-  const color = isRising ? "#22c55e" : "#ef4444";
-  const bodyHeight = Math.abs(open - close);
-  const bodyY = Math.min(open, close);
-
-  return (
-    <g>
-      {/* Wick */}
-      <line
-        x1={x + width / 2}
-        y1={y + high}
-        x2={x + width / 2}
-        y2={y + low}
-        stroke={color}
-        strokeWidth={1}
-      />
-      {/* Body */}
-      <rect
-        x={x}
-        y={y + bodyY}
-        width={width}
-        height={bodyHeight || 1}
-        fill={color}
-        stroke={color}
-      />
-    </g>
-  );
-};
+import { ptBR } from "date-fns/locale";
 
 export function ExpenseChart() {
   const { user } = useAuth();
@@ -80,7 +32,8 @@ export function ExpenseChart() {
       const dates = eachDayOfInterval({ start: startDate, end: endDate });
 
       // Process data for candlestick chart
-      const dailyData: DailyData[] = dates.map(date => {
+      // Format: ['Data', 'Menor', 'Abertura', 'Fechamento', 'Maior']
+      const dailyData = dates.map(date => {
         const dayStart = startOfDay(date);
         const dayEnd = endOfDay(date);
         
@@ -90,28 +43,25 @@ export function ExpenseChart() {
         });
 
         if (dayTransactions.length === 0) {
-          return {
-            date: format(date, "dd/MM"),
-            open: 0,
-            high: 0,
-            low: 0,
-            close: 0
-          };
+          return [format(date, "dd/MM", { locale: ptBR }), 0, 0, 0, 0];
         }
 
         const values = dayTransactions.map(t => t.amount);
-        const netValue = values.reduce((sum, val) => sum + val, 0);
+        const open = dayTransactions[0].amount;
+        const close = dayTransactions[dayTransactions.length - 1].amount;
+        const high = Math.max(...values);
+        const low = Math.min(...values);
 
-        return {
-          date: format(date, "dd/MM"),
-          open: dayTransactions[0].amount,
-          high: Math.max(...values),
-          low: Math.min(...values),
-          close: dayTransactions[dayTransactions.length - 1].amount
-        };
+        return [
+          format(date, "dd/MM", { locale: ptBR }),
+          low,
+          open,
+          close,
+          high,
+        ];
       });
 
-      return dailyData;
+      return [['Data', 'Menor', 'Abertura', 'Fechamento', 'Maior'], ...dailyData];
     },
     enabled: !!user
   });
@@ -135,24 +85,33 @@ export function ExpenseChart() {
         <CardTitle>Visão Mensal</CardTitle>
       </CardHeader>
       <CardContent className="h-[400px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData}>
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip 
-              formatter={(value: number) => `R$ ${value.toFixed(2)}`}
-              labelFormatter={(label) => `Data: ${label}`}
-            />
-            <Legend />
-            <CartesianGrid strokeDasharray="3 3" />
-            <Scatter
-              data={chartData}
-              shape={<CustomCandlestick width={20} />}
-              name="Transações"
-              fill="#8884d8"
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
+        <Chart
+          width="100%"
+          height="400px"
+          chartType="CandlestickChart"
+          loader={<div>Carregando Gráfico...</div>}
+          data={chartData}
+          options={{
+            legend: 'none',
+            candlestick: {
+              fallingColor: { strokeWidth: 0, fill: '#ef4444' },
+              risingColor: { strokeWidth: 0, fill: '#22c55e' }
+            },
+            vAxis: {
+              title: 'Valor (R$)',
+              format: 'currency',
+              formatOptions: { currency: 'BRL' }
+            },
+            hAxis: {
+              title: 'Data'
+            },
+            backgroundColor: 'transparent',
+            chartArea: {
+              width: '80%',
+              height: '80%'
+            }
+          }}
+        />
       </CardContent>
     </Card>
   );

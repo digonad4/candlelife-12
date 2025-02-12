@@ -51,7 +51,7 @@ export function TopCategories() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Top Categories</CardTitle>
+          <CardTitle>Principais Categorias</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -70,7 +70,7 @@ export function TopCategories() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top Categories</CardTitle>
+        <CardTitle>Principais Categorias</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

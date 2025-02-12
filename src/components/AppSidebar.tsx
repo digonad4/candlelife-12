@@ -18,7 +18,7 @@ const menuItems = [
     url: "/",
   },
   {
-    title: "Add Expense",
+    title: "Nova Transação",
     icon: PlusCircle,
     url: "#",
     onClick: () => {
@@ -26,12 +26,12 @@ const menuItems = [
     },
   },
   {
-    title: "Categories",
+    title: "Categorias",
     icon: Tags,
     url: "/categories",
   },
   {
-    title: "Transactions",
+    title: "Transações",
     icon: Wallet,
     url: "/transactions",
   },

@@ -30,7 +30,7 @@ export function RecentTransactions() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle>Transações Recentes</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -46,7 +46,7 @@ export function RecentTransactions() {
   return (
     <Card className="overflow-hidden">
       <CardHeader>
-        <CardTitle>Recent Transactions</CardTitle>
+        <CardTitle>Transações Recentes</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -71,7 +71,7 @@ export function RecentTransactions() {
                   <p className="font-medium">{transaction.description}</p>
                   <p className="text-sm text-gray-500">{transaction.category}</p>
                   <p className="text-xs text-gray-400">
-                    {new Date(transaction.date).toLocaleDateString()}
+                    {new Date(transaction.date).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
               </div>
@@ -83,13 +83,13 @@ export function RecentTransactions() {
                 }`}
               >
                 {transaction.type === "income" ? "+" : "-"}
-                R$ {Math.abs(transaction.amount).toFixed(2)}
+                R$ {Math.abs(transaction.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
           ))}
           {(!transactions || transactions.length === 0) && (
             <div className="text-center py-4 text-gray-500">
-              No transactions found
+              Nenhuma transação encontrada
             </div>
           )}
         </div>
