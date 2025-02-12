@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 
 export function RecentTransactions() {
   const { user } = useAuth();
@@ -43,7 +44,7 @@ export function RecentTransactions() {
   }
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader>
         <CardTitle>Recent Transactions</CardTitle>
       </CardHeader>
@@ -54,12 +55,25 @@ export function RecentTransactions() {
               key={transaction.id}
               className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-gray-800 shadow hover:shadow-md transition-shadow duration-200"
             >
-              <div className="space-y-1">
-                <p className="font-medium">{transaction.description}</p>
-                <p className="text-sm text-gray-500">{transaction.category}</p>
-                <p className="text-xs text-gray-400">
-                  {new Date(transaction.date).toLocaleDateString()}
-                </p>
+              <div className="flex gap-3">
+                <div className={`rounded-full p-2 ${
+                  transaction.type === "income" 
+                    ? "bg-green-100 dark:bg-green-900/20" 
+                    : "bg-red-100 dark:bg-red-900/20"
+                }`}>
+                  {transaction.type === "income" ? (
+                    <ArrowUpIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <ArrowDownIcon className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">{transaction.description}</p>
+                  <p className="text-sm text-gray-500">{transaction.category}</p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(transaction.date).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
               <span
                 className={`font-mono font-medium ${

@@ -10,6 +10,7 @@ import { ExpenseChart } from "@/components/ExpenseChart";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -49,18 +50,18 @@ const Dashboard = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen w-full flex">
       <AppSidebar />
-      <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <main className="flex-1 p-4 md:p-8 bg-gray-50 dark:bg-gray-900 overflow-auto">
+        <div className="max-w-[2000px] mx-auto space-y-6 md:space-y-8">
           <div className="flex justify-between items-center">
-            <h1 className="text-4xl font-bold">Dashboard</h1>
+            <h1 className="text-2xl md:text-4xl font-bold">Dashboard</h1>
             <Button variant="outline" onClick={signOut}>
               Sign out
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-8">
             <ExpenseChart />
             <TopCategories />
           </div>
@@ -68,10 +69,11 @@ const Dashboard = () => {
           <RecentTransactions />
 
           <Button
-            className="fixed bottom-8 right-8 rounded-full w-16 h-16 shadow-lg"
+            size="lg"
+            className="fixed bottom-8 right-8 rounded-full w-14 h-14 md:w-16 md:h-16 shadow-lg"
             onClick={() => setIsModalOpen(true)}
           >
-            +
+            <Plus className="w-6 h-6" />
           </Button>
 
           <ExpenseModal 
