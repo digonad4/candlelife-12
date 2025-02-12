@@ -9,17 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-const categories = [
-  "Food",
-  "Transportation",
-  "Entertainment",
-  "Shopping",
-  "Bills",
-  "Salary",
-  "Investment",
-  "Other",
-];
+import { useQuery } from "@tanstack/react-query";
 
 export function ExpenseModal({
   open,
@@ -38,6 +28,22 @@ export function ExpenseModal({
   const { toast } = useToast();
   const { user } = useAuth();
 
+  const { data: categories } = useQuery({
+    queryKey: ["categories", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -47,7 +53,7 @@ export function ExpenseModal({
       const { error } = await supabase.from("transactions").insert({
         description,
         amount: type === "expense" ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
-        category: category.toLowerCase(),
+        category,
         type,
         user_id: user.id,
         date: new Date().toISOString()
@@ -136,9 +142,17 @@ export function ExpenseModal({
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat.toLowerCase()}>
-                    {cat}
+                {categories?.map((cat) => (
+                  <SelectItem 
+                    key={cat.id} 
+                    value={cat.name}
+                    className="flex items-center gap-2"
+                  >
+                    <div 
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    {cat.name}
                   </SelectItem>
                 ))}
               </SelectContent>
