@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Chart } from "react-google-charts";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, parseISO } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, parseISO, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export function ExpenseChart() {
@@ -31,24 +31,37 @@ export function ExpenseChart() {
       // Create a date range for the current month
       const dates = eachDayOfInterval({ start: startDate, end: endDate });
 
-      // Calcular valores acumulados
-      let runningTotal = 0;
+      // Process data for candlestick chart
+      // Format: ['Data', 'Menor', 'Abertura', 'Fechamento', 'Maior']
       const dailyData = dates.map(date => {
+        const dayStart = startOfDay(date);
+        const dayEnd = endOfDay(date);
+        
         const dayTransactions = transactions.filter(t => {
           const transactionDate = parseISO(t.date);
-          return format(transactionDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
+          return transactionDate >= dayStart && transactionDate <= dayEnd;
         });
 
-        const dayTotal = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
-        runningTotal += dayTotal;
+        if (dayTransactions.length === 0) {
+          return [format(date, "dd/MM", { locale: ptBR }), 0, 0, 0, 0];
+        }
+
+        const values = dayTransactions.map(t => t.amount);
+        const open = dayTransactions[0].amount;
+        const close = dayTransactions[dayTransactions.length - 1].amount;
+        const high = Math.max(...values);
+        const low = Math.min(...values);
 
         return [
           format(date, "dd/MM", { locale: ptBR }),
-          runningTotal,
+          low,
+          open,
+          close,
+          high,
         ];
       });
 
-      return [['Data', 'Valor Acumulado'], ...dailyData];
+      return [['Data', 'Menor', 'Abertura', 'Fechamento', 'Maior'], ...dailyData];
     },
     enabled: !!user
   });
@@ -57,7 +70,7 @@ export function ExpenseChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Fluxo de Caixa Mensal</CardTitle>
+          <CardTitle>Visão Mensal</CardTitle>
         </CardHeader>
         <CardContent className="h-[400px] flex items-center justify-center">
           <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg" />
@@ -69,21 +82,23 @@ export function ExpenseChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Fluxo de Caixa Mensal</CardTitle>
+        <CardTitle>Visão Mensal</CardTitle>
       </CardHeader>
       <CardContent className="h-[400px]">
         <Chart
           width="100%"
           height="400px"
-          chartType="LineChart"
+          chartType="CandlestickChart"
           loader={<div>Carregando Gráfico...</div>}
           data={chartData}
           options={{
-            curveType: 'function',
             legend: 'none',
-            colors: ['#4F46E5'],
+            candlestick: {
+              fallingColor: { strokeWidth: 0, fill: '#ef4444' },
+              risingColor: { strokeWidth: 0, fill: '#22c55e' }
+            },
             vAxis: {
-              title: 'Valor Acumulado (R$)',
+              title: 'Valor (R$)',
               format: 'currency',
               formatOptions: { currency: 'BRL' }
             },

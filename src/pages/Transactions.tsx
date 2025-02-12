@@ -99,17 +99,17 @@ const Transactions = () => {
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Transação atualizada com sucesso",
+        title: "Success",
+        description: "Transaction updated successfully",
       });
 
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       setIsEditModalOpen(false);
     } catch (error) {
-      console.error("Erro ao atualizar transação:", error);
+      console.error("Error updating transaction:", error);
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar transação",
+        title: "Error",
+        description: "Failed to update transaction",
         variant: "destructive",
       });
     }
