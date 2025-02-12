@@ -16,6 +16,14 @@ import {
 } from "recharts";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
 
+type DailyData = {
+  date: string;
+  expenses: number;
+  income: number;
+  balance: number;
+  cumulativeBalance: number;
+};
+
 export function ExpenseChart() {
   const { user } = useAuth();
 
@@ -41,13 +49,14 @@ export function ExpenseChart() {
       const dates = eachDayOfInterval({ start: startDate, end: endDate });
 
       // Initialize data for each day
-      const dailyData = dates.map(date => {
+      const dailyData: DailyData[] = dates.map(date => {
         const dateStr = format(date, "dd/MM");
         return {
           date: dateStr,
           expenses: 0,
           income: 0,
-          balance: 0
+          balance: 0,
+          cumulativeBalance: 0
         };
       });
 
