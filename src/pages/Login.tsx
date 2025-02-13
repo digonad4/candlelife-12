@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const { signIn, signUp } = useAuth();
@@ -16,14 +17,17 @@ const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setNeedsEmailConfirmation(false);
 
     try {
       if (isSignUp) {
         await signUp(email, password);
+        setNeedsEmailConfirmation(true);
         toast({
           title: "Conta criada com sucesso!",
           description: "Por favor, verifique seu email para confirmar sua conta.",
@@ -34,11 +38,22 @@ const Login = () => {
       }
     } catch (error: any) {
       console.error("Erro de autenticação:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: error.message,
-      });
+      
+      // Tratamento específico para email não confirmado
+      if (error.message.includes("Email not confirmed")) {
+        setNeedsEmailConfirmation(true);
+        toast({
+          variant: "destructive",
+          title: "Email não confirmado",
+          description: "Por favor, verifique seu email e clique no link de confirmação antes de fazer login.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: error.message,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -54,6 +69,15 @@ const Login = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {needsEmailConfirmation && (
+              <Alert className="mb-4">
+                <AlertDescription>
+                  Enviamos um email de confirmação para {email}. 
+                  Por favor, verifique sua caixa de entrada e confirme seu email antes de fazer login.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -92,7 +116,10 @@ const Login = () => {
                 type="button"
                 variant="ghost"
                 className="w-full rounded-xl"
-                onClick={() => setIsSignUp(!isSignUp)}
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setNeedsEmailConfirmation(false);
+                }}
               >
                 {isSignUp 
                   ? "Já tem uma conta? Entre aqui" 
