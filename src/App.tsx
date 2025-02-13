@@ -11,6 +11,7 @@ import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,47 +28,59 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const ThemeInitializer = ({ children }: { children: React.ReactNode }) => {
+  useEffect(() => {
+    // Aplica o tema salvo ou o tema padrão
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  }, []);
+
+  return <>{children}</>;
+};
+
 const App = () => (
-  <BrowserRouter>
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <SidebarProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/transactions"
-                element={
-                  <ProtectedRoute>
-                    <Transactions />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </SidebarProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </AuthProvider>
-  </BrowserRouter>
+  <ThemeInitializer>
+    <BrowserRouter>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <SidebarProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/transactions"
+                  element={
+                    <ProtectedRoute>
+                      <Transactions />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </SidebarProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </ThemeInitializer>
 );
 
 export default App;

@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
 
 export function ExpenseModal({
   open,
@@ -62,8 +64,8 @@ export function ExpenseModal({
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Transaction added successfully",
+        title: "Sucesso",
+        description: "Transação adicionada com sucesso",
       });
 
       onTransactionAdded?.();
@@ -75,8 +77,8 @@ export function ExpenseModal({
     } catch (error) {
       console.error("Error adding transaction:", error);
       toast({
-        title: "Error",
-        description: "Failed to add transaction",
+        title: "Erro",
+        description: "Falha ao adicionar transação",
         variant: "destructive",
       });
     } finally {
@@ -88,58 +90,78 @@ export function ExpenseModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Transaction</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">Nova Transação</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Type</Label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <Label className="text-lg">Tipo</Label>
             <RadioGroup
               value={type}
               onValueChange={(value) => setType(value as "expense" | "income")}
-              className="flex gap-4"
+              className="grid grid-cols-2 gap-4"
             >
-              <div className="flex items-center space-x-2">
+              <Card className={`relative flex items-center space-x-2 p-4 cursor-pointer ${
+                type === "expense" ? "border-red-500" : "border-input"
+              }`}>
                 <RadioGroupItem value="expense" id="expense" />
-                <Label htmlFor="expense" className="text-red-500 dark:text-red-400">Expense</Label>
-              </div>
-              <div className="flex items-center space-x-2">
+                <Label htmlFor="expense" className="flex items-center gap-2 cursor-pointer">
+                  <ArrowDownIcon className="w-4 h-4 text-red-500" />
+                  <span className="text-red-500">Despesa</span>
+                </Label>
+              </Card>
+              <Card className={`relative flex items-center space-x-2 p-4 cursor-pointer ${
+                type === "income" ? "border-green-500" : "border-input"
+              }`}>
                 <RadioGroupItem value="income" id="income" />
-                <Label htmlFor="income" className="text-green-500 dark:text-green-400">Income</Label>
-              </div>
+                <Label htmlFor="income" className="flex items-center gap-2 cursor-pointer">
+                  <ArrowUpIcon className="w-4 h-4 text-green-500" />
+                  <span className="text-green-500">Receita</span>
+                </Label>
+              </Card>
             </RadioGroup>
           </div>
 
-          <div>
-            <Label htmlFor="amount">Amount</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Enter amount"
-              required
-              className={type === "expense" ? "border-red-200" : "border-green-200"}
-            />
+          <div className="space-y-2">
+            <Label htmlFor="amount">Valor</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                R$
+              </span>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0,00"
+                required
+                className={`pl-8 ${
+                  type === "expense" 
+                    ? "border-red-200 focus:border-red-500" 
+                    : "border-green-200 focus:border-green-500"
+                }`}
+              />
+            </div>
           </div>
           
-          <div>
-            <Label htmlFor="description">Description</Label>
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição</Label>
             <Input
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter description"
+              placeholder="Ex: Mercado, Aluguel, Salário..."
               required
+              className="focus:border-primary"
             />
           </div>
 
-          <div>
-            <Label htmlFor="category">Category</Label>
+          <div className="space-y-2">
+            <Label htmlFor="category">Categoria</Label>
             <Select value={category} onValueChange={setCategory} required>
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
               <SelectContent>
                 {categories?.map((cat) => (
@@ -165,7 +187,7 @@ export function ExpenseModal({
             disabled={isLoading}
             variant={type === "expense" ? "destructive" : "default"}
           >
-            {isLoading ? "Adding..." : `Add ${type === "expense" ? "Expense" : "Income"}`}
+            {isLoading ? "Adicionando..." : "Adicionar"}
           </Button>
         </form>
       </DialogContent>
