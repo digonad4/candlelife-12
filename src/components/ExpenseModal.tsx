@@ -13,6 +13,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
 
+type Client = {
+  id: string;
+  name: string;
+  document: string | null;
+  email: string | null;
+};
+
+type PaymentMethod = 'pix' | 'cash' | 'invoice';
+
 export function ExpenseModal({
   open,
   onOpenChange,
@@ -24,24 +33,25 @@ export function ExpenseModal({
 }) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [type, setType] = useState<"expense" | "income">("expense");
+  const [clientId, setClientId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const { data: categories } = useQuery({
-    queryKey: ["categories", user?.id],
+  const { data: clients } = useQuery({
+    queryKey: ["clients", user?.id],
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from("categories")
+        .from("clients")
         .select("*")
         .eq("user_id", user.id)
         .order("name");
       
       if (error) throw error;
-      return data;
+      return data as Client[];
     },
     enabled: !!user
   });
@@ -51,11 +61,23 @@ export function ExpenseModal({
     if (!user) return;
     setIsLoading(true);
 
+    // Validar se tem cliente selecionado quando o método é faturado
+    if (paymentMethod === 'invoice' && !clientId) {
+      toast({
+        title: "Erro",
+        description: "Selecione um cliente para transações faturadas",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.from("transactions").insert({
         description,
         amount: type === "expense" ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
-        category,
+        payment_method: paymentMethod,
+        client_id: clientId,
         type,
         user_id: user.id,
         date: new Date().toISOString()
@@ -72,7 +94,8 @@ export function ExpenseModal({
       onOpenChange(false);
       setAmount("");
       setDescription("");
-      setCategory("");
+      setPaymentMethod("pix");
+      setClientId(null);
       setType("expense");
     } catch (error) {
       console.error("Error adding transaction:", error);
@@ -151,35 +174,48 @@ export function ExpenseModal({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ex: Mercado, Aluguel, Salário..."
+              placeholder="Ex: Corrida, Manutenção..."
               required
               className="focus:border-primary"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Categoria</Label>
-            <Select value={category} onValueChange={setCategory} required>
+            <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
+            <Select value={paymentMethod} onValueChange={(value) => {
+              setPaymentMethod(value as PaymentMethod);
+              if (value !== 'invoice') {
+                setClientId(null);
+              }
+            }}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione uma categoria" />
+                <SelectValue placeholder="Selecione a forma de pagamento" />
               </SelectTrigger>
               <SelectContent>
-                {categories?.map((cat) => (
-                  <SelectItem 
-                    key={cat.id} 
-                    value={cat.name}
-                    className="flex items-center gap-2"
-                  >
-                    <div 
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    {cat.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="pix">PIX</SelectItem>
+                <SelectItem value="cash">Dinheiro</SelectItem>
+                <SelectItem value="invoice">Faturado</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {paymentMethod === 'invoice' && (
+            <div className="space-y-2">
+              <Label htmlFor="client">Cliente</Label>
+              <Select value={clientId || ''} onValueChange={setClientId} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients?.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <Button 
             type="submit" 
