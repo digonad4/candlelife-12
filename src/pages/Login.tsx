@@ -33,6 +33,7 @@ const Login = () => {
         navigate("/");
       }
     } catch (error: any) {
+      console.error("Erro de autenticação:", error);
       toast({
         variant: "destructive",
         title: "Erro",
