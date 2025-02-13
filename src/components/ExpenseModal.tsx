@@ -18,6 +18,9 @@ type Client = {
   name: string;
   document: string | null;
   email: string | null;
+  phone: string | null;
+  created_at: string;
+  user_id: string;
 };
 
 type PaymentMethod = 'pix' | 'cash' | 'invoice';
@@ -46,7 +49,7 @@ export function ExpenseModal({
       if (!user) return [];
       const { data, error } = await supabase
         .from("clients")
-        .select("*")
+        .select()
         .eq("user_id", user.id)
         .order("name");
       
