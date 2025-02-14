@@ -77,14 +77,14 @@ export function ExpenseModal({
 
     try {
       // Primeiro, garantir que a categoria existe
-      const { error: categoryError } = await supabase
+      const { data: existingCategory, error: categoryError } = await supabase
         .from("categories")
         .select()
         .eq("name", paymentMethod)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (categoryError) {
+      if (!existingCategory) {
         // Se a categoria não existe, vamos criá-la
         const { error: insertCategoryError } = await supabase
           .from("categories")
