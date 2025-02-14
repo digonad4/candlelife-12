@@ -76,15 +76,39 @@ export function ExpenseModal({
     }
 
     try {
-      const { error } = await supabase.from("transactions").insert({
-        description,
-        amount: type === "expense" ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
-        category: paymentMethod, // Usando category para armazenar o método de pagamento
-        client_id: clientId,
-        type,
-        user_id: user.id,
-        date: new Date().toISOString()
-      });
+      // Primeiro, garantir que a categoria existe
+      const { error: categoryError } = await supabase
+        .from("categories")
+        .select()
+        .eq("name", paymentMethod)
+        .eq("user_id", user.id)
+        .single();
+
+      if (categoryError) {
+        // Se a categoria não existe, vamos criá-la
+        const { error: insertCategoryError } = await supabase
+          .from("categories")
+          .insert({
+            name: paymentMethod,
+            user_id: user.id,
+            color: '#4F46E5'
+          });
+
+        if (insertCategoryError) throw insertCategoryError;
+      }
+
+      // Agora inserir a transação
+      const { error } = await supabase
+        .from("transactions")
+        .insert({
+          description,
+          amount: type === "expense" ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
+          category: paymentMethod,
+          client_id: clientId,
+          type,
+          user_id: user.id,
+          date: new Date().toISOString()
+        });
 
       if (error) throw error;
 
