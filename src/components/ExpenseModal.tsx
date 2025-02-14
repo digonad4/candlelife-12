@@ -79,7 +79,7 @@ export function ExpenseModal({
       const { error } = await supabase.from("transactions").insert({
         description,
         amount: type === "expense" ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
-        category: paymentMethod, // Usar payment_method como categoria temporariamente
+        category: paymentMethod, // Usando category para armazenar o método de pagamento
         client_id: clientId,
         type,
         user_id: user.id,
