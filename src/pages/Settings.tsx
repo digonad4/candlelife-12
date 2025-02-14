@@ -1,27 +1,34 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Moon, Sun, Palette } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const themes = [
   { id: "light", name: "Claro", icon: Sun },
   { id: "dark", name: "Escuro", icon: Moon },
   { id: "purple", name: "Roxo", icon: Palette },
   { id: "green", name: "Verde", icon: Palette },
-];
+] as const;
 
 const Settings = () => {
   const [currentTheme, setCurrentTheme] = useState(() => {
     return localStorage.getItem("theme") || "light";
   });
+  const { toast } = useToast();
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", currentTheme);
+    const root = document.documentElement;
+    root.setAttribute("data-theme", currentTheme);
     localStorage.setItem("theme", currentTheme);
-  }, [currentTheme]);
+
+    toast({
+      title: "Tema alterado",
+      description: `O tema foi alterado para ${themes.find(t => t.id === currentTheme)?.name.toLowerCase()}.`,
+    });
+  }, [currentTheme, toast]);
 
   return (
     <div className="container mx-auto p-4 md:p-8 animate-fade-in">
@@ -41,7 +48,7 @@ const Settings = () => {
                 <Label
                   key={id}
                   className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-accent transition-colors ${
-                    currentTheme === id ? "border-primary" : "border-input"
+                    currentTheme === id ? "border-primary bg-accent/50" : "border-input"
                   }`}
                 >
                   <RadioGroupItem value={id} id={id} />
