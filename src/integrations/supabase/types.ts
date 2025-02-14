@@ -33,10 +33,41 @@ export type Database = {
         }
         Relationships: []
       }
+      clients: {
+        Row: {
+          created_at: string
+          document: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
           category: string
+          client_id: string | null
           created_at: string
           date: string
           description: string
@@ -47,6 +78,7 @@ export type Database = {
         Insert: {
           amount: number
           category: string
+          client_id?: string | null
           created_at?: string
           date?: string
           description: string
@@ -57,6 +89,7 @@ export type Database = {
         Update: {
           amount?: number
           category?: string
+          client_id?: string | null
           created_at?: string
           date?: string
           description?: string
@@ -71,6 +104,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "categories"
             referencedColumns: ["user_id", "name"]
+          },
+          {
+            foreignKeyName: "transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
           },
         ]
       }
