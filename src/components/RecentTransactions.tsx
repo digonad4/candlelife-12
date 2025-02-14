@@ -15,9 +15,12 @@ export function RecentTransactions() {
       
       const { data, error } = await supabase
         .from("transactions")
-        .select("*")
+        .select(`
+          *,
+          client:clients(name)
+        `)
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
+        .order("date", { ascending: false })
         .limit(5);
 
       if (error) throw error;
@@ -69,7 +72,10 @@ export function RecentTransactions() {
                 </div>
                 <div className="space-y-1">
                   <p className="font-medium">{transaction.description}</p>
-                  <p className="text-sm text-gray-500">{transaction.category}</p>
+                  <p className="text-sm text-gray-500">
+                    {transaction.payment_method}
+                    {transaction.client?.name && ` - ${transaction.client.name}`}
+                  </p>
                   <p className="text-xs text-gray-400">
                     {new Date(transaction.date).toLocaleDateString('pt-BR')}
                   </p>
