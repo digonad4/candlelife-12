@@ -73,7 +73,7 @@ export function RecentTransactions() {
                 <div className="space-y-1">
                   <p className="font-medium">{transaction.description}</p>
                   <p className="text-sm text-gray-500">
-                    {transaction.payment_method}
+                    {transaction.category}
                     {transaction.client?.name && ` - ${transaction.client.name}`}
                   </p>
                   <p className="text-xs text-gray-400">

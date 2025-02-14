@@ -72,6 +72,7 @@ export type Database = {
           date: string
           description: string
           id: string
+          payment_method: string
           type: string
           user_id: string
         }
@@ -83,6 +84,7 @@ export type Database = {
           date?: string
           description: string
           id?: string
+          payment_method?: string
           type: string
           user_id: string
         }
@@ -94,6 +96,7 @@ export type Database = {
           date?: string
           description?: string
           id?: string
+          payment_method?: string
           type?: string
           user_id?: string
         }
