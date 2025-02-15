@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -9,8 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Edit2, Trash2, ArrowUpIcon, ArrowDownIcon } from "lucide-react";
+import { Edit2, Trash2, ArrowUpIcon, ArrowDownIcon, Calendar, Tag, CreditCard } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +31,11 @@ type Transaction = {
   category: string;
   date: string;
   type: "income" | "expense";
+  payment_method: string;
+  client_id?: string;
+  client?: {
+    name: string;
+  };
 };
 
 const Transactions = () => {
@@ -40,7 +48,8 @@ const Transactions = () => {
     description: "",
     amount: "",
     category: "",
-    type: "expense" as "expense" | "income"
+    type: "expense" as "expense" | "income",
+    payment_method: ""
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
@@ -52,7 +61,10 @@ const Transactions = () => {
       
       const { data, error } = await supabase
         .from("transactions")
-        .select("*")
+        .select(`
+          *,
+          client:clients(name)
+        `)
         .eq("user_id", user.id)
         .order("date", { ascending: false });
 
@@ -68,7 +80,8 @@ const Transactions = () => {
       description: transaction.description,
       amount: Math.abs(transaction.amount).toString(),
       category: transaction.category,
-      type: transaction.type
+      type: transaction.type,
+      payment_method: transaction.payment_method
     });
     setIsEditModalOpen(true);
   };
@@ -84,7 +97,8 @@ const Transactions = () => {
           description: editForm.description,
           amount: editForm.type === "expense" ? -Math.abs(Number(editForm.amount)) : Math.abs(Number(editForm.amount)),
           category: editForm.category,
-          type: editForm.type
+          type: editForm.type,
+          payment_method: editForm.payment_method
         })
         .eq("id", selectedTransaction.id)
         .eq("user_id", user.id);
@@ -138,40 +152,81 @@ const Transactions = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex bg-background">
       <AppSidebar />
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
-          <h1 className="text-4xl font-bold">Transações</h1>
+          <h1 className="text-4xl font-bold text-foreground">Transações</h1>
           
-          <Card className="rounded-xl">
+          <Card className="rounded-xl border-border bg-card">
             <CardHeader>
-              <CardTitle>Histórico de Transações</CardTitle>
+              <CardTitle className="text-card-foreground">Histórico de Transações</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {isLoading ? (
-                  <p>Carregando...</p>
+                  <p className="text-muted-foreground">Carregando...</p>
                 ) : transactions?.map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-gray-800 shadow">
-                    <div className="flex gap-3">
-                      {transaction.type === "income" ? (
-                        <ArrowUpIcon className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <ArrowDownIcon className="w-4 h-4 text-red-600" />
-                      )}
-                      <p>{transaction.description} - R$ {Math.abs(transaction.amount).toFixed(2)}</p>
+                  <div key={transaction.id} className="flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:bg-accent/50 transition-colors">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${
+                          transaction.type === "income" 
+                            ? "bg-green-500/20 text-green-500" 
+                            : "bg-red-500/20 text-red-500"
+                        }`}>
+                          {transaction.type === "income" ? (
+                            <ArrowUpIcon className="w-4 h-4" />
+                          ) : (
+                            <ArrowDownIcon className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-card-foreground">{transaction.description}</p>
+                          <p className={`text-lg font-semibold ${
+                            transaction.type === "income" 
+                              ? "text-green-500" 
+                              : "text-red-500"
+                          }`}>
+                            R$ {Math.abs(transaction.amount).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          <span>{format(new Date(transaction.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Tag className="w-4 h-4" />
+                          <span>{transaction.category}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <CreditCard className="w-4 h-4" />
+                          <span>{transaction.payment_method}</span>
+                        </div>
+                        {transaction.client?.name && (
+                          <div className="flex items-center gap-1">
+                            <span>Cliente: {transaction.client.name}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(transaction)}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => { setTransactionToDelete(transaction.id); setIsDeleteDialogOpen(true); }}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
                 ))}
+                {transactions?.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhuma transação encontrada
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -180,29 +235,90 @@ const Transactions = () => {
 
       {/* Modal de Edição */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent>
+        <DialogContent className="bg-card">
           <DialogHeader>
-            <DialogTitle>Editar Transação</DialogTitle>
+            <DialogTitle className="text-card-foreground">Editar Transação</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmitEdit}>
-            <Label>Descrição</Label>
-            <Input value={editForm.description} onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))} required />
-            <Label>Valor</Label>
-            <Input type="number" value={editForm.amount} onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))} required />
-            <Button type="submit">Salvar</Button>
+          <form onSubmit={handleSubmitEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição</Label>
+              <Input 
+                id="description"
+                value={editForm.description} 
+                onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))} 
+                className="bg-background"
+                required 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="amount">Valor</Label>
+              <Input 
+                id="amount"
+                type="number" 
+                value={editForm.amount} 
+                onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))} 
+                className="bg-background"
+                required 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoria</Label>
+              <Input 
+                id="category"
+                value={editForm.category} 
+                onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))} 
+                className="bg-background"
+                required 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <RadioGroup
+                value={editForm.type}
+                onValueChange={(value) => setEditForm(prev => ({ ...prev, type: value as "income" | "expense" }))}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="income" id="income" />
+                  <Label htmlFor="income">Receita</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="expense" id="expense" />
+                  <Label htmlFor="expense">Despesa</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment_method">Método de Pagamento</Label>
+              <Input 
+                id="payment_method"
+                value={editForm.payment_method} 
+                onChange={(e) => setEditForm(prev => ({ ...prev, payment_method: e.target.value }))} 
+                className="bg-background"
+                required 
+              />
+            </div>
+
+            <Button type="submit" className="w-full">Salvar</Button>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Confirmação de Exclusão */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogTitle className="text-card-foreground">Tem certeza?</AlertDialogTitle>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-500 text-white">Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Excluir
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
