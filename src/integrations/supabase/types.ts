@@ -9,30 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      categories: {
-        Row: {
-          color: string
-          created_at: string
-          id: string
-          name: string
-          user_id: string
-        }
-        Insert: {
-          color?: string
-          created_at?: string
-          id?: string
-          name: string
-          user_id: string
-        }
-        Update: {
-          color?: string
-          created_at?: string
-          id?: string
-          name?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       clients: {
         Row: {
           created_at: string
@@ -66,48 +42,41 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
-          category: string
           client_id: string | null
           created_at: string
           date: string
           description: string
           id: string
           payment_method: string
+          payment_status: string
           type: string
           user_id: string
         }
         Insert: {
           amount: number
-          category: string
           client_id?: string | null
           created_at?: string
           date?: string
           description: string
           id?: string
           payment_method?: string
+          payment_status?: string
           type: string
           user_id: string
         }
         Update: {
           amount?: number
-          category?: string
           client_id?: string | null
           created_at?: string
           date?: string
           description?: string
           id?: string
           payment_method?: string
+          payment_status?: string
           type?: string
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_category"
-            columns: ["user_id", "category"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["user_id", "name"]
-          },
           {
             foreignKeyName: "transactions_client_id_fkey"
             columns: ["client_id"]

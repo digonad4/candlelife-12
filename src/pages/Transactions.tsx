@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Edit2, Trash2, ArrowUpIcon, ArrowDownIcon, Calendar, Tag, CreditCard } from "lucide-react";
+import { Edit2, Trash2, ArrowUpIcon, ArrowDownIcon, Calendar, CreditCard, CheckCircle2, Clock } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,17 +21,19 @@ import {
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
+  AlertDialogTitle,
+  AlertDialogDescription
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Transaction = {
   id: string;
   description: string;
   amount: number;
-  category: string;
   date: string;
   type: "income" | "expense";
   payment_method: string;
+  payment_status: "pending" | "confirmed";
   client_id?: string;
   client?: {
     name: string;
@@ -47,12 +49,14 @@ const Transactions = () => {
   const [editForm, setEditForm] = useState({
     description: "",
     amount: "",
-    category: "",
     type: "expense" as "expense" | "income",
-    payment_method: ""
+    payment_method: "",
+    payment_status: "pending" as "pending" | "confirmed"
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isConfirmPaymentDialogOpen, setIsConfirmPaymentDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+  const [transactionToConfirm, setTransactionToConfirm] = useState<Transaction | null>(null);
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["transactions", user?.id],
@@ -79,9 +83,9 @@ const Transactions = () => {
     setEditForm({
       description: transaction.description,
       amount: Math.abs(transaction.amount).toString(),
-      category: transaction.category,
       type: transaction.type,
-      payment_method: transaction.payment_method
+      payment_method: transaction.payment_method,
+      payment_status: transaction.payment_status
     });
     setIsEditModalOpen(true);
   };
@@ -96,9 +100,9 @@ const Transactions = () => {
         .update({
           description: editForm.description,
           amount: editForm.type === "expense" ? -Math.abs(Number(editForm.amount)) : Math.abs(Number(editForm.amount)),
-          category: editForm.category,
           type: editForm.type,
-          payment_method: editForm.payment_method
+          payment_method: editForm.payment_method,
+          payment_status: editForm.payment_status
         })
         .eq("id", selectedTransaction.id)
         .eq("user_id", user.id);
@@ -151,6 +155,36 @@ const Transactions = () => {
     }
   };
 
+  const handleConfirmPayment = async () => {
+    if (!user || !transactionToConfirm) return;
+
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ payment_status: "confirmed" })
+        .eq("id", transactionToConfirm.id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Pagamento confirmado",
+        description: "O status do pagamento foi atualizado com sucesso.",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      setIsConfirmPaymentDialogOpen(false);
+      setTransactionToConfirm(null);
+    } catch (error) {
+      console.error("Erro ao confirmar pagamento:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível confirmar o pagamento.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-background">
       <AppSidebar />
@@ -198,12 +232,18 @@ const Transactions = () => {
                           <span>{format(new Date(transaction.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Tag className="w-4 h-4" />
-                          <span>{transaction.category}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
                           <CreditCard className="w-4 h-4" />
                           <span>{transaction.payment_method}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {transaction.payment_status === "confirmed" ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-yellow-500" />
+                          )}
+                          <span className={transaction.payment_status === "confirmed" ? "text-green-500" : "text-yellow-500"}>
+                            {transaction.payment_status === "confirmed" ? "Confirmado" : "Pendente"}
+                          </span>
                         </div>
                         {transaction.client?.name && (
                           <div className="flex items-center gap-1">
@@ -213,6 +253,19 @@ const Transactions = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
+                      {transaction.payment_status === "pending" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setTransactionToConfirm(transaction);
+                            setIsConfirmPaymentDialogOpen(true);
+                          }}
+                          className="text-yellow-500 hover:text-yellow-600"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(transaction)}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -264,17 +317,6 @@ const Transactions = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">Categoria</Label>
-              <Input 
-                id="category"
-                value={editForm.category} 
-                onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))} 
-                className="bg-background"
-                required 
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label>Tipo</Label>
               <RadioGroup
                 value={editForm.type}
@@ -294,13 +336,35 @@ const Transactions = () => {
 
             <div className="space-y-2">
               <Label htmlFor="payment_method">Método de Pagamento</Label>
-              <Input 
-                id="payment_method"
-                value={editForm.payment_method} 
-                onChange={(e) => setEditForm(prev => ({ ...prev, payment_method: e.target.value }))} 
-                className="bg-background"
-                required 
-              />
+              <Select
+                value={editForm.payment_method}
+                onValueChange={(value) => setEditForm(prev => ({ ...prev, payment_method: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o método de pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="cash">Dinheiro</SelectItem>
+                  <SelectItem value="invoice">Faturado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment_status">Status do Pagamento</Label>
+              <Select
+                value={editForm.payment_status}
+                onValueChange={(value) => setEditForm(prev => ({ ...prev, payment_status: value as "pending" | "confirmed" }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="confirmed">Confirmado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button type="submit" className="w-full">Salvar</Button>
@@ -313,11 +377,32 @@ const Transactions = () => {
         <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-card-foreground">Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente a transação.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmação de Pagamento */}
+      <AlertDialog open={isConfirmPaymentDialogOpen} onOpenChange={setIsConfirmPaymentDialogOpen}>
+        <AlertDialogContent className="bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-card-foreground">Confirmar Pagamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja confirmar o recebimento do pagamento desta transação?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPayment} className="bg-green-600 text-white hover:bg-green-700">
+              Confirmar Pagamento
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
