@@ -10,13 +10,14 @@ import { ptBR } from "date-fns/locale";
 type GroupedTransactions = {
   [key: string]: {
     amount: number;
-    category: string;
     client_id: string | null;
     created_at: string;
     date: string;
     description: string;
     id: string;
     type: string;
+    payment_method: string;
+    payment_status: string;
     user_id: string;
     client?: {
       name: string;
@@ -108,7 +109,7 @@ export function RecentTransactions() {
                       <div className="space-y-1">
                         <p className="font-medium">{transaction.description}</p>
                         <p className="text-sm text-gray-500">
-                          {transaction.category}
+                          {transaction.payment_method}
                           {transaction.client?.name && ` - ${transaction.client.name}`}
                         </p>
                         <p className="text-xs text-gray-400">
