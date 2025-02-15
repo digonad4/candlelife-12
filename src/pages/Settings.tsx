@@ -3,12 +3,15 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Moon, Sun, Palette } from "lucide-react";
+import { Moon, Sun, Palette, Zap, Ghost, Mountain } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const themes = [
   { id: "light", name: "Claro", icon: Sun },
   { id: "dark", name: "Escuro", icon: Moon },
+  { id: "cyberpunk", name: "Cyberpunk", icon: Zap },
+  { id: "dracula", name: "Dracula", icon: Ghost },
+  { id: "nord", name: "Nord", icon: Mountain },
   { id: "purple", name: "Roxo", icon: Palette },
   { id: "green", name: "Verde", icon: Palette },
 ] as const;
@@ -42,7 +45,7 @@ const Settings = () => {
             <RadioGroup
               value={currentTheme}
               onValueChange={setCurrentTheme}
-              className="grid grid-cols-2 gap-4 pt-2"
+              className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2"
             >
               {themes.map(({ id, name, icon: Icon }) => (
                 <Label

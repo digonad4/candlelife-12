@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -96,6 +95,72 @@
     --input: 150 50% 90%;
     --ring: 150 50% 50%;
   }
+
+  [data-theme="cyberpunk"] {
+    --background: 232 80% 2%;
+    --foreground: 0 0% 98%;
+    --card: 232 80% 4%;
+    --card-foreground: 0 0% 98%;
+    --popover: 232 80% 4%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 320 100% 60%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 260 100% 60%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 232 80% 8%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 190 100% 60%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 232 80% 10%;
+    --input: 232 80% 10%;
+    --ring: 320 100% 60%;
+  }
+
+  [data-theme="dracula"] {
+    --background: 231 15% 18%;
+    --foreground: 60 30% 96%;
+    --card: 231 15% 15%;
+    --card-foreground: 60 30% 96%;
+    --popover: 231 15% 15%;
+    --popover-foreground: 60 30% 96%;
+    --primary: 326 100% 74%;
+    --primary-foreground: 60 30% 96%;
+    --secondary: 265 89% 78%;
+    --secondary-foreground: 60 30% 96%;
+    --muted: 231 15% 25%;
+    --muted-foreground: 60 30% 76%;
+    --accent: 135 94% 65%;
+    --accent-foreground: 60 30% 96%;
+    --destructive: 0 100% 67%;
+    --destructive-foreground: 60 30% 96%;
+    --border: 231 15% 25%;
+    --input: 231 15% 25%;
+    --ring: 326 100% 74%;
+  }
+
+  [data-theme="nord"] {
+    --background: 220 28% 12%;
+    --foreground: 218 27% 94%;
+    --card: 220 28% 14%;
+    --card-foreground: 218 27% 94%;
+    --popover: 220 28% 14%;
+    --popover-foreground: 218 27% 94%;
+    --primary: 193 43% 67%;
+    --primary-foreground: 220 28% 12%;
+    --secondary: 213 32% 52%;
+    --secondary-foreground: 218 27% 94%;
+    --muted: 220 28% 20%;
+    --muted-foreground: 218 27% 74%;
+    --accent: 179 25% 65%;
+    --accent-foreground: 220 28% 12%;
+    --destructive: 354 42% 56%;
+    --destructive-foreground: 218 27% 94%;
+    --border: 220 28% 20%;
+    --input: 220 28% 20%;
+    --ring: 193 43% 67%;
+  }
 }
 
 @layer utilities {
@@ -103,7 +168,7 @@
     @apply bg-white/80 backdrop-blur-lg dark:bg-gray-950/80;
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;
