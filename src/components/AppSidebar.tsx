@@ -4,7 +4,7 @@ import { Home, PlusCircle, Settings, Wallet, Menu as MenuIcon } from "lucide-rea
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
-  SidebarContent,
+  SidebarContent as BaseSidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -47,9 +47,9 @@ export function AppSidebar() {
     },
   ];
 
-  const SidebarContent = () => (
+  const MenuContent = () => (
     <Sidebar className="border-r bg-card">
-      <SidebarContent>
+      <BaseSidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -77,7 +77,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      </SidebarContent>
+      </BaseSidebarContent>
     </Sidebar>
   );
 
@@ -95,7 +95,7 @@ export function AppSidebar() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-72">
-            <SidebarContent />
+            <MenuContent />
           </SheetContent>
         </Sheet>
 
@@ -113,7 +113,7 @@ export function AppSidebar() {
 
   return (
     <>
-      <SidebarContent />
+      <MenuContent />
       <ExpenseModal 
         open={isModalOpen} 
         onOpenChange={setIsModalOpen}
