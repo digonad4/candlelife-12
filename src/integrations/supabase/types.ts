@@ -41,6 +41,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_theme: string | null
           avatar_url: string | null
           created_at: string
           id: string
@@ -48,6 +49,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          active_theme?: string | null
           avatar_url?: string | null
           created_at?: string
           id: string
@@ -55,6 +57,7 @@ export type Database = {
           username: string
         }
         Update: {
+          active_theme?: string | null
           avatar_url?: string | null
           created_at?: string
           id?: string

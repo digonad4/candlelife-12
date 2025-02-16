@@ -1,68 +1,65 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Moon, Sun, Palette, Zap, Ghost, Mountain } from "lucide-react";
+import { AppSidebar } from "@/components/AppSidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-
-const themes = [
-  { id: "light", name: "Claro", icon: Sun },
-  { id: "dark", name: "Escuro", icon: Moon },
-  { id: "cyberpunk", name: "Cyberpunk", icon: Zap },
-  { id: "dracula", name: "Dracula", icon: Ghost },
-  { id: "nord", name: "Nord", icon: Mountain },
-  { id: "purple", name: "Roxo", icon: Palette },
-  { id: "green", name: "Verde", icon: Palette },
-] as const;
+import { Palette, User, Lock, Image } from "lucide-react";
+import { ThemeSettings } from "@/components/settings/ThemeSettings";
+import { ProfileSettings } from "@/components/settings/ProfileSettings";
+import { AvatarSettings } from "@/components/settings/AvatarSettings";
+import { SecuritySettings } from "@/components/settings/SecuritySettings";
 
 const Settings = () => {
-  const [currentTheme, setCurrentTheme] = useState(() => {
-    return localStorage.getItem("theme") || "light";
-  });
   const { toast } = useToast();
 
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute("data-theme", currentTheme);
-    localStorage.setItem("theme", currentTheme);
-
-    toast({
-      title: "Tema alterado",
-      description: `O tema foi alterado para ${themes.find(t => t.id === currentTheme)?.name.toLowerCase()}.`,
-    });
-  }, [currentTheme, toast]);
-
   return (
-    <div className="container mx-auto p-4 md:p-8 animate-fade-in">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl">Configurações</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <Label className="text-lg font-medium">Tema</Label>
-            <RadioGroup
-              value={currentTheme}
-              onValueChange={setCurrentTheme}
-              className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2"
-            >
-              {themes.map(({ id, name, icon: Icon }) => (
-                <Label
-                  key={id}
-                  className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-accent transition-colors ${
-                    currentTheme === id ? "border-primary bg-accent/50" : "border-input"
-                  }`}
-                >
-                  <RadioGroupItem value={id} id={id} />
-                  <Icon className="w-5 h-5" />
-                  <span>{name}</span>
-                </Label>
-              ))}
-            </RadioGroup>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex bg-background">
+      <AppSidebar />
+      <main className="flex-1 p-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <h1 className="text-4xl font-bold text-foreground">Configurações</h1>
+          
+          <Tabs defaultValue="profile" className="w-full">
+            <TabsList className="grid grid-cols-4 gap-4 mb-8">
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                <span>Perfil</span>
+              </TabsTrigger>
+              <TabsTrigger value="theme" className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                <span>Tema</span>
+              </TabsTrigger>
+              <TabsTrigger value="avatar" className="flex items-center gap-2">
+                <Image className="w-4 h-4" />
+                <span>Avatar</span>
+              </TabsTrigger>
+              <TabsTrigger value="security" className="flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                <span>Segurança</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <Card className="p-6">
+              <TabsContent value="profile">
+                <ProfileSettings />
+              </TabsContent>
+              
+              <TabsContent value="theme">
+                <ThemeSettings />
+              </TabsContent>
+              
+              <TabsContent value="avatar">
+                <AvatarSettings />
+              </TabsContent>
+              
+              <TabsContent value="security">
+                <SecuritySettings />
+              </TabsContent>
+            </Card>
+          </Tabs>
+        </div>
+      </main>
     </div>
   );
 };
