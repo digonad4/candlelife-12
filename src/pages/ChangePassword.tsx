@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ const ChangePassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +31,13 @@ const ChangePassword = () => {
 
     setIsLoading(true);
     try {
+      // Primeiro verifica se há uma sessão ativa
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error("Sua sessão expirou. Por favor, faça login novamente.");
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
@@ -38,13 +46,20 @@ const ChangePassword = () => {
 
       toast({
         title: "Senha alterada",
-        description: "Sua senha foi alterada com sucesso.",
+        description: "Sua senha foi alterada com sucesso. Por favor, faça login novamente.",
       });
 
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      // Após alterar a senha, fazer logout e redirecionar para login
+      await supabase.auth.signOut();
+      navigate("/login");
+
     } catch (error: any) {
+      console.error("Erro ao alterar senha:", error);
+      
+      if (error.message.includes("session")) {
+        navigate("/login");
+      }
+      
       toast({
         title: "Erro",
         description: error.message,
