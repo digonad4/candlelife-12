@@ -31,7 +31,6 @@ const ChangePassword = () => {
 
     setIsLoading(true);
     try {
-      // Primeiro verifica se há uma sessão ativa
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
@@ -49,7 +48,6 @@ const ChangePassword = () => {
         description: "Sua senha foi alterada com sucesso. Por favor, faça login novamente.",
       });
 
-      // Após alterar a senha, fazer logout e redirecionar para login
       await supabase.auth.signOut();
       navigate("/login");
 
