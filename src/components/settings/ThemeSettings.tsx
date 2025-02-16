@@ -28,12 +28,12 @@ export const ThemeSettings = () => {
       localStorage.setItem("theme", theme);
       document.documentElement.setAttribute("data-theme", theme);
       
-      const { error } = await supabase.auth.getUser();
-      if (!error) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
         await supabase
           .from('profiles')
           .update({ active_theme: theme })
-          .eq('id', error.user?.id);
+          .eq('id', user.id);
       }
 
       toast({
