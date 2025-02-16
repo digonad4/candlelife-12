@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -216,28 +215,68 @@ const Login = () => {
                 </>
               )}
 
-              <Button 
-                type="submit" 
-                className="w-full rounded-xl"
-                disabled={isLoading}
-              >
-                {isLoading 
-                  ? "Carregando..." 
-                  : (isSignUp ? "Criar conta" : "Entrar")}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full rounded-xl"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setNeedsEmailConfirmation(false);
-                }}
-              >
-                {isSignUp 
-                  ? "Já tem uma conta? Entre aqui" 
-                  : "Não tem uma conta? Cadastre-se"}
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  type="submit" 
+                  className="w-full rounded-xl"
+                  disabled={isLoading}
+                >
+                  {isLoading 
+                    ? "Carregando..." 
+                    : (isSignUp ? "Criar conta" : "Entrar")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full rounded-xl"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setNeedsEmailConfirmation(false);
+                  }}
+                >
+                  {isSignUp 
+                    ? "Já tem uma conta? Entre aqui" 
+                    : "Não tem uma conta? Cadastre-se"}
+                </Button>
+                {!isSignUp && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="w-full"
+                    onClick={async () => {
+                      if (!email) {
+                        toast({
+                          title: "Digite seu email",
+                          description: "Digite seu email para receber o link de redefinição de senha.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      try {
+                        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                          redirectTo: `${window.location.origin}/change-password`,
+                        });
+                        
+                        if (error) throw error;
+                        
+                        toast({
+                          title: "Email enviado",
+                          description: "Verifique seu email para redefinir sua senha.",
+                        });
+                      } catch (error: any) {
+                        toast({
+                          title: "Erro",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    Esqueceu sua senha?
+                  </Button>
+                )}
+              </div>
             </form>
           </CardContent>
         </Card>

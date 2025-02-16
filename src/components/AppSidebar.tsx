@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Home, Settings, Wallet, Menu as MenuIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -15,10 +15,32 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AppSidebar() {
   const location = useLocation();
   const isMobile = useIsMobile();
+  const [profile, setProfile] = useState<{ username?: string; avatar_url?: string } | null>(null);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) {
+          setProfile(data);
+        }
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   const menuItems = [
     {
@@ -41,6 +63,18 @@ export function AppSidebar() {
   const MenuContent = () => (
     <Sidebar className="border-r bg-card">
       <BaseSidebarContent>
+        {profile && (
+          <div className="p-4 mb-4 flex items-center space-x-4">
+            <Avatar>
+              <AvatarImage src={profile.avatar_url} alt={profile.username} />
+              <AvatarFallback>{profile.username?.[0]?.toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">Bem-vindo,</p>
+              <p className="text-sm text-muted-foreground">{profile.username}</p>
+            </div>
+          </div>
+        )}
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
