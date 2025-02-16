@@ -41,6 +41,16 @@ const Login = () => {
           throw new Error("Você precisa aceitar a política de dados");
         }
 
+        // 1. Primeiro fazer o signup
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (signUpError) throw signUpError;
+        if (!signUpData.user) throw new Error("Erro ao criar usuário");
+
+        // 2. Upload do avatar se existir
         let avatarUrl = null;
         if (avatar) {
           const fileExt = avatar.name.split('.').pop();
@@ -58,17 +68,14 @@ const Login = () => {
           avatarUrl = publicUrl;
         }
 
-        const { error: signUpError } = await signUp(email, password);
-        if (signUpError) throw signUpError;
-
+        // 3. Criar o perfil do usuário
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert([
-            {
-              username,
-              avatar_url: avatarUrl,
-            }
-          ]);
+          .insert({
+            id: signUpData.user.id,
+            username,
+            avatar_url: avatarUrl,
+          });
 
         if (profileError) throw profileError;
 
@@ -78,7 +85,12 @@ const Login = () => {
           description: "Por favor, verifique seu email para confirmar sua conta.",
         });
       } else {
-        await signIn(email, password);
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) throw signInError;
         navigate("/");
       }
     } catch (error: any) {

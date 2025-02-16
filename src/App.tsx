@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,7 +31,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const ThemeInitializer = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
-    // Aplica o tema salvo ou o tema padrão
     const savedTheme = localStorage.getItem("theme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
   }, []);
@@ -39,8 +39,8 @@ const ThemeInitializer = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => (
-  <ThemeInitializer>
-    <BrowserRouter>
+  <BrowserRouter>
+    <ThemeInitializer>
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
@@ -87,8 +87,8 @@ const App = () => (
           </TooltipProvider>
         </QueryClientProvider>
       </AuthProvider>
-    </BrowserRouter>
-  </ThemeInitializer>
+    </ThemeInitializer>
+  </BrowserRouter>
 );
 
 export default App;
