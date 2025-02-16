@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from "uuid";
 
 const Login = () => {
   const { signIn, signUp } = useAuth();
@@ -17,6 +20,10 @@ const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +33,45 @@ const Login = () => {
 
     try {
       if (isSignUp) {
-        await signUp(email, password);
+        if (password !== confirmPassword) {
+          throw new Error("As senhas não coincidem");
+        }
+
+        if (!acceptedTerms) {
+          throw new Error("Você precisa aceitar a política de dados");
+        }
+
+        let avatarUrl = null;
+        if (avatar) {
+          const fileExt = avatar.name.split('.').pop();
+          const fileName = `${uuidv4()}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, avatar);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+
+          avatarUrl = publicUrl;
+        }
+
+        const { error: signUpError } = await signUp(email, password);
+        if (signUpError) throw signUpError;
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              username,
+              avatar_url: avatarUrl,
+            }
+          ]);
+
+        if (profileError) throw profileError;
+
         setNeedsEmailConfirmation(true);
         toast({
           title: "Conta criada com sucesso!",
@@ -39,7 +84,6 @@ const Login = () => {
     } catch (error: any) {
       console.error("Erro de autenticação:", error);
       
-      // Tratamento específico para email não confirmado
       if (error.message.includes("Email not confirmed")) {
         setNeedsEmailConfirmation(true);
         toast({
@@ -91,6 +135,22 @@ const Login = () => {
                   className="rounded-xl"
                 />
               </div>
+
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label htmlFor="username">Nome de usuário</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Seu nome de usuário"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    className="rounded-xl"
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
                 <Input
@@ -103,6 +163,47 @@ const Login = () => {
                   className="rounded-xl"
                 />
               </div>
+
+              {isSignUp && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="rounded-xl"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="avatar">Foto (opcional)</Label>
+                    <Input
+                      id="avatar"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setAvatar(e.target.files?.[0] || null)}
+                      className="rounded-xl"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="terms"
+                      checked={acceptedTerms}
+                      onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                      required
+                    />
+                    <Label htmlFor="terms" className="text-sm">
+                      Aceito a política de dados e termos de uso
+                    </Label>
+                  </div>
+                </>
+              )}
+
               <Button 
                 type="submit" 
                 className="w-full rounded-xl"
