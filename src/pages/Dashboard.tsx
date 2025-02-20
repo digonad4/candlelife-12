@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ExpenseModal } from "@/components/ExpenseModal";
-import { RecentTransactions } from "@/components/RecentTransactions";
+import RecentTransactions from "@/components/RecentTransactions";
 import { ExpenseChart } from "@/components/ExpenseChart";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,7 +71,7 @@ const Dashboard = () => {
       console.log("🛑 Removendo canal do Supabase.");
       supabase.removeChannel(channel);
     };
-  }, [queryClient, user?.id, navigate]);
+  }, [queryClient, user.id, navigate, user]);
 
   if (!user) return null;
 
@@ -82,10 +82,14 @@ const Dashboard = () => {
         <div className="max-w-[2000px] mx-auto space-y-6 md:space-y-8">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl md:text-4xl font-bold">Dashboard</h1>
-            <Button variant="outline" onClick={() => setIsModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nova transação
-            </Button>
+            <div className="flex space-x-4">
+              <Button variant="outline" onClick={() => {
+                supabase.auth.signOut();
+                navigate("/login");
+              }}>
+                Logout
+              </Button>
+            </div>
           </div>
 
           <Card>
