@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { Home, Settings, Wallet, Menu as MenuIcon } from "lucide-react";
+import { Home, Settings, Wallet, Menu as MenuIcon, LogOut, ChevronDown } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -16,6 +15,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 
 export function AppSidebar() {
@@ -23,60 +24,54 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const [profile, setProfile] = useState<{ username?: string; avatar_url?: string } | null>(null);
 
+  console.log('isMobile:', isMobile); // Depuração
+
   useEffect(() => {
     const loadProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', user.id)
-          .single();
-        
-        if (data) {
-          setProfile(data);
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        console.log('Usuário autenticado:', user);
+        if (userError) throw userError;
+        if (user) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', user.id)
+            .single();
+          console.log('Dados do perfil:', data);
+          if (error) throw error;
+          if (data) {
+            setProfile(data);
+          }
         }
+      } catch (error) {
+        console.error("Erro ao carregar perfil:", error.message);
       }
     };
 
     loadProfile();
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error.message);
+    }
+  };
+
   const menuItems = [
-    {
-      title: "Dashboard",
-      icon: Home,
-      url: "/",
-    },
-    {
-      title: "Transações",
-      icon: Wallet,
-      url: "/transactions",
-    },
-    {
-      title: "Configurações",
-      icon: Settings,
-      url: "/settings",
-    },
+    { title: "Dashboard", icon: Home, url: "/" },
+    { title: "Transações", icon: Wallet, url: "/transactions" },
+    { title: "Configurações", icon: Settings, url: "/settings" },
   ];
 
   const MenuContent = () => (
     <Sidebar className="border-r bg-card">
-      <BaseSidebarContent>
-        {profile && (
-          <div className="p-4 mb-4 flex items-center space-x-4">
-            <Avatar>
-              <AvatarImage src={profile.avatar_url} alt={profile.username} />
-              <AvatarFallback>{profile.username?.[0]?.toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-medium">Bem-vindo,</p>
-              <p className="text-sm text-muted-foreground">{profile.username}</p>
-            </div>
-          </div>
-        )}
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+      <BaseSidebarContent className="flex flex-col h-full">
+        <SidebarGroup className="flex-grow">
+          <SidebarGroupLabel>Bem vindo !</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -85,7 +80,7 @@ export function AppSidebar() {
                     asChild
                     className={location.pathname === item.url ? "bg-accent" : ""}
                   >
-                    <Link to={item.url!} className="flex items-center w-full gap-2">
+                    <Link to={item.url} className="flex items-center w-full gap-2">
                       <item.icon className="w-5 h-5" />
                       <span>{item.title}</span>
                     </Link>
@@ -95,6 +90,34 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {profile ? (
+          <div className="p-4 border-t mt-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start">
+                  <Avatar className="mr-2">
+                    <AvatarImage src={profile.avatar_url} alt={profile.username} />
+                    <AvatarFallback>{profile.username?.[0]?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span>{profile.username}</span>
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="w-full">Editar Perfil</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <div className="p-4 border-t mt-auto">Carregando perfil...</div>
+        )}
       </BaseSidebarContent>
     </Sidebar>
   );
@@ -103,11 +126,7 @@ export function AppSidebar() {
     return (
       <Sheet>
         <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="fixed top-4 left-4 z-50"
-          >
+          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50 bg-white">
             <MenuIcon className="h-5 w-5" />
           </Button>
         </SheetTrigger>

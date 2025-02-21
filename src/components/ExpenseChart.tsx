@@ -4,14 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Chart } from "react-google-charts";
-import { ChartType } from "react-google-charts";
+import { GoogleChartWrapperChartType } from "react-google-charts";
 import { parseISO, format, startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMemo } from "react";
 
 export function ExpenseChart() {
   const { user } = useAuth();
-  const [chartType, setChartType] = useState<ChartType>("CandlestickChart"); // Gráfico de velas como padrão
+  const [chartType, setChartType] = useState<GoogleChartWrapperChartType>("CandlestickChart"); // Gráfico de velas como padrão
   const [timeRange, setTimeRange] = useState("individual"); // "individual", "daily", "weekly", "monthly", "yearly"
 
   const { data: transactions, isLoading } = useQuery({
