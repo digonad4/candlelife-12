@@ -71,7 +71,7 @@ export function AppSidebar() {
     <Sidebar className="border-r bg-card">
       <BaseSidebarContent className="flex flex-col h-full">
         <SidebarGroup className="flex-grow">
-          <SidebarGroupLabel>Bem vindo !</SidebarGroupLabel>
+          <SidebarGroupLabel>Bem vindo </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
