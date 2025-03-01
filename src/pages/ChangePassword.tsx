@@ -8,24 +8,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const ChangePassword = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (newPassword !== confirmPassword) {
-      toast({
-        title: "Erro",
-        description: "A nova senha e a confirmação não coincidem.",
-        variant: "destructive",
-      });
+      setError("A nova senha e a confirmação não coincidem.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("A nova senha deve ter pelo menos 6 caracteres.");
       return;
     }
 
@@ -58,11 +63,7 @@ const ChangePassword = () => {
         navigate("/login");
       }
       
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -80,6 +81,14 @@ const ChangePassword = () => {
               <CardTitle>Digite sua nova senha</CardTitle>
             </CardHeader>
             <CardContent>
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Erro</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Senha Atual</Label>
