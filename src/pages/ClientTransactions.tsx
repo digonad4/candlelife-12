@@ -137,16 +137,19 @@ const ClientTransactions = () => {
 
   const confirmPayments = async () => {
     try {
-      const updates = selectedTransactions.map((id) => ({
-        id,
-        payment_status: "paid",
-        payment_method: paymentMethod,
-      }));
+      // Create a proper update array with all required fields
+      for (const id of selectedTransactions) {
+        const { error } = await supabase
+          .from("transactions")
+          .update({
+            payment_status: "paid",
+            payment_method: paymentMethod
+          })
+          .eq("id", id);
 
-      const { error } = await supabase.from("transactions").upsert(updates);
-
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
       }
 
       toast({
@@ -264,7 +267,7 @@ const ClientTransactions = () => {
                         <Badge
                           variant={
                             transaction.payment_status === "paid"
-                              ? "success"
+                              ? "default"
                               : transaction.payment_status === "pending"
                               ? "outline"
                               : "destructive"
@@ -312,7 +315,7 @@ const ClientTransactions = () => {
                 <label className="text-sm font-medium">Método de Pagamento</label>
                 <Select
                   value={paymentMethod}
-                  onValueChange={(value) => setPaymentMethod(value)}
+                  onValueChange={setPaymentMethod}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o método de pagamento" />
