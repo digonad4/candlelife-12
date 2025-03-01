@@ -10,43 +10,28 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format, subDays, addDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [todayStats, setTodayStats] = useState({ total: 0, count: 0 });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  
+  // Estado para armazenar datas selecionadas
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dateRange, setDateRange] = useState({
+    start: format(new Date(), "yyyy-MM-dd"),
+    end: format(new Date(), "yyyy-MM-dd")
+  });
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
       return;
     }
-
-    const loadTodayStats = async () => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('user_id', user.id)
-        .gte('date', today.toISOString())
-        .lt('date', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString());
-
-      if (!error && data) {
-        const total = data.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-        setTodayStats({
-          total,
-          count: data.length
-        });
-      }
-    };
-
-    loadTodayStats();
 
     const channel = supabase
       .channel(`transactions-${user.id}`)
@@ -62,7 +47,6 @@ const Dashboard = () => {
           console.log("📢 Alteração detectada no banco de dados. Atualizando dashboard...");
           queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
           queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
-          loadTodayStats();
         }
       )
       .subscribe();
@@ -71,7 +55,51 @@ const Dashboard = () => {
       console.log("🛑 Removendo canal do Supabase.");
       supabase.removeChannel(channel);
     };
-  }, [queryClient, user.id, navigate, user]);
+  }, [queryClient, user?.id, navigate, user]);
+
+  // Handler para quando uma data é selecionada
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      
+      const formattedDate = format(date, "yyyy-MM-dd");
+      setDateRange({
+        start: formattedDate,
+        end: formattedDate
+      });
+    }
+  };
+
+  // Manipuladores para navegação rápida de datas
+  const goToToday = () => {
+    const today = new Date();
+    setSelectedDate(today);
+    const formattedDate = format(today, "yyyy-MM-dd");
+    setDateRange({
+      start: formattedDate,
+      end: formattedDate
+    });
+  };
+
+  const goToYesterday = () => {
+    const yesterday = subDays(new Date(), 1);
+    setSelectedDate(yesterday);
+    const formattedDate = format(yesterday, "yyyy-MM-dd");
+    setDateRange({
+      start: formattedDate,
+      end: formattedDate
+    });
+  };
+
+  const goToTomorrow = () => {
+    const tomorrow = addDays(new Date(), 1);
+    setSelectedDate(tomorrow);
+    const formattedDate = format(tomorrow, "yyyy-MM-dd");
+    setDateRange({
+      start: formattedDate,
+      end: formattedDate
+    });
+  };
 
   if (!user) return null;
 
@@ -92,39 +120,34 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Resumo de Hoje
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Movimentado
-                  </p>
-                  <h2 className="text-2xl font-bold">
-                    {formatCurrency(todayStats.total)}
-                  </h2>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Quantidade de Transações
-                  </p>
-                  <h2 className="text-2xl font-bold">
-                    {todayStats.count}
-                  </h2>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="w-full">
-            <ExpenseChart />
+          {/* Seletor de data com navegação rápida */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+            <DatePicker
+              selected={selectedDate}
+              onSelect={handleDateSelect}
+              placeholder="Selecione uma data"
+              className="w-full sm:w-auto"
+            />
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={goToYesterday}>
+                Ontem
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToToday}>
+                Hoje
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToTomorrow}>
+                Amanhã
+              </Button>
+            </div>
           </div>
 
-          <RecentTransactions />
+          {/* Resumo Financeiro */}
+          <RecentTransactions dateRange={dateRange} setDateRange={setDateRange} />
+
+          {/* Gráfico de Despesas */}
+          <div className="w-full">
+            <ExpenseChart dateRange={dateRange} />
+          </div>
         </div>
 
         <Button
