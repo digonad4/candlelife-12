@@ -1,237 +1,387 @@
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useAuth } from "@/context/AuthContext";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useQuery } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
-import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type Client = {
-  id: string;
-  name: string;
-  document: string | null;
-  email: string | null;
-  phone: string | null;
-  created_at: string;
-  user_id: string;
-};
+const formSchema = z.object({
+  description: z.string().min(3, {
+    message: "A descrição deve ter pelo menos 3 caracteres.",
+  }),
+  amount: z.string().min(1, {
+    message: "O valor é obrigatório.",
+  }),
+  type: z.enum(["income", "expense"], {
+    required_error: "Selecione o tipo de transação.",
+  }),
+  date: z.date({
+    required_error: "Selecione uma data.",
+  }),
+  client_id: z.string().optional(),
+  payment_status: z.enum(["pending", "paid"], {
+    required_error: "Selecione o status do pagamento.",
+  }),
+  payment_method: z.string({
+    required_error: "Selecione o método de pagamento.",
+  }),
+});
 
-type PaymentMethod = 'pix' | 'cash' | 'invoice';
-
-export function ExpenseModal({
-  open,
-  onOpenChange,
-  onTransactionAdded,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onTransactionAdded?: () => void;
+export function ExpenseModal({ 
+  open, 
+  onOpenChange, 
+  onTransactionAdded = () => {} 
 }) {
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
-  const [type, setType] = useState<"expense" | "income">("expense");
-  const [clientId, setClientId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const { user } = useAuth();
+  const [clients, setClients] = useState([]);
 
-  const { data: clients } = useQuery({
-    queryKey: ["clients", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data, error } = await supabase
-        .from("clients")
-        .select()
-        .eq("user_id", user.id)
-        .order("name");
-      
-      if (error) throw error;
-      return data as Client[];
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      description: "",
+      amount: "",
+      type: "expense",
+      date: new Date(),
+      client_id: "",
+      payment_status: "paid",
+      payment_method: "Dinheiro",
     },
-    enabled: !!user
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setIsLoading(true);
+  useEffect(() => {
+    const fetchClients = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .order('name');
+        
+      if (data) {
+        setClients(data);
+      }
+    };
+    
+    fetchClients();
+  }, [user]);
 
-    // Validar se tem cliente selecionado quando o método é faturado
-    if (paymentMethod === 'invoice' && !clientId) {
-      toast({
-        title: "Erro",
-        description: "Selecione um cliente para transações faturadas",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
+  const onSubmit = async (values) => {
+    if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from("transactions")
-        .insert({
-          description,
-          amount: type === "expense" ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
-          client_id: clientId,
-          type,
+      const numericAmount = parseFloat(values.amount.replace(/[^\d,.]/g, "").replace(",", "."));
+
+      const { data, error } = await supabase.from("transactions").insert([
+        {
           user_id: user.id,
-          payment_method: paymentMethod,
-          payment_status: 'pending',
-          date: new Date().toISOString()
-        });
+          description: values.description,
+          amount: numericAmount,
+          type: values.type,
+          date: values.date.toISOString(),
+          client_id: values.client_id || null,
+          payment_status: values.payment_status,
+          payment_method: values.payment_method,
+        },
+      ]);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao adicionar transação:", error);
+        return;
+      }
 
-      toast({
-        title: "Sucesso",
-        description: "Transação adicionada com sucesso",
+      console.log("Transação adicionada com sucesso:", data);
+      onTransactionAdded();
+      form.reset({
+        description: "",
+        amount: "",
+        type: "expense",
+        date: new Date(),
+        client_id: "",
+        payment_status: "paid",
+        payment_method: "Dinheiro",
       });
-
-      onTransactionAdded?.();
       onOpenChange(false);
-      setAmount("");
-      setDescription("");
-      setPaymentMethod("pix");
-      setClientId(null);
-      setType("expense");
     } catch (error) {
-      console.error("Error adding transaction:", error);
-      toast({
-        title: "Erro",
-        description: "Falha ao adicionar transação",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      console.error("Erro ao processar transação:", error);
+    }
+  };
+
+  // Format amount as currency while typing
+  const handleAmountChange = (e) => {
+    let value = e.target.value;
+    // Remove non-numeric characters except comma or dot
+    value = value.replace(/[^\d,.]/g, "");
+    
+    // Convert comma to dot
+    value = value.replace(",", ".");
+    
+    // Convert to number and format
+    if (value) {
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue)) {
+        value = numValue.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      }
+    }
+    
+    form.setValue("amount", value);
+  };
+
+  const handleClientChange = (value) => {
+    form.setValue("client_id", value);
+    
+    // If a client was selected, change payment_status to pending as it's likely to be invoiced
+    if (value) {
+      form.setValue("payment_status", "pending");
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Nova Transação</DialogTitle>
+          <DialogTitle>Nova Transação</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <Label className="text-lg">Tipo</Label>
-            <RadioGroup
-              value={type}
-              onValueChange={(value) => setType(value as "expense" | "income")}
-              className="grid grid-cols-2 gap-4"
-            >
-              <Card className={`relative flex items-center space-x-2 p-4 cursor-pointer ${
-                type === "expense" ? "border-red-500" : "border-input"
-              }`}>
-                <RadioGroupItem value="expense" id="expense" />
-                <Label htmlFor="expense" className="flex items-center gap-2 cursor-pointer">
-                  <ArrowDownIcon className="w-4 h-4 text-red-500" />
-                  <span className="text-red-500">Despesa</span>
-                </Label>
-              </Card>
-              <Card className={`relative flex items-center space-x-2 p-4 cursor-pointer ${
-                type === "income" ? "border-green-500" : "border-input"
-              }`}>
-                <RadioGroupItem value="income" id="income" />
-                <Label htmlFor="income" className="flex items-center gap-2 cursor-pointer">
-                  <ArrowUpIcon className="w-4 h-4 text-green-500" />
-                  <span className="text-green-500">Receita</span>
-                </Label>
-              </Card>
-            </RadioGroup>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="amount">Valor</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                R$
-              </span>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0,00"
-                required
-                className={`pl-8 ${
-                  type === "expense" 
-                    ? "border-red-200 focus:border-red-500" 
-                    : "border-green-200 focus:border-green-500"
-                }`}
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ex: Corrida, Manutenção..."
-              required
-              className="focus:border-primary"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Descrição da transação" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
-            <Select value={paymentMethod} onValueChange={(value) => {
-              setPaymentMethod(value as PaymentMethod);
-              if (value !== 'invoice') {
-                setClientId(null);
-              }
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a forma de pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pix">PIX</SelectItem>
-                <SelectItem value="cash">Dinheiro</SelectItem>
-                <SelectItem value="invoice">Faturado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field: { onChange, ...field } }) => (
+                <FormItem>
+                  <FormLabel>Valor (R$)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="0,00" 
+                      {...field} 
+                      onChange={handleAmountChange} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {paymentMethod === 'invoice' && (
-            <div className="space-y-2">
-              <Label htmlFor="client">Cliente</Label>
-              <Select value={clientId || ''} onValueChange={setClientId} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients?.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Tipo</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex space-x-4"
+                    >
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="expense" />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer">Despesa</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="income" />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer">Receita</FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={isLoading}
-            variant={type === "expense" ? "destructive" : "default"}
-          >
-            {isLoading ? "Adicionando..." : "Adicionar"}
-          </Button>
-        </form>
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP", { locale: ptBR })
+                          ) : (
+                            <span>Selecione uma data</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        locale={ptBR}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="client_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cliente (opcional)</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={handleClientChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cliente (opcional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Nenhum cliente</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="payment_status"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Status de Pagamento</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex space-x-4"
+                    >
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="paid" />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer">Pago</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="pending" />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer">Pendente</FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="payment_method"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Método de Pagamento</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um método de pagamento" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                      <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
+                      <SelectItem value="PIX">PIX</SelectItem>
+                      <SelectItem value="Transferência">Transferência</SelectItem>
+                      <SelectItem value="Boleto">Boleto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="submit">Adicionar</Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
