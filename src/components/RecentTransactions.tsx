@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -38,14 +39,17 @@ interface DateRange {
   end: string;
 }
 
-const RecentTransactions = () => {
+interface RecentTransactionsProps {
+  dateRange: DateRange;
+  setDateRange: (range: DateRange) => void;
+}
+
+const RecentTransactions = ({ dateRange, setDateRange }: RecentTransactionsProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
-  const today = format(new Date(), "yyyy-MM-dd");
-  const [dateRange, setDateRange] = useState<DateRange>({ start: today, end: today });
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const { data: transactions, isLoading } = useQuery<Transaction[]>({
