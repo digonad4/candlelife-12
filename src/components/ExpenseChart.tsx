@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +14,12 @@ interface ExpenseChartProps {
     start: string;
     end: string;
   };
+}
+
+// Define proper type for month data
+interface MonthData {
+  income: number;
+  expense: number;
 }
 
 export const ExpenseChart = ({ dateRange }: ExpenseChartProps) => {
@@ -90,7 +96,7 @@ export const ExpenseChart = ({ dateRange }: ExpenseChartProps) => {
 
     // Para visualização por mês (não usado no filtro atual, mas mantido para extensibilidade)
     if (activeTab === "mes") {
-      const months = {};
+      const months: Record<string, MonthData> = {};
       transactions.forEach(t => {
         const month = format(new Date(t.date), "MM/yyyy");
         if (!months[month]) {

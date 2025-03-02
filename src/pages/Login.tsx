@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from "uuid";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const { signIn, signUp } = useAuth();
@@ -40,43 +40,39 @@ const Login = () => {
           throw new Error("Você precisa aceitar a política de dados");
         }
 
-        // 1. Primeiro fazer o signup
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+        await signUp(email, password);
+        
+        // Only proceed with profile creation if signup was successful
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData && userData.user) {
+          // Create user profile
+          let avatarUrl = null;
+          if (avatar) {
+            const fileExt = avatar.name.split('.').pop();
+            const fileName = `${uuidv4()}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage
+              .from('avatars')
+              .upload(fileName, avatar);
 
-        if (signUpError) throw signUpError;
-        if (!signUpData.user) throw new Error("Erro ao criar usuário");
+            if (uploadError) throw uploadError;
 
-        // 2. Upload do avatar se existir
-        let avatarUrl = null;
-        if (avatar) {
-          const fileExt = avatar.name.split('.').pop();
-          const fileName = `${uuidv4()}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(fileName, avatar);
+            const { data: { publicUrl } } = supabase.storage
+              .from('avatars')
+              .getPublicUrl(fileName);
 
-          if (uploadError) throw uploadError;
+            avatarUrl = publicUrl;
+          }
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(fileName);
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userData.user.id,
+              username,
+              avatar_url: avatarUrl,
+            });
 
-          avatarUrl = publicUrl;
+          if (profileError) throw profileError;
         }
-
-        // 3. Criar o perfil do usuário
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: signUpData.user.id,
-            username,
-            avatar_url: avatarUrl,
-          });
-
-        if (profileError) throw profileError;
 
         setNeedsEmailConfirmation(true);
         toast({
@@ -84,29 +80,44 @@ const Login = () => {
           description: "Por favor, verifique seu email para confirmar sua conta.",
         });
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+        // Login
+        console.log("Attempting to sign in with:", email);
+        
+        // Use o contexto auth para login
+        await signIn(email, password);
+        
+        // Se chegou aqui, o login foi bem-sucedido
+        toast({
+          title: "Login bem-sucedido!",
+          description: "Você será redirecionado para o dashboard.",
         });
-
-        if (signInError) throw signInError;
+        
+        // Redirecionamento será feito automaticamente por meio do router
         navigate("/");
       }
     } catch (error: any) {
       console.error("Erro de autenticação:", error);
       
-      if (error.message.includes("Email not confirmed")) {
+      const errorMessage = error.message || "Falha na autenticação";
+      
+      if (errorMessage.includes("Email not confirmed")) {
         setNeedsEmailConfirmation(true);
         toast({
           variant: "destructive",
           title: "Email não confirmado",
           description: "Por favor, verifique seu email e clique no link de confirmação antes de fazer login.",
         });
+      } else if (errorMessage.includes("Invalid login credentials")) {
+        toast({
+          variant: "destructive",
+          title: "Credenciais inválidas",
+          description: "Email ou senha incorretos. Por favor, tente novamente.",
+        });
       } else {
         toast({
           variant: "destructive",
           title: "Erro",
-          description: error.message,
+          description: errorMessage,
         });
       }
     } finally {
