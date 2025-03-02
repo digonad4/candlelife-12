@@ -13,9 +13,6 @@ import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ChangePassword from "./pages/ChangePassword";
-import Clients from "./pages/Clients";
-import ClientTransactions from "./pages/ClientTransactions";
-import InvoicedTransactions from "./pages/InvoicedTransactions";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,30 +79,6 @@ const App = () => {
                     element={
                       <ProtectedRoute>
                         <ChangePassword />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/clients"
-                    element={
-                      <ProtectedRoute>
-                        <Clients />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/client-transactions/:clientId"
-                    element={
-                      <ProtectedRoute>
-                        <ClientTransactions />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/invoiced-transactions"
-                    element={
-                      <ProtectedRoute>
-                        <InvoicedTransactions />
                       </ProtectedRoute>
                     }
                   />

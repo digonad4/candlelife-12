@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -39,36 +38,26 @@ interface DateRange {
   end: string;
 }
 
-interface RecentTransactionsProps {
-  dateRange?: DateRange;
-  onDateRangeChange?: (range: DateRange) => void;
-}
-
-const RecentTransactions = ({ dateRange, onDateRangeChange }: RecentTransactionsProps) => {
+const RecentTransactions = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const today = format(new Date(), "yyyy-MM-dd");
-  const [localDateRange, setLocalDateRange] = useState<DateRange>(
-    dateRange || { start: today, end: today }
-  );
+  const [dateRange, setDateRange] = useState<DateRange>({ start: today, end: today });
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-  // Use either prop dateRange or local state
-  const effectiveDateRange = dateRange || localDateRange;
-
   const { data: transactions, isLoading } = useQuery<Transaction[]>({
-    queryKey: ["recent-transactions", user?.id, effectiveDateRange],
+    queryKey: ["recent-transactions", user?.id, dateRange],
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
         .from("transactions")
         .select("*, client:clients(name)")
         .eq("user_id", user.id)
-        .gte("date", `${effectiveDateRange.start}T00:00:00.000Z`)
-        .lte("date", `${effectiveDateRange.end}T23:59:59.999Z`)
+        .gte("date", `${dateRange.start}T00:00:00.000Z`)
+        .lte("date", `${dateRange.end}T23:59:59.999Z`)
         .order("payment_status", { ascending: false })
         .order("date", { ascending: false });
       if (error) throw error;
@@ -170,59 +159,31 @@ const RecentTransactions = ({ dateRange, onDateRangeChange }: RecentTransactions
       return;
     }
 
-    const newRange = {
+    setDateRange({
       start: format(range.from, "yyyy-MM-dd"),
       end: format(range.to, "yyyy-MM-dd"),
-    };
-    
-    if (onDateRangeChange) {
-      onDateRangeChange(newRange);
-    } else {
-      setLocalDateRange(newRange);
-    }
-    
+    });
     setSelectedTransactions([]);
     setIsCalendarOpen(false);
   };
 
   const setYesterday = () => {
     const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
-    const newRange = { start: yesterday, end: yesterday };
-    
-    if (onDateRangeChange) {
-      onDateRangeChange(newRange);
-    } else {
-      setLocalDateRange(newRange);
-    }
-    
+    setDateRange({ start: yesterday, end: yesterday });
     setSelectedTransactions([]);
   };
 
   const setLastWeek = () => {
     const end = format(new Date(), "yyyy-MM-dd");
     const start = format(subWeeks(new Date(), 1), "yyyy-MM-dd");
-    const newRange = { start, end };
-    
-    if (onDateRangeChange) {
-      onDateRangeChange(newRange);
-    } else {
-      setLocalDateRange(newRange);
-    }
-    
+    setDateRange({ start, end });
     setSelectedTransactions([]);
   };
 
   const setLast15Days = () => {
     const end = format(new Date(), "yyyy-MM-dd");
     const start = format(subDays(new Date(), 14), "yyyy-MM-dd");
-    const newRange = { start, end };
-    
-    if (onDateRangeChange) {
-      onDateRangeChange(newRange);
-    } else {
-      setLocalDateRange(newRange);
-    }
-    
+    setDateRange({ start, end });
     setSelectedTransactions([]);
   };
 
@@ -231,10 +192,10 @@ const RecentTransactions = ({ dateRange, onDateRangeChange }: RecentTransactions
       <CardHeader>
         <CardTitle>Resumo Financeiro</CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
-          Período: {effectiveDateRange.start === effectiveDateRange.end
-            ? format(parseISO(effectiveDateRange.start), "dd/MM/yyyy", { locale: ptBR })
-            : `${format(parseISO(effectiveDateRange.start), "dd/MM/yyyy", { locale: ptBR })} a ${format(
-                parseISO(effectiveDateRange.end),
+          Período: {dateRange.start === dateRange.end
+            ? format(parseISO(dateRange.start), "dd/MM/yyyy", { locale: ptBR })
+            : `${format(parseISO(dateRange.start), "dd/MM/yyyy", { locale: ptBR })} a ${format(
+                parseISO(dateRange.end),
                 "dd/MM/yyyy",
                 { locale: ptBR }
               )}`}
@@ -279,7 +240,7 @@ const RecentTransactions = ({ dateRange, onDateRangeChange }: RecentTransactions
             <div className="absolute z-10 mt-40 p-4 bg-muted border border-gray-200 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-700">
               <DayPicker
                 mode="range"
-                selected={{ from: parseISO(effectiveDateRange.start), to: parseISO(effectiveDateRange.end) }}
+                selected={{ from: parseISO(dateRange.start), to: parseISO(dateRange.end) }}
                 onSelect={handleRangeSelect}
                 locale={ptBR}
                 className="rounded-lg"

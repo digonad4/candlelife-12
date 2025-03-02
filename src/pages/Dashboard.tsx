@@ -10,22 +10,43 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [todayStats, setTodayStats] = useState({ total: 0, count: 0 });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [dateRange, setDateRange] = useState({
-    start: new Date().toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
-  });
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
       return;
     }
+
+    const loadTodayStats = async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('user_id', user.id)
+        .gte('date', today.toISOString())
+        .lt('date', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString());
+
+      if (!error && data) {
+        const total = data.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+        setTodayStats({
+          total,
+          count: data.length
+        });
+      }
+    };
+
+    loadTodayStats();
 
     const channel = supabase
       .channel(`transactions-${user.id}`)
@@ -41,6 +62,7 @@ const Dashboard = () => {
           console.log("📢 Alteração detectada no banco de dados. Atualizando dashboard...");
           queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
           queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
+          loadTodayStats();
         }
       )
       .subscribe();
@@ -49,16 +71,9 @@ const Dashboard = () => {
       console.log("🛑 Removendo canal do Supabase.");
       supabase.removeChannel(channel);
     };
-  }, [queryClient, user?.id, navigate, user]);
+  }, [queryClient, user.id, navigate, user]);
 
   if (!user) return null;
-
-  const handleDateRangeChange = (newRange) => {
-    setDateRange(newRange);
-    // Invalidate queries to refresh data with new date range
-    queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
-    queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
-  };
 
   return (
     <div className="min-h-screen w-full flex bg-background">
@@ -77,16 +92,39 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Resumo Financeiro - Agora no topo */}
-          <RecentTransactions 
-            dateRange={dateRange} 
-            onDateRangeChange={handleDateRangeChange} 
-          />
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Resumo de Hoje
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Total Movimentado
+                  </p>
+                  <h2 className="text-2xl font-bold">
+                    {formatCurrency(todayStats.total)}
+                  </h2>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Quantidade de Transações
+                  </p>
+                  <h2 className="text-2xl font-bold">
+                    {todayStats.count}
+                  </h2>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Gráfico de Despesas - Agora no meio */}
           <div className="w-full">
-            <ExpenseChart dateRange={dateRange} />
+            <ExpenseChart />
           </div>
+
+          <RecentTransactions />
         </div>
 
         <Button

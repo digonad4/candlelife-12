@@ -1,205 +1,206 @@
-
-import { useState, useEffect, useMemo } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { Chart } from "react-google-charts";
+import { GoogleChartWrapperChartType } from "react-google-charts";
+import { parseISO, format, startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMemo } from "react";
 
-interface ExpenseChartProps {
-  dateRange?: {
-    start: string;
-    end: string;
-  };
-}
-
-// Define proper type for month data
-interface MonthData {
-  income: number;
-  expense: number;
-}
-
-export const ExpenseChart = ({ dateRange }: ExpenseChartProps) => {
+export function ExpenseChart() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("dia");
+  const [chartType, setChartType] = useState<GoogleChartWrapperChartType>("CandlestickChart"); // Gráfico de velas como padrão
+  const [timeRange, setTimeRange] = useState("individual"); // "individual", "daily", "weekly", "monthly", "yearly"
 
-  // Use date range if provided, otherwise default to current month
-  const today = new Date();
-  const currentMonthStart = format(startOfMonth(today), "yyyy-MM-dd");
-  const currentMonthEnd = format(endOfMonth(today), "yyyy-MM-dd");
-  
-  const effectiveDateRange = dateRange || {
-    start: currentMonthStart,
-    end: currentMonthEnd
-  };
-
-  const { data: transactions = [] } = useQuery({
-    queryKey: ["expense-chart", user?.id, effectiveDateRange, activeTab],
+  const { data: transactions, isLoading } = useQuery({
+    queryKey: ["expense-chart", user?.id, chartType, timeRange],
     queryFn: async () => {
       if (!user) return [];
 
       const { data, error } = await supabase
         .from("transactions")
-        .select("*")
+        .select("date, amount")
         .eq("user_id", user.id)
-        .gte("date", `${effectiveDateRange.start}T00:00:00.000Z`)
-        .lte("date", `${effectiveDateRange.end}T23:59:59.999Z`)
-        .order("date", { ascending: true });
+        .eq("payment_status", "confirmed")
+        .order("date");
 
-      if (error) {
-        console.error("Erro ao buscar transações:", error);
-        return [];
-      }
-
+      if (error) throw error;
       return data || [];
     },
     enabled: !!user,
   });
 
-  // Agrupa transações por dia, mês, ou semana
-  const groupedData = useMemo(() => {
-    if (!transactions.length) return [];
-
-    // Cria um array de todas as datas no intervalo
-    const dateInterval = eachDayOfInterval({
-      start: parseISO(effectiveDateRange.start),
-      end: parseISO(effectiveDateRange.end)
-    });
-
-    // Para visualização por dia
-    if (activeTab === "dia") {
-      return dateInterval.map(date => {
-        const dayTransactions = transactions.filter(t => {
-          const transactionDate = new Date(t.date);
-          return isSameDay(transactionDate, date);
-        });
-
-        const income = dayTransactions
-          .filter(t => t.type === "income")
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const expense = dayTransactions
-          .filter(t => t.type === "expense")
-          .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
-
-        return {
-          name: format(date, "dd/MM", { locale: ptBR }),
-          income,
-          expense,
-          balance: income - expense,
-        };
-      });
+  const chartData = useMemo(() => {
+    if (!transactions || transactions.length === 0) {
+      return [["Data", "Menor", "Abertura", "Fechamento", "Maior"]];
     }
 
-    // Para visualização por mês (não usado no filtro atual, mas mantido para extensibilidade)
-    if (activeTab === "mes") {
-      const months: Record<string, MonthData> = {};
-      transactions.forEach(t => {
-        const month = format(new Date(t.date), "MM/yyyy");
-        if (!months[month]) {
-          months[month] = { income: 0, expense: 0 };
+    let accumulatedValue = 0;
+    const processedTransactions = [];
+
+    if (timeRange === "individual") { // Velas individuais
+      return [
+        ["Data", "Menor", "Abertura", "Fechamento", "Maior"],
+        ...transactions.map((t) => {
+          const dateFormatted = format(parseISO(t.date), "dd/MM", { locale: ptBR });
+
+          const open = accumulatedValue;
+          const close = accumulatedValue + t.amount;
+          const low = Math.min(open, close);
+          const high = Math.max(open, close);
+
+          accumulatedValue = close;
+
+          return [dateFormatted, low, open, close, high];
+        }),
+      ];
+    } else { // Agrupamento por período
+      transactions.forEach((t) => {
+        let dateFormatted;
+        switch (timeRange) {
+          case "daily":
+            dateFormatted = format(startOfDay(parseISO(t.date)), "dd/MM", { locale: ptBR });
+            break;
+          case "weekly":
+            dateFormatted = format(startOfWeek(parseISO(t.date), { locale: ptBR }), "dd/MM/yyyy", { locale: ptBR });
+            break;
+          case "monthly":
+            dateFormatted = format(startOfMonth(parseISO(t.date)), "MM/yyyy", { locale: ptBR });
+            break;
+          case "yearly":
+            dateFormatted = format(startOfYear(parseISO(t.date)), "yyyy", { locale: ptBR });
+            break;
+          default:
+            dateFormatted = format(parseISO(t.date), "dd/MM", { locale: ptBR });
         }
-        if (t.type === "income") {
-          months[month].income += Number(t.amount);
+
+        const existingTransaction = processedTransactions.find(item => item.date === dateFormatted);
+
+        if (existingTransaction) {
+          existingTransaction.amount += t.amount;
         } else {
-          months[month].expense += Math.abs(Number(t.amount));
+          processedTransactions.push({ date: dateFormatted, amount: t.amount });
         }
       });
 
-      return Object.entries(months).map(([month, data]) => ({
-        name: month,
-        income: data.income,
-        expense: data.expense,
-        balance: data.income - data.expense,
-      }));
+      if (chartType === "CandlestickChart") {
+        return [
+          ["Data", "Menor", "Abertura", "Fechamento", "Maior"],
+          ...processedTransactions.map((t) => {
+            const open = accumulatedValue;
+            const close = accumulatedValue + t.amount;
+            const low = Math.min(open, close);
+            const high = Math.max(open, close);
+
+            accumulatedValue = close;
+
+            return [t.date, low, open, close, high];
+          }),
+        ];
+      } else {
+        return [["Data", "Valor"], ...processedTransactions.map((t) => [t.date, t.amount])];
+      }
     }
-
-    // Por padrão, retorna dados agrupados por dia
-    return dateInterval.map(date => {
-      const dayTransactions = transactions.filter(t => {
-        const transactionDate = new Date(t.date);
-        return isSameDay(transactionDate, date);
-      });
-
-      const income = dayTransactions
-        .filter(t => t.type === "income")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-
-      const expense = dayTransactions
-        .filter(t => t.type === "expense")
-        .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
-
-      return {
-        name: format(date, "dd/MM", { locale: ptBR }),
-        income,
-        expense,
-        balance: income - expense,
-      };
-    });
-  }, [transactions, activeTab, effectiveDateRange]);
+  }, [transactions, chartType, timeRange]);
 
   return (
-    <Card className="rounded-xl border-border bg-card mt-8">
+    <Card>
       <CardHeader>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <CardTitle className="text-card-foreground">Fluxo Financeiro</CardTitle>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-xs">
-            <TabsList className="grid w-full grid-cols-1">
-              <TabsTrigger value="dia">Por Dia</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <CardTitle>Seu desempenho (apenas transações confirmadas)</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="h-[400px] w-full">
-          {groupedData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={groupedData}
-                margin={{
-                  top: 20,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value) => [`R$ ${Number(value).toFixed(2)}`, ""]}
-                  labelFormatter={(label) => `Data: ${label}`}
-                />
-                <Bar dataKey="income" name="Receitas" fill="#22c55e">
-                  {groupedData.map((entry, index) => (
-                    <Cell key={`cell-income-${index}`} fill="#22c55e" />
-                  ))}
-                </Bar>
-                <Bar dataKey="expense" name="Despesas" fill="#ef4444">
-                  {groupedData.map((entry, index) => (
-                    <Cell key={`cell-expense-${index}`} fill="#ef4444" />
-                  ))}
-                </Bar>
-                <Bar dataKey="balance" name="Saldo" fill="#3b82f6">
-                  {groupedData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-balance-${index}`} 
-                      fill={entry.balance >= 0 ? "#3b82f6" : "#f97316"} 
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-muted-foreground">Nenhum dado para o período selecionado</p>
-            </div>
-          )}
-        </div>
-      </CardContent>
+      <CardContent className="h-[400px] flex flex-col">
+  {isLoading ? (
+    <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg" />
+  ) : transactions.length === 0 ? (
+    <p className="text-gray-500">Nenhuma transação confirmada registrada.</p>
+  ) : (
+    <div className="flex flex-col h-full">
+      <div className="h-[400px] flex-1">
+        <Chart
+          width="100%"
+          height="100%"
+          chartType={chartType}
+          loader={<div>Carregando Gráfico...</div>}
+          data={chartData}
+          options={{
+            legend: "none",
+            candlestick: {
+              fallingColor: { strokeWidth: 0, fill: "#ef4444" },
+              risingColor: { strokeWidth: 0, fill: "#22c55e" },
+            },
+            vAxis: {
+              title: "Valor Acumulado (R$)",
+              format: "decimal",
+            },
+            hAxis: {
+              title: "Data",
+            },
+            backgroundColor: "transparent",
+            chartArea: {
+              width: "80%",
+              height: "80%",
+            },
+          }}
+        />
+      </div>
+      <div className="flex flex-wrap justify-center mt-4 space-x-2">
+  <button
+    onClick={() => setTimeRange("individual")}
+    className={`px-3 py-1 text-sm rounded ${
+      timeRange === "individual"
+        ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
+        : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+    }`}
+  >
+    Padrão
+  </button>
+  <button
+    onClick={() => setTimeRange("daily")}
+    className={`px-3 py-1 text-sm rounded ${
+      timeRange === "daily"
+        ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
+        : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+    }`}
+  >
+    Diário
+  </button>
+  <button
+    onClick={() => setTimeRange("weekly")}
+    className={`px-3 py-1 text-sm rounded ${
+      timeRange === "weekly"
+        ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
+        : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+    }`}
+  >
+    Semanal
+  </button>
+  <button
+    onClick={() => setTimeRange("monthly")}
+    className={`px-3 py-1 text-sm rounded ${
+      timeRange === "monthly"
+        ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
+        : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+    }`}
+  >
+    Mensal
+  </button>
+  <button
+    onClick={() => setTimeRange("yearly")}
+    className={`px-3 py-1 text-sm rounded ${
+      timeRange === "yearly"
+        ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
+        : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+    }`}
+  >
+    Anual
+  </button>
+</div>
+    </div>
+  )}
+</CardContent>
+
     </Card>
   );
-};
+}
