@@ -15,14 +15,27 @@ export const supabase = createClient<Database>(
       detectSessionInUrl: true,
       storage: {
         getItem: (key) => {
-          const item = localStorage.getItem(key);
-          return item ? JSON.parse(item) : null;
+          try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : null;
+          } catch (error) {
+            console.error("Error reading from localStorage:", error);
+            return null;
+          }
         },
         setItem: (key, value) => {
-          localStorage.setItem(key, JSON.stringify(value));
+          try {
+            localStorage.setItem(key, JSON.stringify(value));
+          } catch (error) {
+            console.error("Error writing to localStorage:", error);
+          }
         },
         removeItem: (key) => {
-          localStorage.removeItem(key);
+          try {
+            localStorage.removeItem(key);
+          } catch (error) {
+            console.error("Error removing from localStorage:", error);
+          }
         },
       },
     },

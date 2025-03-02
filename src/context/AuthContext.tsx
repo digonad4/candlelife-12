@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -27,18 +27,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Obter sessão inicial
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Configurar listener de mudança de estado de autenticação
+    // Set up auth state change listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Estado de autenticação mudou:", _event);
+      console.log("Auth state changed:", _event);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -48,12 +48,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log("Signing in with:", email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) {
-      console.error("Erro ao fazer login:", error.message);
+      console.error("Authentication error:", error.message);
       throw error;
     }
   };
@@ -67,7 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       },
     });
     if (error) {
-      console.error("Erro ao criar conta:", error.message);
+      console.error("Signup error:", error.message);
       throw error;
     }
   };
@@ -76,11 +77,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      // Limpar estado após logout
+      // Clear state after logout
       setUser(null);
       setSession(null);
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error("Logout error:", error);
       throw error;
     }
   };
