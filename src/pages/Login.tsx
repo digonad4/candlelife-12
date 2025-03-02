@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from "uuid";
 
 const Login = () => {
   const { signIn, signUp } = useAuth();
@@ -80,44 +80,26 @@ const Login = () => {
           description: "Por favor, verifique seu email para confirmar sua conta.",
         });
       } else {
-        // Login
+        // For login, just use the signIn from Auth context
         console.log("Attempting to sign in with:", email);
-        
-        // Use o contexto auth para login
         await signIn(email, password);
-        
-        // Se chegou aqui, o login foi bem-sucedido
-        toast({
-          title: "Login bem-sucedido!",
-          description: "Você será redirecionado para o dashboard.",
-        });
-        
-        // Redirecionamento será feito automaticamente por meio do router
         navigate("/");
       }
     } catch (error: any) {
       console.error("Erro de autenticação:", error);
       
-      const errorMessage = error.message || "Falha na autenticação";
-      
-      if (errorMessage.includes("Email not confirmed")) {
+      if (error.message && error.message.includes("Email not confirmed")) {
         setNeedsEmailConfirmation(true);
         toast({
           variant: "destructive",
           title: "Email não confirmado",
           description: "Por favor, verifique seu email e clique no link de confirmação antes de fazer login.",
         });
-      } else if (errorMessage.includes("Invalid login credentials")) {
-        toast({
-          variant: "destructive",
-          title: "Credenciais inválidas",
-          description: "Email ou senha incorretos. Por favor, tente novamente.",
-        });
       } else {
         toast({
           variant: "destructive",
           title: "Erro",
-          description: errorMessage,
+          description: error.message || "Falha na autenticação. Verifique suas credenciais.",
         });
       }
     } finally {
