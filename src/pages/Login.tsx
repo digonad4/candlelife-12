@@ -40,39 +40,43 @@ const Login = () => {
           throw new Error("Você precisa aceitar a política de dados");
         }
 
-        await signUp(email, password);
-        
-        // Only proceed with profile creation if signup was successful
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData && userData.user) {
-          // Create user profile
-          let avatarUrl = null;
-          if (avatar) {
-            const fileExt = avatar.name.split('.').pop();
-            const fileName = `${uuidv4()}.${fileExt}`;
-            const { error: uploadError } = await supabase.storage
-              .from('avatars')
-              .upload(fileName, avatar);
+        // 1. Primeiro fazer o signup
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
 
-            if (uploadError) throw uploadError;
+        if (signUpError) throw signUpError;
+        if (!signUpData.user) throw new Error("Erro ao criar usuário");
 
-            const { data: { publicUrl } } = supabase.storage
-              .from('avatars')
-              .getPublicUrl(fileName);
+        // 2. Upload do avatar se existir
+        let avatarUrl = null;
+        if (avatar) {
+          const fileExt = avatar.name.split('.').pop();
+          const fileName = `${uuidv4()}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, avatar);
 
-            avatarUrl = publicUrl;
-          }
+          if (uploadError) throw uploadError;
 
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userData.user.id,
-              username,
-              avatar_url: avatarUrl,
-            });
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
 
-          if (profileError) throw profileError;
+          avatarUrl = publicUrl;
         }
+
+        // 3. Criar o perfil do usuário
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: signUpData.user.id,
+            username,
+            avatar_url: avatarUrl,
+          });
+
+        if (profileError) throw profileError;
 
         setNeedsEmailConfirmation(true);
         toast({
@@ -80,15 +84,18 @@ const Login = () => {
           description: "Por favor, verifique seu email para confirmar sua conta.",
         });
       } else {
-        // For login, just use the signIn from Auth context
-        console.log("Attempting to sign in with:", email);
-        await signIn(email, password);
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) throw signInError;
         navigate("/");
       }
     } catch (error: any) {
       console.error("Erro de autenticação:", error);
       
-      if (error.message && error.message.includes("Email not confirmed")) {
+      if (error.message.includes("Email not confirmed")) {
         setNeedsEmailConfirmation(true);
         toast({
           variant: "destructive",
@@ -99,7 +106,7 @@ const Login = () => {
         toast({
           variant: "destructive",
           title: "Erro",
-          description: error.message || "Falha na autenticação. Verifique suas credenciais.",
+          description: error.message,
         });
       }
     } finally {
