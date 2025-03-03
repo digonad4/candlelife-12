@@ -1,4 +1,3 @@
-
 import React from "react";
 
 interface TimeRangeSelectorProps {
@@ -7,58 +6,29 @@ interface TimeRangeSelectorProps {
 }
 
 export function TimeRangeSelector({ timeRange, onTimeRangeChange }: TimeRangeSelectorProps) {
+  const ranges = [
+    { value: "individual", label: "P" },
+    { value: "daily", label: "D" },
+    { value: "weekly", label: "S" },
+    { value: "monthly", label: "M" },
+    { value: "yearly", label: "A" },
+  ];
+
   return (
-    <div className="flex flex-wrap justify-center mt-4 space-x-2">
-      <button
-        onClick={() => onTimeRangeChange("individual")}
-        className={`px-3 py-1 text-sm rounded ${
-          timeRange === "individual"
-            ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
-            : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-        }`}
-      >
-        Padrão
-      </button>
-      <button
-        onClick={() => onTimeRangeChange("daily")}
-        className={`px-3 py-1 text-sm rounded ${
-          timeRange === "daily"
-            ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
-            : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-        }`}
-      >
-        Diário
-      </button>
-      <button
-        onClick={() => onTimeRangeChange("weekly")}
-        className={`px-3 py-1 text-sm rounded ${
-          timeRange === "weekly"
-            ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
-            : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-        }`}
-      >
-        Semanal
-      </button>
-      <button
-        onClick={() => onTimeRangeChange("monthly")}
-        className={`px-3 py-1 text-sm rounded ${
-          timeRange === "monthly"
-            ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
-            : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-        }`}
-      >
-        Mensal
-      </button>
-      <button
-        onClick={() => onTimeRangeChange("yearly")}
-        className={`px-3 py-1 text-sm rounded ${
-          timeRange === "yearly"
-            ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white"
-            : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-        }`}
-      >
-        Anual
-      </button>
+    <div className="flex space-x-2">
+      {ranges.map((range) => (
+        <button
+          key={range.value}
+          onClick={() => onTimeRangeChange(range.value)}
+          className={`w-6 h-6 flex items-center justify-center text-xs font-medium rounded border border-gray-300 dark:border-gray-600 transition-colors ${
+            timeRange === range.value
+              ? "bg-blue-500 text-white dark:bg-blue-700 dark:text-white border-blue-500 dark:border-blue-700"
+              : "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          }`}
+        >
+          {range.label}
+        </button>
+      ))}
     </div>
   );
 }

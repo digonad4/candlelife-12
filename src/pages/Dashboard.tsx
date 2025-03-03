@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ import { DateFilter } from "@/components/dashboard/DateFilter";
 const Dashboard = () => {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [dateRange, setDateRange] = useState("last7days");
+  const [dateRange, setDateRange] = useState("today");
   const [startDate, setStartDate] = useState<Date | undefined>(subDays(new Date(), 7));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
@@ -36,7 +35,7 @@ const Dashboard = () => {
           event: "*",
           schema: "public",
           table: "transactions",
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${user.id}`,
         },
         () => {
           console.log("📢 Alteração detectada no banco de dados. Atualizando dashboard...");
@@ -60,18 +59,20 @@ const Dashboard = () => {
       <main className="flex-1 p-4 md:p-8 overflow-auto">
         <div className="max-w-[2000px] mx-auto space-y-6 md:space-y-8">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl md:text-4xl font-bold">Dashboard</h1>
-            <div className="flex space-x-4">
-              <Button variant="outline" onClick={() => {
+            <h1 className="text-2xl md:text-4xl font-bold">Resumo Financeiro</h1>
+            <Button
+              variant="outline"
+              onClick={() => {
                 supabase.auth.signOut();
                 navigate("/login");
-              }}>
-                Logout
-              </Button>
-            </div>
+              }}
+            >
+              Logout
+            </Button>
           </div>
 
-          <DateFilter 
+          {/* Único seletor de período */}
+          <DateFilter
             dateRange={dateRange}
             startDate={startDate}
             endDate={endDate}
@@ -80,12 +81,13 @@ const Dashboard = () => {
             onEndDateChange={setEndDate}
           />
 
-          {/* RecentTransactions moved to the top */}
-          <RecentTransactions />
-
+          {/* Gráfico */}
           <div className="w-full">
             <ExpenseChart startDate={startDate} endDate={endDate} />
           </div>
+
+          {/* Transações e valores */}
+          <RecentTransactions startDate={startDate} endDate={endDate} />
         </div>
 
         <Button
@@ -96,9 +98,9 @@ const Dashboard = () => {
           <Plus className="w-6 h-6" />
         </Button>
 
-        <ExpenseModal 
-          open={isModalOpen} 
-          onOpenChange={setIsModalOpen} 
+        <ExpenseModal
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
           onTransactionAdded={() => {
             console.log("📌 Nova transação adicionada. Invalidando cache...");
             queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });

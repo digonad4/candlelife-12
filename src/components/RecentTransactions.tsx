@@ -1,43 +1,52 @@
-
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Transaction, DateRange } from "@/types/transaction";
+import { Transaction } from "@/types/transaction";
 import { FinancialSummary } from "./transactions/FinancialSummary";
-import { DateRangePicker } from "./transactions/DateRangePicker";
 import { TransactionList } from "./transactions/TransactionList";
 import { ConfirmPaymentsDialog } from "./transactions/ConfirmPaymentsDialog";
+import { Button } from "@/components/ui/button";
 
-const RecentTransactions = () => {
+interface RecentTransactionsProps {
+  startDate?: Date;
+  endDate?: Date;
+}
+
+const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
-  const today = format(new Date(), "yyyy-MM-dd");
-  const [dateRange, setDateRange] = useState<DateRange>({ start: today, end: today });
+
+  const formattedStartDate = startDate
+    ? format(startDate, "yyyy-MM-dd'T00:00:00.000Z'")
+    : format(new Date(), "yyyy-MM-dd'T00:00:00.000Z'");
+  const formattedEndDate = endDate
+    ? format(endDate, "yyyy-MM-dd'T23:59:59.999Z'")
+    : format(new Date(), "yyyy-MM-dd'T23:59:59.999Z'");
 
   const { data: transactions, isLoading } = useQuery<Transaction[]>({
-    queryKey: ["recent-transactions", user?.id, dateRange],
+    queryKey: ["recent-transactions", user?.id, formattedStartDate, formattedEndDate],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user || !formattedStartDate || !formattedEndDate) return [];
       const { data, error } = await supabase
         .from("transactions")
         .select("*, client:clients(name)")
         .eq("user_id", user.id)
-        .gte("date", `${dateRange.start}T00:00:00.000Z`)
-        .lte("date", `${dateRange.end}T23:59:59.999Z`)
+        .gte("date", formattedStartDate)
+        .lte("date", formattedEndDate)
         .order("payment_status", { ascending: false })
         .order("date", { ascending: false });
       if (error) throw error;
       return (data as Transaction[]) || [];
     },
-    enabled: !!user,
+    enabled: !!user && !!formattedStartDate && !!formattedEndDate,
   });
 
   const handleConfirmPayments = async () => {
@@ -73,41 +82,63 @@ const RecentTransactions = () => {
     setIsConfirmDialogOpen(true);
   };
 
+  const handleSelectAllPending = () => {
+    const pendingTransactions = (transactions || []).filter(
+      (t) => t.payment_status === "pending"
+    );
+    const pendingIds = pendingTransactions.map((t) => t.id);
+    setSelectedTransactions(pendingIds);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTransactions([]);
+  };
+
   return (
     <Card className="rounded-xl border-border bg-card text-card-foreground">
       <CardHeader>
-        <CardTitle>Resumo Financeiro</CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">
-          Período: {dateRange.start === dateRange.end
-            ? format(parseISO(dateRange.start), "dd/MM/yyyy", { locale: ptBR })
-            : `${format(parseISO(dateRange.start), "dd/MM/yyyy", { locale: ptBR })} a ${format(
-                parseISO(dateRange.end),
-                "dd/MM/yyyy",
-                { locale: ptBR }
-              )}`}
-        </p>
+        <CardTitle>Transações Recentes</CardTitle>
       </CardHeader>
-      <CardContent>
-        <DateRangePicker 
-          dateRange={dateRange} 
-          onDateRangeChange={setDateRange} 
-        />
-        
-        <div className="mb-8">
-          <FinancialSummary transactions={transactions || []} />
+      <CardContent className="space-y-6">
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAllPending}
+                disabled={isLoading || !transactions?.some((t) => t.payment_status === "pending")}
+              >
+                Selecionar Pendentes
+              </Button>
+              {selectedTransactions.length > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearSelection}
+                  >
+                    Limpar Seleção
+                  </Button>
+                  
+                </>
+              )}
+            </div>
+          </div>
+          <TransactionList
+            transactions={transactions || []}
+            isLoading={isLoading}
+            selectedTransactions={selectedTransactions}
+            onSelectTransaction={handleSelectTransaction}
+            onOpenConfirmDialog={handleOpenConfirmDialog}
+          />
         </div>
 
-        <TransactionList 
-          transactions={transactions || []}
-          isLoading={isLoading}
-          selectedTransactions={selectedTransactions}
-          onSelectTransaction={handleSelectTransaction}
-          onOpenConfirmDialog={handleOpenConfirmDialog}
-        />
+        <FinancialSummary transactions={transactions || []} />
       </CardContent>
 
-      <ConfirmPaymentsDialog 
-        open={isConfirmDialogOpen} 
+      <ConfirmPaymentsDialog
+        open={isConfirmDialogOpen}
         onOpenChange={setIsConfirmDialogOpen}
         onConfirm={handleConfirmPayments}
         count={selectedTransactions.length}
