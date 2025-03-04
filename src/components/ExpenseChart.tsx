@@ -34,13 +34,28 @@ export function ExpenseChart({ startDate, endDate }: ExpenseChartProps) {
           timeRange={timeRange} 
           isLoading={isLoading} 
         />
-        <div className="flex justify-center mt-4">
-          <TimeRangeSelector 
-            timeRange={timeRange} 
-            onTimeRangeChange={setTimeRange} 
-          />
-        </div>
+        <TimeRangeSelectorContainer 
+          timeRange={timeRange} 
+          onTimeRangeChange={setTimeRange} 
+        />
       </ChartContainer>
     </Card>
+  );
+}
+
+function TimeRangeSelectorContainer({ 
+  timeRange, 
+  onTimeRangeChange 
+}: { 
+  timeRange: string; 
+  onTimeRangeChange: (value: string) => void 
+}) {
+  return (
+    <div className="flex justify-center mt-2">
+      <TimeRangeSelector 
+        timeRange={timeRange} 
+        onTimeRangeChange={onTimeRangeChange} 
+      />
+    </div>
   );
 }
