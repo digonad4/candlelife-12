@@ -4,12 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { GoogleChartWrapperChartType } from "react-google-charts";
 
-export function useTransactionData(
-  chartType: GoogleChartWrapperChartType, 
-  timeRange: string, 
-  startDateISO?: string, 
-  endDateISO?: string
-) {
+export function useTransactionData(chartType: GoogleChartWrapperChartType, timeRange: string, startDateISO?: string, endDateISO?: string) {
   const { user } = useAuth();
 
   return useQuery({
@@ -34,11 +29,7 @@ export function useTransactionData(
 
       const { data, error } = await query;
 
-      if (error) {
-        console.error("Erro ao buscar transações:", error);
-        throw error;
-      }
-
+      if (error) throw error;
       return data || [];
     },
     enabled: !!user,

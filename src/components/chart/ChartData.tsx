@@ -18,65 +18,80 @@ export function ChartData({ transactions, chartType, timeRange, isLoading }: Cha
       return [["Data", "Menor", "Abertura", "Fechamento", "Maior"]];
     }
 
-    const processedData = transactions.reduce((acc, transaction) => {
-      let dateKey;
-      const date = parseISO(transaction.date);
+    let accumulatedValue = 0;
+    const processedTransactions = [];
 
-      switch (timeRange) {
-        case "individual":
-          dateKey = format(date, "dd/MM", { locale: ptBR });
-          break;
-        case "daily":
-          dateKey = format(startOfDay(date), "dd/MM", { locale: ptBR });
-          break;
-        case "weekly":
-          dateKey = format(startOfWeek(date, { locale: ptBR }), "dd/MM/yyyy", { locale: ptBR });
-          break;
-        case "monthly":
-          dateKey = format(startOfMonth(date), "MM/yyyy", { locale: ptBR });
-          break;
-        case "yearly":
-          dateKey = format(startOfYear(date), "yyyy", { locale: ptBR });
-          break;
-        default:
-          dateKey = format(date, "dd/MM", { locale: ptBR });
+    if (timeRange === "individual") { // Velas individuais
+      return [
+        ["Data", "Menor", "Abertura", "Fechamento", "Maior"],
+        ...transactions.map((t) => {
+          const dateFormatted = format(parseISO(t.date), "dd/MM", { locale: ptBR });
+
+          const open = accumulatedValue;
+          const close = accumulatedValue + t.amount;
+          const low = Math.min(open, close);
+          const high = Math.max(open, close);
+
+          accumulatedValue = close;
+
+          return [dateFormatted, low, open, close, high];
+        }),
+      ];
+    } else { // Agrupamento por período
+      transactions.forEach((t) => {
+        let dateFormatted;
+        switch (timeRange) {
+          case "daily":
+            dateFormatted = format(startOfDay(parseISO(t.date)), "dd/MM", { locale: ptBR });
+            break;
+          case "weekly":
+            dateFormatted = format(startOfWeek(parseISO(t.date), { locale: ptBR }), "dd/MM/yyyy", { locale: ptBR });
+            break;
+          case "monthly":
+            dateFormatted = format(startOfMonth(parseISO(t.date)), "MM/yyyy", { locale: ptBR });
+            break;
+          case "yearly":
+            dateFormatted = format(startOfYear(parseISO(t.date)), "yyyy", { locale: ptBR });
+            break;
+          default:
+            dateFormatted = format(parseISO(t.date), "dd/MM", { locale: ptBR });
+        }
+
+        const existingTransaction = processedTransactions.find(item => item.date === dateFormatted);
+
+        if (existingTransaction) {
+          existingTransaction.amount += t.amount;
+        } else {
+          processedTransactions.push({ date: dateFormatted, amount: t.amount });
+        }
+      });
+
+      if (chartType === "CandlestickChart") {
+        return [
+          ["Data", "Menor", "Abertura", "Fechamento", "Maior"],
+          ...processedTransactions.map((t) => {
+            const open = accumulatedValue;
+            const close = accumulatedValue + t.amount;
+            const low = Math.min(open, close);
+            const high = Math.max(open, close);
+
+            accumulatedValue = close;
+
+            return [t.date, low, open, close, high];
+          }),
+        ];
+      } else {
+        return [["Data", "Valor"], ...processedTransactions.map((t) => [t.date, t.amount])];
       }
-
-      if (!acc[dateKey]) {
-        acc[dateKey] = { total: 0, min: transaction.amount, max: transaction.amount };
-      }
-      
-      acc[dateKey].total += transaction.amount;
-      acc[dateKey].min = Math.min(acc[dateKey].min, acc[dateKey].total);
-      acc[dateKey].max = Math.max(acc[dateKey].max, acc[dateKey].total);
-      
-      return acc;
-    }, {});
-
-    const chartRows = Object.entries(processedData).map(([date, data]) => [
-      date,
-      data.min,
-      data.min,
-      data.total,
-      data.max,
-    ]);
-
-    return [
-      ["Data", "Menor", "Abertura", "Fechamento", "Maior"],
-      ...chartRows,
-    ];
-  }, [transactions, timeRange]);
+    }
+  }, [transactions, chartType, timeRange]);
 
   if (isLoading) {
     return <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg" />;
   }
 
-  if (!transactions || transactions.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Nenhuma transação encontrada neste período.</p>
-      </div>
-    );
+  if (transactions.length === 0) {
+    return <p className="text-gray-500">Nenhuma transação confirmada registrada neste período.</p>;
   }
 
   return (
@@ -84,7 +99,7 @@ export function ChartData({ transactions, chartType, timeRange, isLoading }: Cha
       width="100%"
       height="100%"
       chartType={chartType}
-      loader={<div className="flex items-center justify-center h-full">Carregando Gráfico...</div>}
+      loader={<div>Carregando Gráfico...</div>}
       data={chartData}
       options={{
         legend: "none",
@@ -98,7 +113,6 @@ export function ChartData({ transactions, chartType, timeRange, isLoading }: Cha
         },
         hAxis: {
           title: "Data",
-          textPosition: "out",
         },
         backgroundColor: "transparent",
         chartArea: {
