@@ -4,11 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { GoogleChartWrapperChartType } from "react-google-charts";
 
-interface Transaction {
-  date: string;
-  amount: number;
-}
-
 export function useTransactionData(
   chartType: GoogleChartWrapperChartType, 
   timeRange: string, 
@@ -44,7 +39,7 @@ export function useTransactionData(
         throw error;
       }
 
-      return data as Transaction[] || [];
+      return data || [];
     },
     enabled: !!user,
   });

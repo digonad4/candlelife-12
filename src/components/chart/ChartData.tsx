@@ -1,120 +1,111 @@
-import { useState, useEffect } from "react";
+
+import { useMemo } from "react";
 import { Chart } from "react-google-charts";
 import { GoogleChartWrapperChartType } from "react-google-charts";
-import { Card } from "@/components/ui/card";
-import LoadingSpinner from "@/components/ui/spinner";
-
-interface Transaction {
-  date: string;
-  amount: number;
-}
+import { parseISO, format, startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface ChartDataProps {
-  transactions: Transaction[];
+  transactions: Array<{ date: string; amount: number }>;
   chartType: GoogleChartWrapperChartType;
   timeRange: string;
   isLoading: boolean;
 }
 
-interface ChartDataResult {
-  labels: string[];
-  data: any[];
-  min: number;
-  max: number;
-  total: number;
-}
-
 export function ChartData({ transactions, chartType, timeRange, isLoading }: ChartDataProps) {
-  const [chartData, setChartData] = useState<ChartDataResult | null>(null);
-
-  useEffect(() => {
+  const chartData = useMemo(() => {
     if (!transactions || transactions.length === 0) {
-      setChartData(null);
-      return;
+      return [["Data", "Menor", "Abertura", "Fechamento", "Maior"]];
     }
 
-    // Process the transaction data for chart visualization
-    const labels = ["Data", "Valor"];
-    const data = [labels];
+    const processedData = transactions.reduce((acc, transaction) => {
+      let dateKey;
+      const date = parseISO(transaction.date);
 
-    let min = Infinity;
-    let max = -Infinity;
-    let total = 0;
-
-    transactions.forEach((transaction) => {
-      const date = new Date(transaction.date).toLocaleDateString();
-      const amount = transaction.amount;
-
-      data.push([date, amount]);
-
-      if (amount < min) {
-        min = amount;
+      switch (timeRange) {
+        case "individual":
+          dateKey = format(date, "dd/MM", { locale: ptBR });
+          break;
+        case "daily":
+          dateKey = format(startOfDay(date), "dd/MM", { locale: ptBR });
+          break;
+        case "weekly":
+          dateKey = format(startOfWeek(date, { locale: ptBR }), "dd/MM/yyyy", { locale: ptBR });
+          break;
+        case "monthly":
+          dateKey = format(startOfMonth(date), "MM/yyyy", { locale: ptBR });
+          break;
+        case "yearly":
+          dateKey = format(startOfYear(date), "yyyy", { locale: ptBR });
+          break;
+        default:
+          dateKey = format(date, "dd/MM", { locale: ptBR });
       }
 
-      if (amount > max) {
-        max = amount;
+      if (!acc[dateKey]) {
+        acc[dateKey] = { total: 0, min: transaction.amount, max: transaction.amount };
       }
+      
+      acc[dateKey].total += transaction.amount;
+      acc[dateKey].min = Math.min(acc[dateKey].min, acc[dateKey].total);
+      acc[dateKey].max = Math.max(acc[dateKey].max, acc[dateKey].total);
+      
+      return acc;
+    }, {});
 
-      total += amount;
-    });
+    const chartRows = Object.entries(processedData).map(([date, data]) => [
+      date,
+      data.min,
+      data.min,
+      data.total,
+      data.max,
+    ]);
 
-    setChartData({ labels, data, min, max, total });
+    return [
+      ["Data", "Menor", "Abertura", "Fechamento", "Maior"],
+      ...chartRows,
+    ];
   }, [transactions, timeRange]);
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <LoadingSpinner />
-      </div>
-    );
+    return <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg" />;
   }
 
-  if (!chartData || !chartData.data || chartData.data.length <= 1) {
+  if (!transactions || transactions.length === 0) {
     return (
-      <Card className="flex justify-center items-center h-64">
-        <p className="text-muted-foreground text-center">
-          Nenhuma transação disponível para visualização.
-          <br />
-          Adicione transações para ver o gráfico.
-        </p>
-      </Card>
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Nenhuma transação encontrada neste período.</p>
+      </div>
     );
   }
 
   return (
-    <div className="h-80">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
-          <p className="text-sm text-muted-foreground">Menor valor</p>
-          <p className="text-xl font-bold">
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(chartData.min)}
-          </p>
-        </div>
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
-          <p className="text-sm text-muted-foreground">Maior valor</p>
-          <p className="text-xl font-bold">
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(chartData.max)}
-          </p>
-        </div>
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-md col-span-2">
-          <p className="text-sm text-muted-foreground">Total</p>
-          <p className="text-xl font-bold">
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(chartData.total)}
-          </p>
-        </div>
-      </div>
-
-      <Chart
-        chartType={chartType}
-        data={chartData.data}
-        options={{
-          title: "Transações",
-          curveType: "function",
-          legend: { position: "bottom" },
-        }}
-        width="100%"
-        height="300px"
-      />
-    </div>
+    <Chart
+      width="100%"
+      height="100%"
+      chartType={chartType}
+      loader={<div className="flex items-center justify-center h-full">Carregando Gráfico...</div>}
+      data={chartData}
+      options={{
+        legend: "none",
+        candlestick: {
+          fallingColor: { strokeWidth: 0, fill: "#ef4444" },
+          risingColor: { strokeWidth: 0, fill: "#22c55e" },
+        },
+        vAxis: {
+          title: "Valor Acumulado (R$)",
+          format: "decimal",
+        },
+        hAxis: {
+          title: "Data",
+          textPosition: "out",
+        },
+        backgroundColor: "transparent",
+        chartArea: {
+          width: "80%",
+          height: "80%",
+        },
+      }}
+    />
   );
 }
