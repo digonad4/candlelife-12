@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Receipt, Users, FileText, Settings } from "lucide-react";
@@ -7,11 +8,11 @@ import { useNavigate } from "react-router-dom";
 
 export function AppSidebar() {
   const { isSidebarOpen, toggleSidebar } = useSidebar();
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     navigate("/login");
   };
 
