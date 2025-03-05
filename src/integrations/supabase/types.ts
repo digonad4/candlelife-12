@@ -9,109 +9,38 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      clients: {
-        Row: {
-          created_at: string
-          document: string | null
-          email: string | null
-          id: string
-          name: string
-          phone: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          document?: string | null
-          email?: string | null
-          id?: string
-          name: string
-          phone?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          document?: string | null
-          email?: string | null
-          id?: string
-          name?: string
-          phone?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          active_theme: string | null
-          avatar_url: string | null
-          created_at: string
-          id: string
-          updated_at: string
-          username: string
-        }
-        Insert: {
-          active_theme?: string | null
-          avatar_url?: string | null
-          created_at?: string
-          id: string
-          updated_at?: string
-          username: string
-        }
-        Update: {
-          active_theme?: string | null
-          avatar_url?: string | null
-          created_at?: string
-          id?: string
-          updated_at?: string
-          username?: string
-        }
-        Relationships: []
-      }
       transactions: {
         Row: {
           amount: number
-          client_id: string | null
+          category: string
           created_at: string
           date: string
           description: string
           id: string
-          payment_method: string
-          payment_status: string
           type: string
           user_id: string
         }
         Insert: {
           amount: number
-          client_id?: string | null
+          category: string
           created_at?: string
           date?: string
           description: string
           id?: string
-          payment_method?: string
-          payment_status?: string
           type: string
           user_id: string
         }
         Update: {
           amount?: number
-          client_id?: string | null
+          category?: string
           created_at?: string
           date?: string
           description?: string
           id?: string
-          payment_method?: string
-          payment_status?: string
           type?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "transactions_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_themes: {
         Row: {

@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -27,35 +27,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Obter sessão inicial
+    // Configure persist session
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
-
-    // Configurar listener de mudança de estado de autenticação
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Estado de autenticação mudou:", _event);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: {
+        persistSession: true // Enable persistent sessions
+      }
     });
-    if (error) {
-      console.error("Erro ao fazer login:", error.message);
-      throw error;
-    }
+    if (error) throw error;
   };
 
   const signUp = async (email: string, password: string) => {
@@ -64,25 +59,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       password,
       options: {
         emailRedirectTo: window.location.origin,
+        persistSession: true // Enable persistent sessions
       },
     });
-    if (error) {
-      console.error("Erro ao criar conta:", error.message);
-      throw error;
-    }
+    if (error) throw error;
   };
 
   const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      // Limpar estado após logout
-      setUser(null);
-      setSession(null);
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error);
-      throw error;
-    }
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
   const value = {
