@@ -1,9 +1,8 @@
 
-import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Receipt, Users, FileText, Settings } from "lucide-react";
-import { useSidebar } from "@/context/SidebarContext";
-import { useAuth } from "@/context/AuthContext";
+import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut } from "lucide-react";
+import { useSidebar } from "../context/SidebarContext";
+import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 export function AppSidebar() {
@@ -17,73 +16,92 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
-      <div className="sidebar-header">
-        <button className="sidebar-toggle" onClick={toggleSidebar}>
+    <aside className={`sidebar bg-sidebar ${isSidebarOpen ? "w-64" : "w-16"} fixed inset-y-0 left-0 z-10 
+      transition-width duration-300 ease-in-out overflow-hidden shadow-md 
+      border-r border-sidebar-border`}>
+      <div className="sidebar-header py-4 px-4 flex items-center justify-between">
+        <h1 className={`text-lg font-bold ${isSidebarOpen ? 'opacity-100' : 'opacity-0'} 
+          transition-opacity duration-300`}>Dashboard</h1>
+        <button className="sidebar-toggle p-2 rounded-md hover:bg-sidebar-accent" onClick={toggleSidebar}>
           ☰
         </button>
       </div>
-      <nav className="sidebar-nav">
-        <ul>
+      <nav className="sidebar-nav mt-4">
+        <ul className="space-y-2 px-2">
           <li>
             <NavLink
               to="/dashboard"
               className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
+                `flex items-center p-3 rounded-md transition-colors
+                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
+                ${!isSidebarOpen && "justify-center"}`
               }
             >
               <LayoutDashboard size={20} />
-              <span>Dashboard</span>
+              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Dashboard</span>
             </NavLink>
           </li>
           <li>
             <NavLink
               to="/transactions"
               className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
+                `flex items-center p-3 rounded-md transition-colors
+                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
+                ${!isSidebarOpen && "justify-center"}`
               }
             >
               <Receipt size={20} />
-              <span>Transações</span>
+              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Transações</span>
             </NavLink>
           </li>
           <li>
             <NavLink
               to="/clients"
               className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
+                `flex items-center p-3 rounded-md transition-colors
+                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
+                ${!isSidebarOpen && "justify-center"}`
               }
             >
               <Users size={20} />
-              <span>Clientes</span>
+              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Clientes</span>
             </NavLink>
           </li>
           <li>
             <NavLink
               to="/invoiced"
               className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
+                `flex items-center p-3 rounded-md transition-colors
+                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
+                ${!isSidebarOpen && "justify-center"}`
               }
             >
               <FileText size={20} />
-              <span>Faturados</span>
+              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Faturados</span>
             </NavLink>
           </li>
           <li>
             <NavLink
               to="/settings"
               className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
+                `flex items-center p-3 rounded-md transition-colors
+                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
+                ${!isSidebarOpen && "justify-center"}`
               }
             >
               <Settings size={20} />
-              <span>Configurações</span>
+              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Configurações</span>
             </NavLink>
           </li>
           <li>
-            <button className="sidebar-link" onClick={handleLogout}>
-              <Settings size={20} />
-              <span>Sair</span>
+            <button 
+              className={`flex items-center p-3 rounded-md transition-colors
+                w-full text-left text-sidebar-foreground hover:bg-sidebar-accent/50
+                ${!isSidebarOpen && "justify-center"}`} 
+              onClick={handleLogout}
+            >
+              <LogOut size={20} />
+              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Sair</span>
             </button>
           </li>
         </ul>

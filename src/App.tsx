@@ -1,10 +1,9 @@
 
 import "./App.css";
-import { useState, useEffect } from "react";
-import { Routes, Route, NavLink, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { useTheme } from "./context/ThemeContext";
-import { LayoutDashboard, Receipt, Users, FileText, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { useSidebar } from "./context/SidebarContext";
 import { AppSidebar } from "./components/AppSidebar";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
@@ -15,40 +14,33 @@ import Transactions from "./pages/Transactions";
 import NotFound from "./pages/NotFound";
 import Clients from "./pages/Clients";
 import InvoicedTransactions from "./pages/InvoicedTransactions";
+import { useEffect } from "react";
 
 function App() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { theme } = useTheme();
-  const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
+  const { isSidebarOpen } = useSidebar();
+  
   useEffect(() => {
     document.body.className = theme === "dark" ? "dark" : "";
   }, [theme]);
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/login");
-  };
-
   return (
-    <div className="app">
+    <div className="app flex h-screen overflow-hidden">
       <AppSidebar />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/transactions" element={<Transactions />} />
-        <Route path="/clients" element={<Clients />} />
-        <Route path="/invoiced" element={<InvoicedTransactions />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/change-password" element={<ChangePassword />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <main className={`flex-1 overflow-y-auto p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-16"}`}>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/clients" element={<Clients />} />
+          <Route path="/invoiced" element={<InvoicedTransactions />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/change-password" element={<ChangePassword />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
     </div>
   );
 }
