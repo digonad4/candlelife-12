@@ -1,298 +1,168 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [avatar, setAvatar] = useState<File | null>(null);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, signUp } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setNeedsEmailConfirmation(false);
+    if (!email || !password) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      if (isSignUp) {
-        if (password !== confirmPassword) {
-          throw new Error("As senhas não coincidem");
-        }
+      setIsLoading(true);
+      await signIn(email, password);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        if (!acceptedTerms) {
-          throw new Error("Você precisa aceitar a política de dados");
-        }
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos",
+        variant: "destructive",
+      });
+      return;
+    }
 
-        // Create user account
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { username },
-            emailRedirectTo: `${window.location.origin}/`,
-          }
-        });
+    if (password.length < 6) {
+      toast({
+        title: "Senha muito curta",
+        description: "A senha deve ter pelo menos 6 caracteres",
+        variant: "destructive",
+      });
+      return;
+    }
 
-        if (signUpError) throw signUpError;
-        if (!authData.user) throw new Error("Erro ao criar usuário");
-
-        // Upload avatar if provided
-        let avatarUrl = null;
-        if (avatar) {
-          const fileExt = avatar.name.split('.').pop();
-          const fileName = `${authData.user.id}.${fileExt}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(fileName, avatar);
-
-          if (uploadError) throw uploadError;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(fileName);
-
-          avatarUrl = publicUrl;
-        }
-
-        // Update profile with username and avatar
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            username,
-            avatar_url: avatarUrl,
-          });
-
-        if (profileError) throw profileError;
-
-        setNeedsEmailConfirmation(true);
-        toast({
-          title: "Conta criada com sucesso!",
-          description: "Por favor, verifique seu email para confirmar sua conta.",
-        });
-      } else {
-        // Login
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (signInError) throw signInError;
-        
-        // Navigate to home page after successful login
-        navigate("/dashboard");
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Bem-vindo de volta.",
-        });
-      }
-    } catch (error: any) {
-      console.error("Erro de autenticação:", error);
-      
-      if (error.message?.includes("Email not confirmed")) {
-        setNeedsEmailConfirmation(true);
-        toast({
-          variant: "destructive",
-          title: "Email não confirmado",
-          description: "Por favor, verifique seu email e clique no link de confirmação antes de fazer login.",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: error.message || "Falha na autenticação",
-        });
-      }
+    try {
+      setIsLoading(true);
+      await signUp(email, password);
+      toast({
+        title: "Conta criada com sucesso",
+        description: "Verifique seu email para confirmação",
+      });
+    } catch (error) {
+      console.error("Signup error:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
-      <div className="w-full max-w-md p-4 animate-fade-in">
-        <Card className="rounded-2xl border-0 shadow-xl backdrop-blur-lg bg-white/90 dark:bg-gray-950/90">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">
-              {isSignUp ? "Criar conta" : "Entrar"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {needsEmailConfirmation && (
-              <Alert className="mb-4">
-                <AlertDescription>
-                  Enviamos um email de confirmação para {email}. 
-                  Por favor, verifique sua caixa de entrada e confirme seu email antes de fazer login.
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="rounded-xl"
-                />
-              </div>
-
-              {isSignUp && (
+    <div className="flex h-screen w-full items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold">Green Wallet</CardTitle>
+          <CardDescription>Entre com sua conta ou cadastre-se</CardDescription>
+        </CardHeader>
+        <Tabs defaultValue="login" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Cadastro</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login">
+            <form onSubmit={handleLogin}>
+              <CardContent className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Nome de usuário</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="Seu nome de usuário"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="rounded-xl"
                   />
                 </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="rounded-xl"
-                />
-              </div>
-
-              {isSignUp && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      className="rounded-xl"
-                    />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Senha</Label>
+                    <a
+                      href="#"
+                      className="text-sm text-primary underline-offset-4 hover:underline"
+                      onClick={() => navigate("/change-password")}
+                    >
+                      Esqueceu a senha?
+                    </a>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="avatar">Foto (opcional)</Label>
-                    <Input
-                      id="avatar"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setAvatar(e.target.files?.[0] || null)}
-                      className="rounded-xl"
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="terms"
-                      checked={acceptedTerms}
-                      onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
-                      required
-                    />
-                    <Label htmlFor="terms" className="text-sm">
-                      Aceito a política de dados e termos de uso
-                    </Label>
-                  </div>
-                </>
-              )}
-
-              <div className="space-y-2">
-                <Button 
-                  type="submit" 
-                  className="w-full rounded-xl"
-                  disabled={isLoading}
-                >
-                  {isLoading 
-                    ? "Carregando..." 
-                    : (isSignUp ? "Criar conta" : "Entrar")}
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Entrando..." : "Entrar"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full rounded-xl"
-                  onClick={() => {
-                    setIsSignUp(!isSignUp);
-                    setNeedsEmailConfirmation(false);
-                  }}
-                >
-                  {isSignUp 
-                    ? "Já tem uma conta? Entre aqui" 
-                    : "Não tem uma conta? Cadastre-se"}
-                </Button>
-                {!isSignUp && (
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="w-full"
-                    onClick={async () => {
-                      if (!email) {
-                        toast({
-                          title: "Digite seu email",
-                          description: "Digite seu email para receber o link de redefinição de senha.",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      
-                      try {
-                        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                          redirectTo: `${window.location.origin}/change-password`,
-                        });
-                        
-                        if (error) throw error;
-                        
-                        toast({
-                          title: "Email enviado",
-                          description: "Verifique seu email para redefinir sua senha.",
-                        });
-                      } catch (error: any) {
-                        toast({
-                          title: "Erro",
-                          description: error.message,
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    Esqueceu sua senha?
-                  </Button>
-                )}
-              </div>
+              </CardFooter>
             </form>
-          </CardContent>
-        </Card>
-      </div>
+          </TabsContent>
+          <TabsContent value="register">
+            <form onSubmit={handleSignUp}>
+              <CardContent className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email-register">Email</Label>
+                  <Input
+                    id="email-register"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password-register">Senha</Label>
+                  <Input
+                    id="password-register"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A senha deve ter pelo menos 6 caracteres
+                  </p>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Criando conta..." : "Criar conta"}
+                </Button>
+              </CardFooter>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </Card>
     </div>
   );
 };
