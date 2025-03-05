@@ -1,73 +1,150 @@
-
+import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Transaction } from "@/types/transaction";
+import { FinancialSummary } from "./transactions/FinancialSummary";
+import { TransactionList } from "./transactions/TransactionList";
+import { ConfirmPaymentsDialog } from "./transactions/ConfirmPaymentsDialog";
+import { Button } from "@/components/ui/button";
 
-export function RecentTransactions() {
-  const { data: transactions, isLoading } = useQuery({
-    queryKey: ["recent-transactions"],
+interface RecentTransactionsProps {
+  startDate?: Date;
+  endDate?: Date;
+}
+
+const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+
+  const formattedStartDate = startDate
+    ? format(startDate, "yyyy-MM-dd'T00:00:00.000Z'")
+    : format(new Date(), "yyyy-MM-dd'T00:00:00.000Z'");
+  const formattedEndDate = endDate
+    ? format(endDate, "yyyy-MM-dd'T23:59:59.999Z'")
+    : format(new Date(), "yyyy-MM-dd'T23:59:59.999Z'");
+
+  const { data: transactions, isLoading } = useQuery<Transaction[]>({
+    queryKey: ["recent-transactions", user?.id, formattedStartDate, formattedEndDate],
     queryFn: async () => {
+      if (!user || !formattedStartDate || !formattedEndDate) return [];
       const { data, error } = await supabase
         .from("transactions")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
+        .select("*, client:clients(name)")
+        .eq("user_id", user.id)
+        .gte("date", formattedStartDate)
+        .lte("date", formattedEndDate)
+        .order("payment_status", { ascending: false })
+        .order("date", { ascending: false });
       if (error) throw error;
-      return data;
+      return (data as Transaction[]) || [];
     },
+    enabled: !!user && !!formattedStartDate && !!formattedEndDate,
   });
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
-            <div className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
-            <div className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
-          </div>
-        </CardContent>
-      </Card>
+  const handleConfirmPayments = async () => {
+    if (selectedTransactions.length === 0) return;
+    try {
+      await supabase
+        .from("transactions")
+        .update({ payment_status: "confirmed" })
+        .in("id", selectedTransactions)
+        .eq("user_id", user.id);
+      toast({ title: "Pagamentos Confirmados", description: "Os pagamentos foram atualizados." });
+      queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
+      setSelectedTransactions([]);
+      setIsConfirmDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao confirmar pagamentos.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSelectTransaction = (id: string, isPending: boolean) => {
+    if (!isPending) return;
+    setSelectedTransactions((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
     );
-  }
+  };
+
+  const handleOpenConfirmDialog = (ids: string[]) => {
+    setSelectedTransactions(ids);
+    setIsConfirmDialogOpen(true);
+  };
+
+  const handleSelectAllPending = () => {
+    const pendingTransactions = (transactions || []).filter(
+      (t) => t.payment_status === "pending"
+    );
+    const pendingIds = pendingTransactions.map((t) => t.id);
+    setSelectedTransactions(pendingIds);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTransactions([]);
+  };
 
   return (
-    <Card>
+    <Card className="rounded-xl border-border bg-card text-card-foreground">
       <CardHeader>
-        <CardTitle>Recent Transactions</CardTitle>
+        <CardTitle>Transações Recentes</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {transactions?.map((transaction) => (
-            <div
-              key={transaction.id}
-              className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-gray-800 shadow hover:shadow-md transition-shadow duration-200"
-            >
-              <div className="space-y-1">
-                <p className="font-medium">{transaction.description}</p>
-                <p className="text-sm text-gray-500">{transaction.category}</p>
-                <p className="text-xs text-gray-400">
-                  {new Date(transaction.date).toLocaleDateString()}
-                </p>
-              </div>
-              <span
-                className={`font-mono font-medium ${
-                  transaction.type === "income"
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-red-600 dark:text-red-400"
-                }`}
+      <CardContent className="space-y-6">
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAllPending}
+                disabled={isLoading || !transactions?.some((t) => t.payment_status === "pending")}
               >
-                {transaction.type === "income" ? "+" : "-"}
-                R$ {Math.abs(transaction.amount).toFixed(2)}
-              </span>
+                Selecionar Pendentes
+              </Button>
+              {selectedTransactions.length > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearSelection}
+                  >
+                    Limpar Seleção
+                  </Button>
+                  
+                </>
+              )}
             </div>
-          ))}
+          </div>
+          <TransactionList
+            transactions={transactions || []}
+            isLoading={isLoading}
+            selectedTransactions={selectedTransactions}
+            onSelectTransaction={handleSelectTransaction}
+            onOpenConfirmDialog={handleOpenConfirmDialog}
+          />
         </div>
+
+        <FinancialSummary transactions={transactions || []} />
       </CardContent>
+
+      <ConfirmPaymentsDialog
+        open={isConfirmDialogOpen}
+        onOpenChange={setIsConfirmDialogOpen}
+        onConfirm={handleConfirmPayments}
+        count={selectedTransactions.length}
+      />
     </Card>
   );
-}
+};
+
+export default RecentTransactions;
