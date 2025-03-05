@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,15 +10,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { subDays } from "date-fns";
-import { DateFilter } from "@/components/dashboard/DateFilter";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [dateRange, setDateRange] = useState("today");
-  const [startDate, setStartDate] = useState<Date | undefined>(subDays(new Date(), 7));
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [todayStats, setTodayStats] = useState({ total: 0, count: 0 });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -27,6 +26,28 @@ const Dashboard = () => {
       return;
     }
 
+    const loadTodayStats = async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('user_id', user.id)
+        .gte('date', today.toISOString())
+        .lt('date', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString());
+
+      if (!error && data) {
+        const total = data.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+        setTodayStats({
+          total,
+          count: data.length
+        });
+      }
+    };
+
+    loadTodayStats();
+
     const channel = supabase
       .channel(`transactions-${user.id}`)
       .on(
@@ -35,12 +56,13 @@ const Dashboard = () => {
           event: "*",
           schema: "public",
           table: "transactions",
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${user.id}`
         },
         () => {
           console.log("📢 Alteração detectada no banco de dados. Atualizando dashboard...");
           queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
           queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
+          loadTodayStats();
         }
       )
       .subscribe();
@@ -49,7 +71,7 @@ const Dashboard = () => {
       console.log("🛑 Removendo canal do Supabase.");
       supabase.removeChannel(channel);
     };
-  }, [queryClient, user?.id, navigate, user]);
+  }, [queryClient, user.id, navigate, user]);
 
   if (!user) return null;
 
@@ -59,35 +81,50 @@ const Dashboard = () => {
       <main className="flex-1 p-4 md:p-8 overflow-auto">
         <div className="max-w-[2000px] mx-auto space-y-6 md:space-y-8">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl md:text-4xl font-bold">Resumo Financeiro</h1>
-            <Button
-              variant="outline"
-              onClick={() => {
+            <h1 className="text-2xl md:text-4xl font-bold">Dashboard</h1>
+            <div className="flex space-x-4">
+              <Button variant="outline" onClick={() => {
                 supabase.auth.signOut();
                 navigate("/login");
-              }}
-            >
-              Logout
-            </Button>
+              }}>
+                Logout
+              </Button>
+            </div>
           </div>
 
-          {/* Único seletor de período */}
-          <DateFilter
-            dateRange={dateRange}
-            startDate={startDate}
-            endDate={endDate}
-            onDateRangeChange={setDateRange}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-          />
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Resumo de Hoje
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Total Movimentado
+                  </p>
+                  <h2 className="text-2xl font-bold">
+                    {formatCurrency(todayStats.total)}
+                  </h2>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Quantidade de Transações
+                  </p>
+                  <h2 className="text-2xl font-bold">
+                    {todayStats.count}
+                  </h2>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Gráfico */}
           <div className="w-full">
-            <ExpenseChart startDate={startDate} endDate={endDate} />
+            <ExpenseChart />
           </div>
 
-          {/* Transações e valores */}
-          <RecentTransactions startDate={startDate} endDate={endDate} />
+          <RecentTransactions />
         </div>
 
         <Button
@@ -98,9 +135,9 @@ const Dashboard = () => {
           <Plus className="w-6 h-6" />
         </Button>
 
-        <ExpenseModal
-          open={isModalOpen}
-          onOpenChange={setIsModalOpen}
+        <ExpenseModal 
+          open={isModalOpen} 
+          onOpenChange={setIsModalOpen} 
           onTransactionAdded={() => {
             console.log("📌 Nova transação adicionada. Invalidando cache...");
             queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });

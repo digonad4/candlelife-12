@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { Home, Settings, Wallet, Menu as MenuIcon, LogOut, ChevronDown } from "lucide-react";
+import { Home, Settings, Wallet, Menu as MenuIcon, LogOut, ChevronDown, Users, FileText } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -15,7 +16,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,8 +23,9 @@ export function AppSidebar() {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [profile, setProfile] = useState<{ username?: string; avatar_url?: string } | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  console.log('isMobile:', isMobile); // Depuração
+  console.log('isMobile:', isMobile);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -64,14 +65,21 @@ export function AppSidebar() {
   const menuItems = [
     { title: "Dashboard", icon: Home, url: "/" },
     { title: "Transações", icon: Wallet, url: "/transactions" },
+    { title: "Clientes", icon: Users, url: "/clients" },
+    { title: "Faturadas", icon: FileText, url: "/invoiced-transactions" },
     { title: "Configurações", icon: Settings, url: "/settings" },
   ];
 
+  // Close the sheet when navigating to a new route
+  useEffect(() => {
+    setIsSheetOpen(false);
+  }, [location.pathname]);
+
   const MenuContent = () => (
-    <Sidebar className="border-r bg-card">
+    <Sidebar className="border-r bg-card h-full">
       <BaseSidebarContent className="flex flex-col h-full">
         <SidebarGroup className="flex-grow">
-          <SidebarGroupLabel>Bem vindo </SidebarGroupLabel>
+          <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -100,7 +108,7 @@ export function AppSidebar() {
                     <AvatarImage src={profile.avatar_url} alt={profile.username} />
                     <AvatarFallback>{profile.username?.[0]?.toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <span>{profile.username}</span>
+                  <span className="truncate max-w-[120px]">{profile.username}</span>
                   <ChevronDown className="ml-auto h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -124,16 +132,22 @@ export function AppSidebar() {
 
   if (isMobile) {
     return (
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50 bg-white">
-            <MenuIcon className="h-5 w-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="p-0 w-72">
-          <MenuContent />
-        </SheetContent>
-      </Sheet>
+      <>
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <SheetTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="fixed top-4 left-4 z-50 bg-background shadow-md"
+            >
+              <MenuIcon className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-72 overflow-y-auto">
+            <MenuContent />
+          </SheetContent>
+        </Sheet>
+      </>
     );
   }
 

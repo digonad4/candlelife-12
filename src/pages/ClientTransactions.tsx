@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,10 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Check, DollarSign, CreditCard, Wallet, Calendar } from "lucide-react";
+import { ArrowLeft, Check, DollarSign, CreditCard, Wallet } from "lucide-react";
 import { format } from "date-fns";
-import { DatePicker } from "@/components/ui/date-picker";
-import { useNavigate } from "react-router-dom";
 
 interface Transaction {
   id: string;
@@ -22,69 +21,72 @@ interface Transaction {
   payment_status: string;
   payment_method: string;
   type: string;
-  client_id: string;
-  client_name?: string;
 }
 
-const InvoicedTransactions = () => {
+interface Client {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  document: string | null;
+}
+
+const ClientTransactions = () => {
+  const { clientId } = useParams<{ clientId: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  const [client, setClient] = useState<Client | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("Dinheiro");
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
-    if (user) {
+    if (user && clientId) {
+      fetchClientData();
       fetchTransactions();
     }
-  }, [user, selectedDate]);
+  }, [user, clientId]);
+
+  const fetchClientData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("id", clientId)
+        .eq("user_id", user?.id)
+        .single();
+
+      if (error) throw error;
+      setClient(data);
+    } catch (error) {
+      console.error("Error fetching client:", error.message);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os dados do cliente",
+        variant: "destructive",
+      });
+      navigate("/clients");
+    }
+  };
 
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      
-      // Build the query
-      let query = supabase
+      const { data, error } = await supabase
         .from("transactions")
-        .select(`
-          *,
-          clients (
-            name
-          )
-        `)
+        .select("*")
+        .eq("client_id", clientId)
         .eq("user_id", user?.id)
         .order("date", { ascending: false });
-      
-      // Apply date filter if selected
-      if (selectedDate) {
-        const startOfDay = new Date(selectedDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const endOfDay = new Date(selectedDate);
-        endOfDay.setHours(23, 59, 59, 999);
-        
-        query = query
-          .gte("date", startOfDay.toISOString())
-          .lte("date", endOfDay.toISOString());
-      }
-      
-      const { data, error } = await query;
 
       if (error) throw error;
       
-      // Format the data to include client name
-      const formattedData = data?.map(transaction => ({
-        ...transaction,
-        client_name: transaction.clients?.name
-      })) || [];
-      
-      setTransactions(formattedData);
+      setTransactions(data || []);
     } catch (error) {
       console.error("Error fetching transactions:", error.message);
       toast({
@@ -186,10 +188,6 @@ const InvoicedTransactions = () => {
       .reduce((sum, t) => sum + Number(t.amount), 0);
   };
 
-  const navigateToClientTransactions = (clientId: string) => {
-    navigate(`/client-transactions/${clientId}`);
-  };
-
   return (
     <div className="min-h-screen flex bg-background">
       <AppSidebar />
@@ -197,7 +195,28 @@ const InvoicedTransactions = () => {
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h1 className="text-4xl font-bold">Transações Faturadas</h1>
+            <div>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/clients")}
+                className="mb-2"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar para Clientes
+              </Button>
+              
+              <h1 className="text-3xl font-bold">
+                Transações de {client?.name || "..."}
+              </h1>
+              
+              {client && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  {client.email && <span className="mr-4">Email: {client.email}</span>}
+                  {client.phone && <span className="mr-4">Telefone: {client.phone}</span>}
+                  {client.document && <span>Documento: {client.document}</span>}
+                </div>
+              )}
+            </div>
             
             {selectedTransactions.length > 0 && (
               <Button
@@ -210,26 +229,9 @@ const InvoicedTransactions = () => {
             )}
           </div>
           
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
-              <DatePicker
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                placeholder="Filtrar por data"
-              />
-            </div>
-            
-            {selectedDate && (
-              <Button variant="outline" onClick={() => setSelectedDate(undefined)}>
-                Limpar Filtro
-              </Button>
-            )}
-          </div>
-          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Todas as Transações</CardTitle>
+              <CardTitle>Histórico de Transações</CardTitle>
               
               {transactions.filter(t => t.payment_status === "pending").length > 0 && (
                 <Button variant="outline" size="sm" onClick={handleSelectAll}>
@@ -266,16 +268,6 @@ const InvoicedTransactions = () => {
                           </div>
                           
                           <div className="text-sm text-muted-foreground">
-                            <p>
-                              Cliente:{" "}
-                              <Button
-                                variant="link"
-                                className="h-auto p-0"
-                                onClick={() => navigateToClientTransactions(transaction.client_id)}
-                              >
-                                {transaction.client_name}
-                              </Button>
-                            </p>
                             <p>Data: {format(new Date(transaction.date), 'dd/MM/yyyy')}</p>
                             {transaction.payment_status === "paid" && (
                               <p>Método: {transaction.payment_method}</p>
@@ -292,9 +284,7 @@ const InvoicedTransactions = () => {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  {selectedDate 
-                    ? "Nenhuma transação encontrada para esta data."
-                    : "Nenhuma transação encontrada."}
+                  Nenhuma transação encontrada para este cliente.
                 </div>
               )}
             </CardContent>
@@ -375,4 +365,4 @@ const InvoicedTransactions = () => {
   );
 };
 
-export default InvoicedTransactions;
+export default ClientTransactions;
