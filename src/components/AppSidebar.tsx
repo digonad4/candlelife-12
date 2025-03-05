@@ -1,93 +1,141 @@
-
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Receipt, Users, FileText, Settings } from "lucide-react";
-import { useSidebar } from "@/context/SidebarContext";
-import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Home, Settings, Wallet, Menu as MenuIcon, LogOut, ChevronDown } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  Sidebar,
+  SidebarContent as BaseSidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AppSidebar() {
-  const { isSidebarOpen, toggleSidebar } = useSidebar();
-  const { signOut } = useAuth();
-  const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = useIsMobile();
+  const [profile, setProfile] = useState<{ username?: string; avatar_url?: string } | null>(null);
+
+  console.log('isMobile:', isMobile); // Depuração
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        console.log('Usuário autenticado:', user);
+        if (userError) throw userError;
+        if (user) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', user.id)
+            .single();
+          console.log('Dados do perfil:', data);
+          if (error) throw error;
+          if (data) {
+            setProfile(data);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao carregar perfil:", error.message);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   const handleLogout = async () => {
-    await signOut();
-    navigate("/login");
+    try {
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error.message);
+    }
   };
 
-  return (
-    <aside className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
-      <div className="sidebar-header">
-        <button className="sidebar-toggle" onClick={toggleSidebar}>
-          ☰
-        </button>
-      </div>
-      <nav className="sidebar-nav">
-        <ul>
-          <li>
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
-              }
-            >
-              <LayoutDashboard size={20} />
-              <span>Dashboard</span>
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/transactions"
-              className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
-              }
-            >
-              <Receipt size={20} />
-              <span>Transações</span>
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/clients"
-              className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
-              }
-            >
-              <Users size={20} />
-              <span>Clientes</span>
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/invoiced"
-              className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
-              }
-            >
-              <FileText size={20} />
-              <span>Faturados</span>
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/settings"
-              className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
-              }
-            >
-              <Settings size={20} />
-              <span>Configurações</span>
-            </NavLink>
-          </li>
-          <li>
-            <button className="sidebar-link" onClick={handleLogout}>
-              <Settings size={20} />
-              <span>Sair</span>
-            </button>
-          </li>
-        </ul>
-      </nav>
-    </aside>
+  const menuItems = [
+    { title: "Dashboard", icon: Home, url: "/" },
+    { title: "Transações", icon: Wallet, url: "/transactions" },
+    { title: "Configurações", icon: Settings, url: "/settings" },
+  ];
+
+  const MenuContent = () => (
+    <Sidebar className="border-r bg-card">
+      <BaseSidebarContent className="flex flex-col h-full">
+        <SidebarGroup className="flex-grow">
+          <SidebarGroupLabel>Bem vindo </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild
+                    className={location.pathname === item.url ? "bg-accent" : ""}
+                  >
+                    <Link to={item.url} className="flex items-center w-full gap-2">
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {profile ? (
+          <div className="p-4 border-t mt-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start">
+                  <Avatar className="mr-2">
+                    <AvatarImage src={profile.avatar_url} alt={profile.username} />
+                    <AvatarFallback>{profile.username?.[0]?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span>{profile.username}</span>
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="w-full">Editar Perfil</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <div className="p-4 border-t mt-auto">Carregando perfil...</div>
+        )}
+      </BaseSidebarContent>
+    </Sidebar>
   );
+
+  if (isMobile) {
+    return (
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50 bg-white">
+            <MenuIcon className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="p-0 w-72">
+          <MenuContent />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return <MenuContent />;
 }
