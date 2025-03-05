@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -9,10 +10,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from "uuid";
 
 const Login = () => {
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -40,20 +40,25 @@ const Login = () => {
           throw new Error("Você precisa aceitar a política de dados");
         }
 
-        // 1. Primeiro fazer o signup
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        // Create user account
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: { username },
+            emailRedirectTo: `${window.location.origin}/`,
+          }
         });
 
         if (signUpError) throw signUpError;
-        if (!signUpData.user) throw new Error("Erro ao criar usuário");
+        if (!authData.user) throw new Error("Erro ao criar usuário");
 
-        // 2. Upload do avatar se existir
+        // Upload avatar if provided
         let avatarUrl = null;
         if (avatar) {
           const fileExt = avatar.name.split('.').pop();
-          const fileName = `${uuidv4()}.${fileExt}`;
+          const fileName = `${authData.user.id}.${fileExt}`;
+          
           const { error: uploadError } = await supabase.storage
             .from('avatars')
             .upload(fileName, avatar);
@@ -67,11 +72,11 @@ const Login = () => {
           avatarUrl = publicUrl;
         }
 
-        // 3. Criar o perfil do usuário
+        // Update profile with username and avatar
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
-            id: signUpData.user.id,
+            id: authData.user.id,
             username,
             avatar_url: avatarUrl,
           });
@@ -84,18 +89,25 @@ const Login = () => {
           description: "Por favor, verifique seu email para confirmar sua conta.",
         });
       } else {
+        // Login
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (signInError) throw signInError;
-        navigate("/");
+        
+        // Navigate to home page after successful login
+        navigate("/dashboard");
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Bem-vindo de volta.",
+        });
       }
     } catch (error: any) {
       console.error("Erro de autenticação:", error);
       
-      if (error.message.includes("Email not confirmed")) {
+      if (error.message?.includes("Email not confirmed")) {
         setNeedsEmailConfirmation(true);
         toast({
           variant: "destructive",
@@ -106,7 +118,7 @@ const Login = () => {
         toast({
           variant: "destructive",
           title: "Erro",
-          description: error.message,
+          description: error.message || "Falha na autenticação",
         });
       }
     } finally {

@@ -25,10 +25,13 @@ function App() {
     document.body.className = theme === "dark" ? "dark" : "";
   }, [theme]);
 
+  // Determine if we should show the sidebar based on authentication and current route
+  const showSidebar = !!user;
+
   return (
     <div className="app flex h-screen overflow-hidden">
-      <AppSidebar />
-      <main className={`flex-1 overflow-y-auto p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-16"}`}>
+      {showSidebar && <AppSidebar />}
+      <main className={`flex-1 overflow-y-auto p-6 transition-all duration-300 ${showSidebar ? (isSidebarOpen ? "ml-64" : "ml-16") : ""}`}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
