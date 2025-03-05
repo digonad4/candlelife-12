@@ -19,7 +19,7 @@ export function useTransactionData(chartType: GoogleChartWrapperChartType, timeR
 
       let query = supabase
         .from("transactions")
-        .select("date, amount, client:clients(name)")
+        .select("date, amount")
         .eq("user_id", user.id)
         .eq("payment_status", "confirmed")
         .order("date");
