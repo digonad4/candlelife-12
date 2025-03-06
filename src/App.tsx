@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import Clients from "./pages/Clients";
 import InvoicedTransactions from "./pages/InvoicedTransactions";
 import { useEffect } from "react";
+import { AppSidebar } from "./components/AppSidebar";
 
 function App() {
   const { user } = useAuth();
@@ -34,6 +35,7 @@ function App() {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {user && <AppSidebar />}
       <div className={`flex-1 overflow-hidden transition-all duration-300 ${user && isSidebarOpen ? "ml-64" : user ? "ml-16" : "ml-0"}`}>
         <main className="h-full hide-scrollbar overflow-y-auto">
           <Routes>
