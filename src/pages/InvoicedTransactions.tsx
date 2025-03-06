@@ -1,13 +1,13 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { InvoicedTransactionCard } from "@/components/invoiced/InvoicedTransactionCard";
 import { ConfirmPaymentsDialog } from "@/components/invoiced/ConfirmPaymentsDialog";
 import { useInvoicedTransactions } from "@/hooks/useInvoicedTransactions";
+import { InvoicedSummary } from "@/components/invoiced/InvoicedSummary";
 
 const InvoicedTransactions = () => {
   const { user } = useAuth();
@@ -34,36 +34,35 @@ const InvoicedTransactions = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <AppSidebar />
-      <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-4xl font-bold text-foreground">Transações Faturadas</h1>
-            {selectedTransactions.length > 0 && (
-              <Button
-                onClick={() => setIsConfirmDialogOpen(true)}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Confirmar Selecionados ({selectedTransactions.length})
-              </Button>
-            )}
-          </div>
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h1 className="text-3xl md:text-4xl font-bold text-foreground">Transações Faturadas</h1>
+        {selectedTransactions.length > 0 && (
+          <Button
+            onClick={() => setIsConfirmDialogOpen(true)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            Confirmar Selecionados ({selectedTransactions.length})
+          </Button>
+        )}
+      </div>
 
-          <div className="flex items-center gap-4">
-            <DatePicker
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              placeholder="Selecione uma data"
-              className="w-[200px]"
-            />
-            {selectedDate && (
-              <Button variant="outline" onClick={() => setSelectedDate(undefined)}>
-                Limpar Filtro
-              </Button>
-            )}
-          </div>
-          
+      <div className="flex flex-col md:flex-row gap-4 md:items-center">
+        <DatePicker
+          selected={selectedDate}
+          onSelect={setSelectedDate}
+          placeholder="Selecione uma data"
+          className="w-full md:w-[200px]"
+        />
+        {selectedDate && (
+          <Button variant="outline" onClick={() => setSelectedDate(undefined)}>
+            Limpar Filtro
+          </Button>
+        )}
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
           <Card className="rounded-xl border-border bg-card">
             <CardHeader>
               <CardTitle className="text-card-foreground">Histórico de Transações Faturadas</CardTitle>
@@ -90,7 +89,11 @@ const InvoicedTransactions = () => {
             </CardContent>
           </Card>
         </div>
-      </main>
+        
+        <div className="lg:col-span-1">
+          <InvoicedSummary />
+        </div>
+      </div>
 
       <ConfirmPaymentsDialog
         isOpen={isConfirmDialogOpen}

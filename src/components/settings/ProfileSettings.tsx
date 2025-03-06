@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, UserRound } from "lucide-react";
 
 export const ProfileSettings = () => {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -17,20 +20,31 @@ export const ProfileSettings = () => {
 
   const loadProfile = async () => {
     try {
+      setLoading(true);
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) throw error;
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('username')
+        .select('username, avatar_url')
         .eq('id', user?.id)
-        .single();
+        .maybeSingle();
+
+      if (profileError) throw profileError;
 
       if (profile) {
-        setUsername(profile.username);
+        setUsername(profile.username || '');
+        setAvatarUrl(profile.avatar_url);
       }
     } catch (error) {
       console.error("Erro ao carregar perfil:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as informações do perfil.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,6 +88,19 @@ export const ProfileSettings = () => {
         </p>
       </div>
 
+      <div className="flex items-center gap-4 mb-6">
+        <Avatar className="w-16 h-16 border border-border">
+          <AvatarImage src={avatarUrl || undefined} alt={username} />
+          <AvatarFallback>
+            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <UserRound className="h-6 w-6" />}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <p className="font-medium">{username || 'Usuário'}</p>
+          <p className="text-sm text-muted-foreground">Altere seu avatar na aba "Avatar"</p>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="username">Nome de usuário</Label>
@@ -82,6 +109,8 @@ export const ProfileSettings = () => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
+            placeholder="Seu nome de usuário"
+            disabled={loading}
           />
         </div>
 
