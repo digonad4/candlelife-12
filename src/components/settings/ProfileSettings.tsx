@@ -7,34 +7,62 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, UserRound } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export const ProfileSettings = () => {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    loadProfile();
-  }, []);
+    if (user) {
+      loadProfile();
+    }
+  }, [user]);
 
   const loadProfile = async () => {
     try {
       setLoading(true);
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) throw error;
+      if (!user) return;
+      
+      console.log("ProfileSettings loading profile for user ID:", user.id);
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('username, avatar_url')
-        .eq('id', user?.id)
+        .eq('id', user.id)
         .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error loading profile:", profileError);
+        throw profileError;
+      }
+
+      console.log("ProfileSettings profile data loaded:", profile);
 
       if (profile) {
         setUsername(profile.username || '');
         setAvatarUrl(profile.avatar_url);
+      } else {
+        console.log("No profile found, creating one");
+        
+        // If profile doesn't exist, create one
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({ 
+            id: user.id, 
+            username: user.email?.split('@')[0] || 'Usuário',
+            avatar_url: null
+          });
+          
+        if (insertError) {
+          console.error("Error creating profile:", insertError);
+          throw insertError;
+        }
+        
+        setUsername(user.email?.split('@')[0] || 'Usuário');
       }
     } catch (error) {
       console.error("Erro ao carregar perfil:", error);
@@ -53,13 +81,22 @@ export const ProfileSettings = () => {
     setLoading(true);
 
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Usuário não encontrado. Faça login novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       const { error } = await supabase
         .from('profiles')
-        .update({ username })
-        .eq('id', user?.id);
+        .upsert({ 
+          id: user.id,
+          username,
+          updated_at: new Date().toISOString()
+        });
 
       if (error) throw error;
 
@@ -115,7 +152,13 @@ export const ProfileSettings = () => {
         </div>
 
         <Button type="submit" disabled={loading}>
-          {loading ? "Salvando..." : "Salvar alterações"}
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" /> Salvando...
+            </span>
+          ) : (
+            "Salvar alterações"
+          )}
         </Button>
       </form>
     </div>

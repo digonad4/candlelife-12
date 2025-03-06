@@ -5,29 +5,39 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, UserRound } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export const AvatarSettings = () => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [username, setUsername] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    loadAvatar();
-  }, []);
+    if (user) {
+      loadAvatar();
+    }
+  }, [user]);
 
   const loadAvatar = async () => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (!user) return;
+      
+      console.log("AvatarSettings loading avatar for user ID:", user.id);
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('avatar_url, username')
-        .eq('id', user?.id)
+        .eq('id', user.id)
         .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error loading avatar:", profileError);
+        throw profileError;
+      }
+
+      console.log("AvatarSettings profile data loaded:", profile);
 
       if (profile) {
         setAvatarUrl(profile.avatar_url);
@@ -47,8 +57,14 @@ export const AvatarSettings = () => {
     try {
       setUploading(true);
 
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Usuário não encontrado. Faça login novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('Você precisa selecionar uma imagem para fazer upload.');
@@ -56,8 +72,10 @@ export const AvatarSettings = () => {
 
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = fileName;
+
+      console.log("Uploading avatar:", filePath);
 
       // Ensure the avatars bucket exists
       const { data: buckets } = await supabase.storage.listBuckets();
@@ -77,14 +95,21 @@ export const AvatarSettings = () => {
         .from('avatars')
         .getPublicUrl(filePath);
 
+      console.log("Avatar uploaded, public URL:", publicUrl);
+
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user?.id);
+        .upsert({ 
+          id: user.id,
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        });
 
       if (updateError) throw updateError;
 
+      console.log("Profile updated with new avatar");
       setAvatarUrl(publicUrl);
+      
       toast({
         title: "Avatar atualizado",
         description: "Seu avatar foi atualizado com sucesso.",
@@ -126,7 +151,13 @@ export const AvatarSettings = () => {
             onClick={() => document.getElementById('avatar-upload')?.click()}
             className="w-full"
           >
-            {uploading ? "Enviando..." : "Alterar avatar"}
+            {uploading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Enviando...
+              </span>
+            ) : (
+              "Alterar avatar"
+            )}
           </Button>
           <input
             type="file"
