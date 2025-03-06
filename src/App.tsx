@@ -1,6 +1,6 @@
 
 import "./App.css";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { useTheme } from "./context/ThemeContext";
 import { useSidebar } from "./context/SidebarContext";
@@ -22,21 +22,65 @@ function App() {
   const { isSidebarOpen } = useSidebar();
   
   useEffect(() => {
-    document.body.className = theme === "dark" ? "dark" : "";
+    document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  // Component to handle redirects based on authentication
+  const AuthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
+    return user ? <>{children}</> : <Navigate to="/login" replace />;
+  };
+
+  const RedirectToCorrectLanding = () => {
+    return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+  };
 
   return (
     <div className="app flex h-screen overflow-hidden">
-      <AppSidebar />
-      <main className={`flex-1 overflow-y-auto p-6 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-16"}`}>
+      {user && <AppSidebar />}
+      <main className={`flex-1 overflow-y-auto p-6 transition-all duration-300 ${user && isSidebarOpen ? "ml-64" : user ? "ml-16" : "ml-0"}`}>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/invoiced" element={<InvoicedTransactions />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<RedirectToCorrectLanding />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <AuthenticatedRoute>
+                <Dashboard />
+              </AuthenticatedRoute>
+            } 
+          />
+          <Route 
+            path="/transactions" 
+            element={
+              <AuthenticatedRoute>
+                <Transactions />
+              </AuthenticatedRoute>
+            } 
+          />
+          <Route 
+            path="/clients" 
+            element={
+              <AuthenticatedRoute>
+                <Clients />
+              </AuthenticatedRoute>
+            } 
+          />
+          <Route 
+            path="/invoiced" 
+            element={
+              <AuthenticatedRoute>
+                <InvoicedTransactions />
+              </AuthenticatedRoute>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <AuthenticatedRoute>
+                <Settings />
+              </AuthenticatedRoute>
+            } 
+          />
+          <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
           <Route path="/change-password" element={<ChangePassword />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

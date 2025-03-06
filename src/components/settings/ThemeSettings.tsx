@@ -1,10 +1,10 @@
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Moon, Sun, Palette, Zap, Ghost, Mountain } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useTheme } from "@/context/ThemeContext";
 
 const themes = [
   { id: "light", name: "Claro", icon: Sun },
@@ -17,28 +17,16 @@ const themes = [
 ] as const;
 
 export const ThemeSettings = () => {
-  const [currentTheme, setCurrentTheme] = useState(() => {
-    return localStorage.getItem("theme") || "light";
-  });
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
-  const updateTheme = async (theme: string) => {
+  const updateTheme = async (newTheme: typeof themes[number]["id"]) => {
     try {
-      setCurrentTheme(theme);
-      localStorage.setItem("theme", theme);
-      document.documentElement.setAttribute("data-theme", theme);
+      setTheme(newTheme);
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('profiles')
-          .update({ active_theme: theme })
-          .eq('id', user.id);
-      }
-
       toast({
         title: "Tema alterado",
-        description: `O tema foi alterado para ${themes.find(t => t.id === theme)?.name.toLowerCase()}.`,
+        description: `O tema foi alterado para ${themes.find(t => t.id === newTheme)?.name.toLowerCase()}.`,
       });
     } catch (error) {
       console.error("Erro ao atualizar tema:", error);
@@ -62,7 +50,7 @@ export const ThemeSettings = () => {
       <div className="space-y-4">
         <Label className="text-lg font-medium">Tema</Label>
         <RadioGroup
-          value={currentTheme}
+          value={theme}
           onValueChange={updateTheme}
           className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2"
         >
@@ -70,7 +58,7 @@ export const ThemeSettings = () => {
             <Label
               key={id}
               className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-accent transition-colors ${
-                currentTheme === id ? "border-primary bg-accent/50" : "border-input"
+                theme === id ? "border-primary bg-accent/50" : "border-input"
               }`}
             >
               <RadioGroupItem value={id} id={id} />

@@ -4,6 +4,7 @@ import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut } from "luc
 import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function AppSidebar() {
   const { isSidebarOpen, toggleSidebar } = useSidebar();
@@ -13,6 +14,39 @@ export function AppSidebar() {
   const handleLogout = async () => {
     await signOut();
     navigate("/login");
+  };
+
+  const renderNavItem = (icon: React.ElementType, label: string, to: string) => {
+    const Icon = icon;
+    
+    return (
+      <li>
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <NavLink
+              to={to}
+              className={({ isActive }) =>
+                `flex items-center p-3 rounded-md transition-colors
+                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
+                ${!isSidebarOpen && "justify-center"}`
+              }
+            >
+              <TooltipTrigger asChild>
+                <span className={`flex items-center ${isSidebarOpen ? 'w-full' : ''}`}>
+                  <Icon size={20} className={isSidebarOpen ? "mr-3" : ""} />
+                  {isSidebarOpen && <span>{label}</span>}
+                </span>
+              </TooltipTrigger>
+              {!isSidebarOpen && (
+                <TooltipContent side="right">
+                  <p>{label}</p>
+                </TooltipContent>
+              )}
+            </NavLink>
+          </Tooltip>
+        </TooltipProvider>
+      </li>
+    );
   };
 
   return (
@@ -28,81 +62,35 @@ export function AppSidebar() {
       </div>
       <nav className="sidebar-nav mt-4">
         <ul className="space-y-2 px-2">
+          {renderNavItem(LayoutDashboard, "Dashboard", "/dashboard")}
+          {renderNavItem(Receipt, "Transações", "/transactions")}
+          {renderNavItem(Users, "Clientes", "/clients")}
+          {renderNavItem(FileText, "Faturados", "/invoiced")}
+          {renderNavItem(Settings, "Configurações", "/settings")}
+          
           <li>
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) =>
-                `flex items-center p-3 rounded-md transition-colors
-                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
-                ${!isSidebarOpen && "justify-center"}`
-              }
-            >
-              <LayoutDashboard size={20} />
-              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Dashboard</span>
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/transactions"
-              className={({ isActive }) =>
-                `flex items-center p-3 rounded-md transition-colors
-                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
-                ${!isSidebarOpen && "justify-center"}`
-              }
-            >
-              <Receipt size={20} />
-              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Transações</span>
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/clients"
-              className={({ isActive }) =>
-                `flex items-center p-3 rounded-md transition-colors
-                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
-                ${!isSidebarOpen && "justify-center"}`
-              }
-            >
-              <Users size={20} />
-              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Clientes</span>
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/invoiced"
-              className={({ isActive }) =>
-                `flex items-center p-3 rounded-md transition-colors
-                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
-                ${!isSidebarOpen && "justify-center"}`
-              }
-            >
-              <FileText size={20} />
-              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Faturados</span>
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/settings"
-              className={({ isActive }) =>
-                `flex items-center p-3 rounded-md transition-colors
-                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
-                ${!isSidebarOpen && "justify-center"}`
-              }
-            >
-              <Settings size={20} />
-              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Configurações</span>
-            </NavLink>
-          </li>
-          <li>
-            <button 
-              className={`flex items-center p-3 rounded-md transition-colors
-                w-full text-left text-sidebar-foreground hover:bg-sidebar-accent/50
-                ${!isSidebarOpen && "justify-center"}`} 
-              onClick={handleLogout}
-            >
-              <LogOut size={20} />
-              <span className={`ml-3 ${isSidebarOpen ? 'block' : 'hidden'}`}>Sair</span>
-            </button>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <button 
+                  className={`flex items-center p-3 rounded-md transition-colors
+                    w-full text-left text-sidebar-foreground hover:bg-sidebar-accent/50
+                    ${!isSidebarOpen && "justify-center"}`} 
+                  onClick={handleLogout}
+                >
+                  <TooltipTrigger asChild>
+                    <span className={`flex items-center ${isSidebarOpen ? 'w-full' : ''}`}>
+                      <LogOut size={20} className={isSidebarOpen ? "mr-3" : ""} />
+                      {isSidebarOpen && <span>Sair</span>}
+                    </span>
+                  </TooltipTrigger>
+                  {!isSidebarOpen && (
+                    <TooltipContent side="right">
+                      <p>Sair</p>
+                    </TooltipContent>
+                  )}
+                </button>
+              </Tooltip>
+            </TooltipProvider>
           </li>
         </ul>
       </nav>
