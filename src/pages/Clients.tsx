@@ -8,9 +8,18 @@ import { PlusCircle } from "lucide-react";
 
 export default function Clients() {
   const [isClientFormOpen, setIsClientFormOpen] = useState(false);
-  const [clientToEdit, setClientToEdit] = useState<any>(null);
+  interface Client {
+    id: string;
+    name: string;
+    email: string;
+    document: string;
+    phone: string;
+    // Add other fields as necessary
+  }
 
-  const handleOpenClientForm = (client?: any) => {
+  const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
+
+  const handleOpenClientForm = (client?: Client) => {
     if (client) {
       setClientToEdit(client);
     } else {
@@ -25,7 +34,7 @@ export default function Clients() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
         <h1 className="text-3xl font-bold mb-4 sm:mb-0">Gerenciamento de Clientes</h1>
         <Button onClick={() => handleOpenClientForm()}>

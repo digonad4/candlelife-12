@@ -47,8 +47,8 @@ const Dashboard = () => {
   }, [queryClient, user]);
 
   return (
-    <div className="max-w-[2000px] mx-auto space-y-6 md:space-y-8">
-      <div className="flex justify-between items-center">
+    <div className="max-w-[2000px] p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-2xl md:text-4xl font-bold">Resumo Financeiro</h1>
       </div>
 
@@ -72,7 +72,7 @@ const Dashboard = () => {
 
       <Button
         size="lg"
-        className="fixed bottom-8 right-8 rounded-full w-14 h-14 md:w-16 md:h-16 shadow-lg"
+        className="fixed bottom-8 right-10 rounded-full w-10 h-10 md:w-19 md:h-19 shadow-lg"
         onClick={() => setIsModalOpen(true)}
       >
         <Plus className="w-6 h-6" />
