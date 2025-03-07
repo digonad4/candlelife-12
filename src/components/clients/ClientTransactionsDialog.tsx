@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -77,6 +76,10 @@ export function ClientTransactionsDialog({
   const pendingTransactions = transactions?.filter(t => t.payment_status === "pending") || [];
   const confirmedTransactions = transactions?.filter(t => t.payment_status === "confirmed") || [];
 
+  // Calculate totals
+  const pendingTotal = pendingTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const confirmedTotal = confirmedTransactions.reduce((sum, t) => sum + t.amount, 0);
+
   const handleSelectTransaction = (id: string) => {
     setSelectedTransactions(prev => 
       prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
@@ -117,11 +120,11 @@ export function ClientTransactionsDialog({
       // Reset selections
       setSelectedTransactions([]);
       setIsConfirmDialogOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error confirming payments:", error);
       toast({
         title: "Erro",
-        description: `Falha ao confirmar pagamentos: ${error.message}`,
+        description: `Falha ao confirmar pagamentos: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         variant: "destructive",
       });
     }
@@ -207,6 +210,13 @@ export function ClientTransactionsDialog({
                         </div>
                       </div>
                     ))}
+                    {/* Pending Total */}
+                    <div className="mt-4 p-3 bg-muted rounded-lg flex justify-between items-center">
+                      <span className="font-semibold text-foreground">Total Pendente:</span>
+                      <span className={`font-semibold ${pendingTotal < 0 ? "text-red-500" : "text-green-500"}`}>
+                        R$ {Math.abs(pendingTotal).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -240,6 +250,13 @@ export function ClientTransactionsDialog({
                         </div>
                       </div>
                     ))}
+                    {/* Confirmed Total */}
+                    <div className="mt-4 p-3 bg-muted rounded-lg flex justify-between items-center">
+                      <span className="font-semibold text-foreground">Total Confirmado:</span>
+                      <span className={`font-semibold ${confirmedTotal < 0 ? "text-red-500" : "text-green-500"}`}>
+                        R$ {Math.abs(confirmedTotal).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>

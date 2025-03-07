@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from "react";
 
 interface SidebarContextType {
@@ -7,7 +6,7 @@ interface SidebarContextType {
 }
 
 const SidebarContext = createContext<SidebarContextType>({
-  isSidebarOpen: true,
+  isSidebarOpen: false, // Ajustado para false como valor padrão no contexto
   toggleSidebar: () => null,
 });
 
@@ -20,10 +19,10 @@ export const useSidebar = () => {
 };
 
 export const SidebarProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Inicia fechado
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+    setIsSidebarOpen(!isSidebarOpen); // Alterna entre true e false
   };
 
   return (

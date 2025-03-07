@@ -1,4 +1,3 @@
-
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut } from "lucide-react";
 import { useSidebar } from "../context/SidebarContext";
