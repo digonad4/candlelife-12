@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; // Certifique-se de usar isso
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ interface SignUpFormProps {
 const SignUpForm = ({ toggleView }: SignUpFormProps) => {
   const { signUp } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate(); // Adicionado para redirecionamento
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +43,6 @@ const SignUpForm = ({ toggleView }: SignUpFormProps) => {
         throw new Error("Você precisa aceitar a política de dados");
       }
 
-      // 1. Primeiro fazer o signup
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -51,7 +51,6 @@ const SignUpForm = ({ toggleView }: SignUpFormProps) => {
       if (signUpError) throw signUpError;
       if (!signUpData.user) throw new Error("Erro ao criar usuário");
 
-      // 2. Upload do avatar se existir
       let avatarUrl = null;
       if (avatar) {
         const fileExt = avatar.name.split('.').pop();
@@ -69,7 +68,6 @@ const SignUpForm = ({ toggleView }: SignUpFormProps) => {
         avatarUrl = publicUrl;
       }
 
-      // 3. Criar o perfil do usuário
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -85,12 +83,14 @@ const SignUpForm = ({ toggleView }: SignUpFormProps) => {
         title: "Conta criada com sucesso!",
         description: "Por favor, verifique seu email para confirmar sua conta.",
       });
-    } catch (error: unknown) {
+      // Opcional: Redirecionar para a página de login após signup
+      // navigate("/login");
+    } catch (error: any) {
       console.error("Erro de autenticação:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: (error as Error).message,
+        description: error.message,
       });
     } finally {
       setIsLoading(false);
