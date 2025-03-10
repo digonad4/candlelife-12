@@ -14,12 +14,6 @@ export const AvatarSettings = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      loadAvatar();
-    }
-  }, [user]);
-
   const loadAvatar = async () => {
     try {
       if (!user) return;
@@ -102,7 +96,8 @@ export const AvatarSettings = () => {
         .upsert({ 
           id: user.id,
           avatar_url: publicUrl,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          username: username
         });
 
       if (updateError) throw updateError;
@@ -114,11 +109,11 @@ export const AvatarSettings = () => {
         title: "Avatar atualizado",
         description: "Seu avatar foi atualizado com sucesso.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao fazer upload do avatar:", error);
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível atualizar o avatar.",
+        description: (error instanceof Error ? error.message : "Não foi possível atualizar o avatar."),
         variant: "destructive",
       });
     } finally {
@@ -159,6 +154,7 @@ export const AvatarSettings = () => {
               "Alterar avatar"
             )}
           </Button>
+          <label htmlFor="avatar-upload" className="sr-only">Upload Avatar</label>
           <input
             type="file"
             id="avatar-upload"
