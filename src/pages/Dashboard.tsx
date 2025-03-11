@@ -14,7 +14,7 @@ import { DateFilter } from "@/components/dashboard/DateFilter";
 const Dashboard = () => {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [dateRange, setDateRange] = useState("today");
+  const [dateRange, setDateRange] = useState("week");
   const [startDate, setStartDate] = useState<Date | undefined>(subDays(new Date(), 7));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
