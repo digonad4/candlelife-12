@@ -61,11 +61,11 @@ export function AppSidebar() {
             isSidebarOpen ? "opacity-100" : "opacity-0"
           } transition-opacity duration-300`}
         >
-          Dashboard
+          Candle Life 
         </h1>
         {/* Botão toggle posicionado absolutamente */}
         <button
-          className="sidebar-toggle p-2 rounded-md hover:bg-sidebar-accent absolute right-2 top-2 z-20"
+          className="sidebar-toggle items-center p-2 rounded-md hover:bg-sidebar-accent absolute right-2 top-2 z-20"
           onClick={toggleSidebar}
         >
           ☰

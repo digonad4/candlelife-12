@@ -11,6 +11,7 @@ import { FinancialSummary } from "./transactions/FinancialSummary";
 import { TransactionList } from "./transactions/TransactionList";
 import { ConfirmPaymentsDialog } from "./transactions/ConfirmPaymentsDialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input"; // Importe o Input
 
 interface RecentTransactionsProps {
   startDate?: Date;
@@ -23,6 +24,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
   const queryClient = useQueryClient();
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState(""); // Estado para o termo de pesquisa
 
   const formattedStartDate = startDate
     ? format(startDate, "yyyy-MM-dd'T00:00:00.000Z'")
@@ -94,12 +96,31 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
     setSelectedTransactions([]);
   };
 
+  // Filtrar transações com base no termo de pesquisa
+  const filteredTransactions = (transactions || []).filter((transaction) => {
+    const clientName = transaction.client?.name || "";
+    return (
+      clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.amount.toString().includes(searchTerm)
+    );
+  });
+
   return (
     <Card className="rounded-xl border-border bg-card text-card-foreground">
       <CardHeader>
-        <CardTitle>Transações Recentes</CardTitle>
+        <CardTitle>Transações
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        <Input
+          type="text"
+          placeholder="Pesquisar transações..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="mb-4"
+        />
         <div>
           <div className="flex justify-between items-center mb-4">
             <div className="flex space-x-2">
@@ -120,13 +141,12 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
                   >
                     Limpar Seleção
                   </Button>
-                  
                 </>
               )}
             </div>
           </div>
           <TransactionList
-            transactions={transactions || []}
+            transactions={filteredTransactions} // Use transações filtradas
             isLoading={isLoading}
             selectedTransactions={selectedTransactions}
             onSelectTransaction={handleSelectTransaction}
@@ -134,7 +154,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
           />
         </div>
 
-        <FinancialSummary transactions={transactions || []} />
+        <FinancialSummary transactions={filteredTransactions} />
       </CardContent>
 
       <ConfirmPaymentsDialog
