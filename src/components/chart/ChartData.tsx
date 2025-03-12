@@ -91,7 +91,7 @@ export function ChartData({ transactions, chartType, timeRange, isLoading }: Cha
   }
 
   if (transactions.length === 0) {
-    return <p className="text-gray-500">Nenhuma transação confirmada registrada neste período.</p>;
+    return <p className="text-center text-muted-foreground py-8 dark:text-gray-400">Nenhuma transação confirmada registrada neste período.</p>;
   }
 
   return (

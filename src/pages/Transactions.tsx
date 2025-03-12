@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -17,19 +16,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogDescription
+  AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
 import { Transaction } from "@/types/transaction";
 import { EditTransactionForm, EditFormData } from "@/components/transactions/EditTransactionForm";
 import { DailyTransactionsList } from "@/components/transactions/DailyTransactionsList";
+import { Button } from "@/components/ui/button";
 
 const Transactions = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
-  const [currentDayIndex, setCurrentDayIndex] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0); // Paginação ajustada
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -37,11 +37,13 @@ const Transactions = () => {
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [transactionToConfirm, setTransactionToConfirm] = useState<Transaction | null>(null);
 
+  const transactionsPerPage = 1; // Um dia por página
+
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["transactions", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("transactions")
         .select(`
@@ -54,7 +56,7 @@ const Transactions = () => {
       if (error) throw error;
       return data as Transaction[];
     },
-    enabled: !!user
+    enabled: !!user,
   });
 
   const transactionsByDay = transactions?.reduce((acc, transaction) => {
@@ -67,11 +69,15 @@ const Transactions = () => {
   }, {} as Record<string, Transaction[]>);
 
   const days = transactionsByDay ? Object.entries(transactionsByDay) : [];
-  const currentDay = days[currentDayIndex] || [];
+  const totalPages = days.length;
+
+  const currentDay = days.slice(currentPage, currentPage + transactionsPerPage)[0] || [];
   const currentTransactions = currentDay[1] || [];
 
   // Transaction selection handling
   const toggleSelection = (id: string) => {
+    const transaction = currentTransactions.find((t) => t.id === id);
+    if (transaction?.payment_method === "invoice") return; // Impede seleção de transações faturadas
     const newSelected = new Set(selectedTransactions);
     if (newSelected.has(id)) {
       newSelected.delete(id);
@@ -82,7 +88,9 @@ const Transactions = () => {
   };
 
   const selectAll = () => {
-    const allIds = new Set(currentTransactions.map(t => t.id));
+    const allIds = new Set(
+      currentTransactions.filter((t) => t.payment_method !== "invoice").map((t) => t.id)
+    );
     setSelectedTransactions(allIds);
   };
 
@@ -166,7 +174,8 @@ const Transactions = () => {
           amount: formData.type === "expense" ? -Math.abs(Number(formData.amount)) : Math.abs(Number(formData.amount)),
           type: formData.type,
           payment_method: formData.payment_method,
-          payment_status: formData.payment_status
+          payment_status: formData.payment_status,
+          client_id: formData.client_id || null, // Inclui o client_id no update
         })
         .eq("id", selectedTransaction.id)
         .eq("user_id", user.id);
@@ -255,10 +264,26 @@ const Transactions = () => {
     setTransactionToDelete(id);
     setIsDeleteDialogOpen(true);
   };
-  
+
   const handleConfirmTransaction = (transaction: Transaction) => {
+    if (transaction.payment_method === "invoice") {
+      toast({
+        title: "Ação não permitida",
+        description: "Transações faturadas não podem ser confirmadas aqui.",
+        variant: "destructive",
+      });
+      return;
+    }
     setTransactionToConfirm(transaction);
     setIsConfirmPaymentDialogOpen(true);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 0) setCurrentPage(currentPage - 1);
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1);
   };
 
   return (
@@ -271,16 +296,32 @@ const Transactions = () => {
           <Card className="rounded-xl border-border bg-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-card-foreground">
-                Histórico de Transações
+                Histórico de Transações - {currentDay[0] || "Nenhum dia selecionado"}
               </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 0}
+                  variant="outline"
+                >
+                  Anterior
+                </Button>
+                <Button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages - 1 || totalPages === 0}
+                  variant="outline"
+                >
+                  Próximo
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <DailyTransactionsList
-                days={days}
-                currentDayIndex={currentDayIndex}
+                days={days.slice(currentPage, currentPage + transactionsPerPage)}
+                currentDayIndex={0} // Apenas o dia atual na página
                 selectedTransactions={selectedTransactions}
                 isLoading={isLoading}
-                onPageChange={setCurrentDayIndex}
+                onPageChange={() => {}} // Não usado mais
                 onSelectTransaction={toggleSelection}
                 onSelectAll={selectAll}
                 onDeselectAll={deselectAll}
@@ -302,10 +343,7 @@ const Transactions = () => {
             <DialogTitle className="text-card-foreground">Editar Transação</DialogTitle>
           </DialogHeader>
           {selectedTransaction && (
-            <EditTransactionForm 
-              transaction={selectedTransaction} 
-              onSubmit={handleSubmitEdit} 
-            />
+            <EditTransactionForm transaction={selectedTransaction} onSubmit={handleSubmitEdit} />
           )}
         </DialogContent>
       </Dialog>
