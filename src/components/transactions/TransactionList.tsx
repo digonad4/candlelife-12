@@ -1,14 +1,12 @@
-
 import { Transaction } from "@/types/transaction";
 import { TransactionItem } from "./TransactionItem";
-import { Button } from "@/components/ui/button";
 
 interface TransactionListProps {
   transactions: Transaction[];
   isLoading: boolean;
   selectedTransactions: string[];
   onSelectTransaction: (id: string, isPending: boolean) => void;
-  onOpenConfirmDialog: (ids: string[]) => void;
+  onOpenConfirmDialog: (ids: string[]) => void; // Mantida para uso no TransactionItem
 }
 
 export function TransactionList({
@@ -31,26 +29,16 @@ export function TransactionList({
   }
 
   return (
-    <>
-      {selectedTransactions.length > 0 && (
-        <Button
-          onClick={() => onOpenConfirmDialog(selectedTransactions)}
-          className="mb-4 bg-green-600 hover:bg-green-700 text-sm py-1 px-3 dark:bg-green-500 dark:hover:bg-green-600"
-        >
-          Confirmar {selectedTransactions.length} Pagamento(s)
-        </Button>
-      )}
-      <div className="space-y-2">
-        {transactions.map((transaction) => (
-          <TransactionItem
-            key={transaction.id}
-            transaction={transaction}
-            selectedTransactions={selectedTransactions}
-            onSelectTransaction={onSelectTransaction}
-            onOpenConfirmDialog={onOpenConfirmDialog}
-          />
-        ))}
-      </div>
-    </>
+    <div className="space-y-2">
+      {transactions.map((transaction) => (
+        <TransactionItem
+          key={transaction.id}
+          transaction={transaction}
+          selectedTransactions={selectedTransactions}
+          onSelectTransaction={onSelectTransaction}
+          onOpenConfirmDialog={onOpenConfirmDialog} // Passada para o TransactionItem
+        />
+      ))}
+    </div>
   );
 }
