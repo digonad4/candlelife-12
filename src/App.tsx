@@ -1,4 +1,3 @@
-
 import "./App.css";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
@@ -12,6 +11,7 @@ import Transactions from "./pages/Transactions";
 import NotFound from "./pages/NotFound";
 import Clients from "./pages/Clients";
 import InvoicedTransactions from "./pages/InvoicedTransactions";
+import ExpensesManagement from "@/components/ExpensesManagement"; // Já está importado
 import { useEffect } from "react";
 import { AppSidebar } from "./components/AppSidebar";
 
@@ -72,6 +72,14 @@ function App() {
                 </AuthenticatedRoute>
               } 
             />
+            <Route 
+              path="/expenses" 
+              element={
+                <AuthenticatedRoute>
+                  <ExpensesManagement />
+                </AuthenticatedRoute>
+              } 
+            /> {/* Nova rota adicionada */}
             <Route 
               path="/settings" 
               element={

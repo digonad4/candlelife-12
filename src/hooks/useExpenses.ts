@@ -11,53 +11,36 @@ type Transaction = {
   type: "income" | "expense";
   payment_method: string;
   payment_status: "pending" | "confirmed";
-  client_id?: string;
-  client?: {
-    name: string;
-  };
 };
 
-export function useInvoicedTransactions(
-  userId: string | undefined,
-  startDate: Date | undefined,
-  endDate: Date | undefined,
-  paymentStatusFilter: string = "all"
-) {
+export function useExpenses(
+userId: string | undefined, startDate: Date | undefined, endDate: Date | undefined, paymentStatusFilter: string = "all", paymentMethodFilter: string, categoryFilter: string, p0: number, p1: number, descriptionFilter: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: transactions, isLoading } = useQuery({
-    queryKey: ["invoiced-transactions", userId, startDate, endDate, paymentStatusFilter],
+  const { data: transactions, isLoading } = useQuery<Transaction[]>({
+    queryKey: ["expenses", userId, startDate, endDate, paymentStatusFilter],
     queryFn: async () => {
       if (!userId) return [];
 
       let query = supabase
         .from("transactions")
-        .select(`
-          *,
-          client:clients(name)
-        `)
+        .select("*")
         .eq("user_id", userId)
-        .eq("payment_method", "invoice")
+        .eq("type", "expense")
         .order("date", { ascending: false });
 
-      // Filtro por intervalo de datas
       if (startDate) {
-        const formattedStartDate = format(startDate, "yyyy-MM-dd'T00:00:00.000Z'");
-        query = query.gte("date", formattedStartDate);
+        query = query.gte("date", format(startDate, "yyyy-MM-dd'T00:00:00.000Z'"));
       }
       if (endDate) {
-        const formattedEndDate = format(endDate, "yyyy-MM-dd'T23:59:59.999Z'");
-        query = query.lte("date", formattedEndDate);
+        query = query.lte("date", format(endDate, "yyyy-MM-dd'T23:59:59.999Z'"));
       }
-
-      // Filtro por status de pagamento
       if (paymentStatusFilter !== "all") {
         query = query.eq("payment_status", paymentStatusFilter);
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
       return (data as Transaction[]) || [];
     },
@@ -81,13 +64,10 @@ export function useInvoicedTransactions(
         description: "Os pagamentos selecionados foram confirmados com sucesso.",
       });
 
-      queryClient.invalidateQueries({ queryKey: ["invoiced-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
-
       return true;
     } catch (error) {
-      console.error("Erro ao confirmar pagamentos:", error);
       toast({
         title: "Erro",
         description: "Não foi possível confirmar os pagamentos.",

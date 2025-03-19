@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet } from "lucide-react"; // Adicionei Wallet
 import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -63,7 +63,6 @@ export function AppSidebar() {
         >
           Candle Life 
         </h1>
-        {/* Botão toggle posicionado absolutamente */}
         <button
           className="sidebar-toggle items-center p-2 rounded-md hover:bg-sidebar-accent absolute right-2 top-2 z-20"
           onClick={toggleSidebar}
@@ -84,6 +83,7 @@ export function AppSidebar() {
           {renderNavItem(Receipt, "Transações", "/transactions")}
           {renderNavItem(Users, "Clientes", "/clients")}
           {renderNavItem(FileText, "Faturados", "/invoiced")}
+          {renderNavItem(Wallet, "Gestão de Despesas", "/expenses")} {/* Novo item */}
           {renderNavItem(Settings, "Configurações", "/settings")}
         </ul>
       </nav>

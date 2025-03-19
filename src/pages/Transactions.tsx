@@ -22,6 +22,7 @@ import { Transaction } from "@/types/transaction";
 import { EditTransactionForm, EditFormData } from "@/components/transactions/EditTransactionForm";
 import { DailyTransactionsList } from "@/components/transactions/DailyTransactionsList";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const Transactions = () => {
   const { user } = useAuth();
@@ -29,15 +30,16 @@ const Transactions = () => {
   const queryClient = useQueryClient();
 
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
-  const [currentPage, setCurrentPage] = useState(0); // Paginação ajustada
+  const [currentPage, setCurrentPage] = useState(1); // Paginação começa em 1
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isConfirmPaymentDialogOpen, setIsConfirmPaymentDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [transactionToConfirm, setTransactionToConfirm] = useState<Transaction | null>(null);
+  const [searchTerm, setSearchTerm] = useState(""); // Termo de busca
 
-  const transactionsPerPage = 1; // Um dia por página
+  const transactionsPerPage = 5; // Ajustado para 5 dias por página (pode mudar conforme necessidade)
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["transactions", user?.id],
@@ -59,7 +61,23 @@ const Transactions = () => {
     enabled: !!user,
   });
 
-  const transactionsByDay = transactions?.reduce((acc, transaction) => {
+  // Filtrar transações com base no termo de busca
+  const filteredTransactions = transactions?.filter((transaction) => {
+    const clientName = transaction.client?.name || "";
+    const description = transaction.description || "";
+    const amount = transaction.amount.toString();
+    const date = format(new Date(transaction.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      clientName.toLowerCase().includes(searchLower) ||
+      description.toLowerCase().includes(searchLower) ||
+      amount.includes(searchLower) ||
+      date.toLowerCase().includes(searchLower)
+    );
+  }) || [];
+
+  // Agrupar transações por dia
+  const transactionsByDay = filteredTransactions.reduce((acc, transaction) => {
     const dateKey = format(new Date(transaction.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
     if (!acc[dateKey]) {
       acc[dateKey] = [];
@@ -68,16 +86,18 @@ const Transactions = () => {
     return acc;
   }, {} as Record<string, Transaction[]>);
 
-  const days = transactionsByDay ? Object.entries(transactionsByDay) : [];
-  const totalPages = days.length;
+  const days = Object.entries(transactionsByDay);
+  const totalPages = Math.ceil(days.length / transactionsPerPage);
 
-  const currentDay = days.slice(currentPage, currentPage + transactionsPerPage)[0] || [];
-  const currentTransactions = currentDay[1] || [];
+  // Paginação dos dias
+  const startIndex = (currentPage - 1) * transactionsPerPage;
+  const endIndex = startIndex + transactionsPerPage;
+  const currentDays = days.slice(startIndex, endIndex);
 
-  // Transaction selection handling
+  // Funções de seleção
   const toggleSelection = (id: string) => {
-    const transaction = currentTransactions.find((t) => t.id === id);
-    if (transaction?.payment_method === "invoice") return; // Impede seleção de transações faturadas
+    const transaction = filteredTransactions.find((t) => t.id === id);
+    if (transaction?.payment_method === "invoice") return;
     const newSelected = new Set(selectedTransactions);
     if (newSelected.has(id)) {
       newSelected.delete(id);
@@ -89,7 +109,10 @@ const Transactions = () => {
 
   const selectAll = () => {
     const allIds = new Set(
-      currentTransactions.filter((t) => t.payment_method !== "invoice").map((t) => t.id)
+      currentDays
+        .flatMap(([, transactions]) => transactions)
+        .filter((t) => t.payment_method !== "invoice")
+        .map((t) => t.id)
     );
     setSelectedTransactions(allIds);
   };
@@ -98,7 +121,7 @@ const Transactions = () => {
     setSelectedTransactions(new Set());
   };
 
-  // Bulk actions
+  // Ações em massa
   const handleBulkConfirm = async () => {
     if (!user || selectedTransactions.size === 0) return;
 
@@ -157,7 +180,7 @@ const Transactions = () => {
     }
   };
 
-  // Single transaction actions
+  // Ações individuais
   const handleEdit = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setIsEditModalOpen(true);
@@ -175,7 +198,7 @@ const Transactions = () => {
           type: formData.type,
           payment_method: formData.payment_method,
           payment_status: formData.payment_status,
-          client_id: formData.client_id || null, // Inclui o client_id no update
+          client_id: formData.client_id || null,
         })
         .eq("id", selectedTransaction.id)
         .eq("user_id", user.id);
@@ -190,7 +213,6 @@ const Transactions = () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       setIsEditModalOpen(false);
     } catch (error) {
-      console.error("Erro ao atualizar transação:", error);
       toast({
         title: "Erro",
         description: "Falha ao atualizar a transação",
@@ -220,7 +242,6 @@ const Transactions = () => {
       setIsDeleteDialogOpen(false);
       setTransactionToDelete(null);
     } catch (error) {
-      console.error("Erro ao excluir transação:", error);
       toast({
         title: "Erro",
         description: "Não foi possível excluir a transação.",
@@ -250,7 +271,6 @@ const Transactions = () => {
       setIsConfirmPaymentDialogOpen(false);
       setTransactionToConfirm(null);
     } catch (error) {
-      console.error("Erro ao confirmar pagamento:", error);
       toast({
         title: "Erro",
         description: "Não foi possível confirmar o pagamento.",
@@ -259,7 +279,7 @@ const Transactions = () => {
     }
   };
 
-  // UI event handlers
+  // Handlers de eventos da UI
   const handleDeleteTransaction = (id: string) => {
     setTransactionToDelete(id);
     setIsDeleteDialogOpen(true);
@@ -279,11 +299,15 @@ const Transactions = () => {
   };
 
   const handlePreviousPage = () => {
-    if (currentPage > 0) setCurrentPage(currentPage - 1);
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
 
   const handleNextPage = () => {
-    if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1);
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   return (
@@ -294,43 +318,77 @@ const Transactions = () => {
           <h1 className="text-4xl font-bold text-foreground">Transações</h1>
 
           <Card className="rounded-xl border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-card-foreground">
-                Histórico de Transações - {currentDay[0] || "Nenhum dia selecionado"}
-              </CardTitle>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 0}
-                  variant="outline"
-                >
-                  Anterior
-                </Button>
-                <Button
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages - 1 || totalPages === 0}
-                  variant="outline"
-                >
-                  Próximo
-                </Button>
+            <CardHeader className="flex flex-col gap-4">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-card-foreground">
+                  {searchTerm ? "Resultados da Pesquisa" : "Histórico de Transações"}
+                </CardTitle>
+                <Input
+                  type="text"
+                  placeholder="Pesquisar por cliente, descrição, valor ou data..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1); // Reseta para a primeira página ao buscar
+                  }}
+                  className="w-full max-w-md"
+                />
               </div>
             </CardHeader>
             <CardContent>
-              <DailyTransactionsList
-                days={days.slice(currentPage, currentPage + transactionsPerPage)}
-                currentDayIndex={0} // Apenas o dia atual na página
-                selectedTransactions={selectedTransactions}
-                isLoading={isLoading}
-                onPageChange={() => {}} // Não usado mais
-                onSelectTransaction={toggleSelection}
-                onSelectAll={selectAll}
-                onDeselectAll={deselectAll}
-                onEdit={handleEdit}
-                onDelete={handleDeleteTransaction}
-                onConfirmPayment={handleConfirmTransaction}
-                onConfirmSelected={() => setIsConfirmPaymentDialogOpen(true)}
-                onDeleteSelected={() => setIsDeleteDialogOpen(true)}
-              />
+              {isLoading ? (
+                <p className="text-center">Carregando...</p>
+              ) : days.length === 0 ? (
+                <p>Nenhuma transação encontrada.</p>
+              ) : (
+                <>
+                  <DailyTransactionsList
+                    days={currentDays}
+                    currentDayIndex={0}
+                    selectedTransactions={selectedTransactions}
+                    isLoading={isLoading}
+                    onPageChange={() => {}} // Não usado
+                    onSelectTransaction={toggleSelection}
+                    onSelectAll={selectAll}
+                    onDeselectAll={deselectAll}
+                    onEdit={handleEdit}
+                    onDelete={handleDeleteTransaction}
+                    onConfirmPayment={handleConfirmTransaction}
+                    onConfirmSelected={() => setIsConfirmPaymentDialogOpen(true)}
+                    onDeleteSelected={() => setIsDeleteDialogOpen(true)}
+                  />
+                  <div className="flex justify-between items-center mt-4">
+                    <Button
+                      onClick={handlePreviousPage}
+                      disabled={currentPage === 1}
+                      variant="outline"
+                    >
+                      Anterior
+                    </Button>
+                    <div className="flex gap-2">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          variant={currentPage === page ? "default" : "outline"}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      onClick={handleNextPage}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      variant="outline"
+                    >
+                      Próximo
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Mostrando {startIndex + 1} - {Math.min(endIndex, days.length)} de {days.length} dias
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

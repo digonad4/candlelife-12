@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,20 +6,28 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { InvoicedTransactionCard } from "@/components/invoiced/InvoicedTransactionCard";
 import { ConfirmPaymentsDialog } from "@/components/invoiced/ConfirmPaymentsDialog";
 import { useInvoicedTransactions } from "@/hooks/useInvoicedTransactions";
-import { InvoicedSummary } from "@/components/invoiced/InvoicedSummary";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const InvoicedTransactions = () => {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all"); // Filtro de status
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
-  const { transactions, isLoading, confirmPayments } = useInvoicedTransactions(user?.id, selectedDate);
+  // Ajuste no hook para suportar intervalo de datas
+  const { transactions, isLoading, confirmPayments } = useInvoicedTransactions(
+    user?.id,
+    startDate,
+    endDate,
+    paymentStatusFilter
+  );
 
   const toggleTransactionSelection = (transactionId: string) => {
-    setSelectedTransactions(prev => 
-      prev.includes(transactionId) 
-        ? prev.filter(id => id !== transactionId)
+    setSelectedTransactions((prev) =>
+      prev.includes(transactionId)
+        ? prev.filter((id) => id !== transactionId)
         : [...prev, transactionId]
     );
   };
@@ -31,6 +38,12 @@ const InvoicedTransactions = () => {
       setSelectedTransactions([]);
       setIsConfirmDialogOpen(false);
     }
+  };
+
+  const handleClearFilters = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setPaymentStatusFilter("all");
   };
 
   return (
@@ -48,51 +61,66 @@ const InvoicedTransactions = () => {
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 md:items-center">
-        <DatePicker
-          selected={selectedDate}
-          onSelect={setSelectedDate}
-          placeholder="Selecione uma data"
-          className="w-full md:w-[200px]"
-        />
-        {selectedDate && (
-          <Button variant="outline" onClick={() => setSelectedDate(undefined)}>
-            Limpar Filtro
+        <div className="flex gap-4">
+          <DatePicker
+            selected={startDate}
+            onSelect={setStartDate}
+            placeholder="Data Inicial"
+            className="w-full md:w-[200px]"
+          />
+          <DatePicker
+            selected={endDate}
+            onSelect={setEndDate}
+            placeholder="Data Final"
+            className="w-full md:w-[200px]"
+          />
+        </div>
+        <Select
+          value={paymentStatusFilter}
+          onValueChange={setPaymentStatusFilter}
+        >
+          <SelectTrigger className="w-full md:w-[200px]">
+            <SelectValue placeholder="Filtrar por Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+            <SelectItem value="confirmed">Confirmado</SelectItem>
+          </SelectContent>
+        </Select>
+        {(startDate || endDate || paymentStatusFilter !== "all") && (
+          <Button variant="outline" onClick={handleClearFilters}>
+            Limpar Filtros
           </Button>
         )}
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="rounded-xl border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Histórico de Transações Faturadas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {isLoading ? (
-                  <p className="text-muted-foreground">Carregando...</p>
-                ) : transactions?.map((transaction) => (
-                  <InvoicedTransactionCard
-                    key={transaction.id}
-                    transaction={transaction}
-                    isSelected={selectedTransactions.includes(transaction.id)}
-                    onToggleSelection={toggleTransactionSelection}
-                  />
-                ))}
-                {(!transactions || transactions.length === 0) && (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhuma transação faturada encontrada
-                    {selectedDate && " para esta data"}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="lg:col-span-1">
-          <InvoicedSummary />
-        </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <Card className="rounded-xl border-border bg-card">
+          <CardHeader>
+            <CardTitle className="text-card-foreground">Histórico de Transações Faturadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {isLoading ? (
+                <p className="text-muted-foreground">Carregando...</p>
+              ) : transactions?.map((transaction) => (
+                <InvoicedTransactionCard
+                  key={transaction.id}
+                  transaction={transaction}
+                  isSelected={selectedTransactions.includes(transaction.id)}
+                  onToggleSelection={toggleTransactionSelection}
+                />
+              ))}
+              {(!transactions || transactions.length === 0) && (
+                <p className="text-center text-muted-foreground py-8">
+                  Nenhuma transação faturada encontrada
+                  {(startDate || endDate) && " para o período selecionado"}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <ConfirmPaymentsDialog

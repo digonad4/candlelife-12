@@ -217,7 +217,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]"></TableHead>
-                  <TableHead className="w-[50px]">Tipo</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Data</TableHead>
