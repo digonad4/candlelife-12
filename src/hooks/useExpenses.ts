@@ -14,12 +14,21 @@ type Transaction = {
 };
 
 export function useExpenses(
-userId: string | undefined, startDate: Date | undefined, endDate: Date | undefined, paymentStatusFilter: string = "all", paymentMethodFilter: string, categoryFilter: string, p0: number, p1: number, descriptionFilter: string) {
+  userId: string | undefined,
+  startDate: Date | undefined,
+  endDate: Date | undefined,
+  paymentStatusFilter: string = "all",
+  paymentMethodFilter: string,
+  categoryFilter: string,
+  p0: number,
+  p1: number,
+  descriptionFilter: string
+) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: transactions, isLoading } = useQuery<Transaction[]>({
-    queryKey: ["expenses", userId, startDate, endDate, paymentStatusFilter],
+    queryKey: ["expenses", userId, startDate, endDate, paymentStatusFilter, descriptionFilter], // Adicionei descriptionFilter na queryKey
     queryFn: async () => {
       if (!userId) return [];
 
@@ -38,6 +47,9 @@ userId: string | undefined, startDate: Date | undefined, endDate: Date | undefin
       }
       if (paymentStatusFilter !== "all") {
         query = query.eq("payment_status", paymentStatusFilter);
+      }
+      if (descriptionFilter) {
+        query = query.ilike("description", `%${descriptionFilter}%`); // Adicionei filtro de descrição
       }
 
       const { data, error } = await query;

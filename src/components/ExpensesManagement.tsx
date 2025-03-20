@@ -1,10 +1,16 @@
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
+import { InvoicedTransactionCard } from "@/components/invoiced/InvoicedTransactionCard";
+import { ConfirmPaymentsDialog } from "@/components/invoiced/ConfirmPaymentsDialog";
 import { useExpenses } from "@/hooks/useExpenses";
+import { Plus } from "lucide-react";
+import { DateFilter } from "@/components/dashboard/DateFilter";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { startOfDay, endOfDay, format } from "date-fns";
 
 type Transaction = {
   id: string;
@@ -18,22 +24,52 @@ type Transaction = {
 
 const ExpensesManagement = () => {
   const { user } = useAuth();
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<string>("today");
+  const [startDate, setStartDate] = useState<Date>(() => startOfDay(new Date()));
+  const [endDate, setEndDate] = useState<Date>(() => endOfDay(new Date()));
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
+  const [descriptionFilter, setDescriptionFilter] = useState<string>("");
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { transactions, isLoading, confirmPayments } = useExpenses(
     user?.id,
     startDate,
     endDate,
     paymentStatusFilter,
-    "all", // paymentMethodFilter
-    "all", // categoryFilter
-    0,     // p0
-    10,    // p1
-    ""     // descriptionFilter
+    "all",
+    "all",
+    0,
+    10,
+    descriptionFilter
   );
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`transactions-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          console.log("📢 Alteração detectada em despesas. Atualizando...");
+          queryClient.invalidateQueries({ queryKey: ["expenses"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log("🛑 Removendo canal do Supabase.");
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, user]);
 
   const toggleTransactionSelection = (transactionId: string) => {
     setSelectedTransactions((prev) =>
@@ -47,22 +83,35 @@ const ExpensesManagement = () => {
     const success = await confirmPayments(selectedTransactions);
     if (success) {
       setSelectedTransactions([]);
+      setIsConfirmDialogOpen(false);
     }
   };
 
-  const handleClearFilters = () => {
-    setStartDate(undefined);
-    setEndDate(undefined);
+  const handleResetFilters = () => {
+    setDateRange("today");
+    setStartDate(startOfDay(new Date()));
+    setEndDate(endOfDay(new Date()));
     setPaymentStatusFilter("all");
+    setDescriptionFilter("");
   };
+
+  // Calcular o valor total das transações exibidas
+  const totalAmount = transactions?.reduce((sum, transaction) => sum + transaction.amount, 0) || 0;
+  const formattedTotal = totalAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // Formatar o intervalo de datas
+  const formattedDateRange =
+    startDate && endDate
+      ? `${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`
+      : "Selecione um período";
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground">Gestão de Despesas</h1>
+        <h1 className="text-2xl md:text-4xl font-bold text-foreground">Gestão de Despesas</h1>
         {selectedTransactions.length > 0 && (
           <Button
-            onClick={handleConfirmSelectedPayments}
+            onClick={() => setIsConfirmDialogOpen(true)}
             className="bg-green-600 hover:bg-green-700"
           >
             Confirmar Selecionados ({selectedTransactions.length})
@@ -70,85 +119,85 @@ const ExpensesManagement = () => {
         )}
       </div>
 
-      <Card className="rounded-xl border-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-card-foreground">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div>
-              <label className="text-sm text-muted-foreground">Data Inicial</label>
-              <DatePicker
-                selected={startDate}
-                onSelect={setStartDate}
-                placeholder="Data Inicial"
-                className="w-full md:w-[200px]"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Data Final</label>
-              <DatePicker
-                selected={endDate}
-                onSelect={setEndDate}
-                placeholder="Data Final"
-                className="w-full md:w-[200px]"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground">Status</label>
-              <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="Filtrar por Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="confirmed">Confirmado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button variant="outline" onClick={handleClearFilters} className="mt-6 md:mt-0">
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row gap-4 md:items-center">
+          <DateFilter
+            dateRange={dateRange}
+            startDate={startDate}
+            endDate={endDate}
+            onDateRangeChange={setDateRange}
+            onStartDateChange={(date) => date && setStartDate(date)}
+            onEndDateChange={(date) => date && setEndDate(date)}
+          />
+          <span className="text-sm font-medium text-muted-foreground  px-3 py-1 rounded-md">
+            Periodo {formattedDateRange}
+          </span>
+          {(dateRange !== "today" || paymentStatusFilter !== "all" || descriptionFilter !== "") && (
+            <Button variant="outline" onClick={handleResetFilters}>
               Limpar Filtros
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+        <div className="flex items-center gap-4">
+          <Input
+            placeholder="Pesquisar por descrição..."
+            value={descriptionFilter}
+            onChange={(e) => setDescriptionFilter(e.target.value)}
+            className="w-full md:w-[300px]"
+          />
+          
+        </div>
+      </div>
 
-      <Card className="rounded-xl border-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-card-foreground">Histórico de Despesas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {isLoading ? (
-              <p className="text-muted-foreground">Carregando...</p>
-            ) : transactions?.map((transaction) => (
-              <div
-                key={transaction.id}
-                className={`p-4 border rounded-lg ${selectedTransactions.includes(transaction.id) ? "bg-gray-100" : ""}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedTransactions.includes(transaction.id)}
-                  onChange={() => toggleTransactionSelection(transaction.id)}
-                  className="mr-2"
-                  title={`Selecionar ${transaction.description}`}
-                />
-                <span>{transaction.description}</span> -{" "}
-                <span>
-                  {transaction.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </span> -{" "}
-                <span>{transaction.payment_status === "pending" ? "Pendente" : "Confirmado"}</span>
-              </div>
-            ))}
-            {(!transactions || transactions.length === 0) && (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhuma despesa encontrada
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-6">
+        <Card className="rounded-xl border-border bg-card">
+          <CardHeader>
+            <CardTitle className="text-card-foreground">Histórico de Despesas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {isLoading ? (
+                <p className="text-muted-foreground">Carregando...</p>
+              ) : (
+                transactions?.map((transaction) => (
+                  <InvoicedTransactionCard
+                    key={transaction.id}
+                    transaction={transaction}
+                    isSelected={selectedTransactions.includes(transaction.id)}
+                    onToggleSelection={toggleTransactionSelection}
+                  />
+                ))
+              )}
+              {(!transactions || transactions.length === 0) && (
+                <p className="text-center text-muted-foreground py-8">
+                  Nenhuma despesa encontrada
+                  {(dateRange !== "today" || descriptionFilter) && " para os filtros selecionados"}
+                </p>
+              )}
+              {transactions && transactions.length > 0 && (
+                <div className="mt-4 text-right text-lg font-semibold text-foreground">
+                  Total: {formattedTotal}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Button
+        size="lg"
+        className="fixed bottom-7 right-12 rounded-full w-19 h-10 md:w-19 md:h-19 shadow-lg"
+        onClick={() => {/* Adicionar lógica para abrir modal de nova despesa */}}
+      >
+        <Plus className="w-6 h-6" />
+      </Button>
+
+      <ConfirmPaymentsDialog
+        isOpen={isConfirmDialogOpen}
+        onOpenChange={setIsConfirmDialogOpen}
+        selectedCount={selectedTransactions.length}
+        onConfirm={handleConfirmSelectedPayments}
+      />
     </div>
   );
 };

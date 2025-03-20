@@ -21,13 +21,14 @@ export function useInvoicedTransactions(
   userId: string | undefined,
   startDate: Date | undefined,
   endDate: Date | undefined,
-  paymentStatusFilter: string = "all"
+  paymentStatusFilter: string = "all",
+  descriptionFilter: string = "" // Adicionado parâmetro
 ) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ["invoiced-transactions", userId, startDate, endDate, paymentStatusFilter],
+    queryKey: ["invoiced-transactions", userId, startDate, endDate, paymentStatusFilter, descriptionFilter], // Adicionado descriptionFilter na queryKey
     queryFn: async () => {
       if (!userId) return [];
 
@@ -41,7 +42,6 @@ export function useInvoicedTransactions(
         .eq("payment_method", "invoice")
         .order("date", { ascending: false });
 
-      // Filtro por intervalo de datas
       if (startDate) {
         const formattedStartDate = format(startDate, "yyyy-MM-dd'T00:00:00.000Z'");
         query = query.gte("date", formattedStartDate);
@@ -50,10 +50,11 @@ export function useInvoicedTransactions(
         const formattedEndDate = format(endDate, "yyyy-MM-dd'T23:59:59.999Z'");
         query = query.lte("date", formattedEndDate);
       }
-
-      // Filtro por status de pagamento
       if (paymentStatusFilter !== "all") {
         query = query.eq("payment_status", paymentStatusFilter);
+      }
+      if (descriptionFilter) {
+        query = query.ilike("description", `%${descriptionFilter}%`); // Adicionado filtro de descrição
       }
 
       const { data, error } = await query;

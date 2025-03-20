@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,10 +18,9 @@ export function DateFilter({
   endDate,
   onDateRangeChange,
   onStartDateChange,
-  onEndDateChange
+  onEndDateChange,
 }: DateFilterProps) {
   useEffect(() => {
-    // Update dates based on selected range
     if (dateRange !== "custom") {
       const today = new Date();
       
@@ -32,20 +30,20 @@ export function DateFilter({
           onEndDateChange(endOfDay(today));
           break;
         case "last7days":
-          onStartDateChange(subDays(today, 7));
-          onEndDateChange(today);
+          onStartDateChange(startOfDay(subDays(today, 7))); // Início do dia há 7 dias
+          onEndDateChange(endOfDay(today));                  // Fim do dia atual
           break;
         case "last30days":
-          onStartDateChange(subDays(today, 30));
-          onEndDateChange(today);
+          onStartDateChange(startOfDay(subDays(today, 30))); // Início do dia há 30 dias
+          onEndDateChange(endOfDay(today));                   // Fim do dia atual
           break;
         case "last6months":
-          onStartDateChange(subMonths(today, 6));
-          onEndDateChange(today);
+          onStartDateChange(startOfDay(subMonths(today, 6))); // Início do dia há 6 meses
+          onEndDateChange(endOfDay(today));                    // Fim do dia atual
           break;
         case "lastyear":
-          onStartDateChange(subYears(today, 1));
-          onEndDateChange(today);
+          onStartDateChange(startOfDay(subYears(today, 1))); // Início do dia há 1 ano
+          onEndDateChange(endOfDay(today));                   // Fim do dia atual
           break;
       }
     }
@@ -53,10 +51,7 @@ export function DateFilter({
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 mb-4">
-      <Select
-        value={dateRange}
-        onValueChange={onDateRangeChange}
-      >
+      <Select value={dateRange} onValueChange={onDateRangeChange}>
         <SelectTrigger className="w-full sm:w-[200px]">
           <SelectValue placeholder="Selecione o período" />
         </SelectTrigger>

@@ -28,7 +28,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"list" | "table">("list"); // Padrão é "list"
+  const [viewMode, setViewMode] = useState<"list" | "table">("list");
 
   const formattedStartDate = startDate
     ? format(startDate, "yyyy-MM-dd'T00:00:00.000Z'")
@@ -99,7 +99,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
         .from("transactions")
         .update({ payment_status: "confirmed" })
         .in("id", selectedTransactions)
-        .eq("user_id", user.id);
+        .eq("user_id", user?.id || "");
       toast({ title: "Pagamentos Confirmados", description: "Os pagamentos foram atualizados." });
       queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
       setSelectedTransactions([]);
@@ -113,8 +113,9 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
     }
   };
 
-  const handleSelectTransaction = (id: string, isPending: boolean) => {
-    if (!isPending) return;
+  const handleSelectTransaction = (id: string, isPending: boolean, paymentMethod: string) => {
+    // Bloqueia seleção se for faturada (payment_method: "invoice")
+    if (!isPending || paymentMethod === "invoice") return;
     setSelectedTransactions((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
     );
@@ -122,7 +123,11 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
 
   const handleOpenConfirmDialog = (ids?: string[]) => {
     if (ids) {
-      setSelectedTransactions(ids);
+      setSelectedTransactions(ids.filter((id) => {
+        const transaction = transactions?.find((t) => t.id === id);
+        // Apenas transações pendentes não faturadas podem ser selecionadas
+        return transaction?.payment_status === "pending" && transaction?.payment_method !== "invoice";
+      }));
     }
     if (selectedTransactions.length > 0 || (ids && ids.length > 0)) {
       setIsConfirmDialogOpen(true);
@@ -130,10 +135,10 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
   };
 
   const handleSelectAllPending = () => {
-    const pendingTransactions = (transactions || []).filter(
-      (t) => t.payment_status === "pending"
+    const pendingNonInvoiced = (transactions || []).filter(
+      (t) => t.payment_status === "pending" && t.payment_method !== "invoice" // Apenas não faturadas
     );
-    const pendingIds = pendingTransactions.map((t) => t.id);
+    const pendingIds = pendingNonInvoiced.map((t) => t.id);
     setSelectedTransactions(pendingIds);
   };
 
@@ -183,7 +188,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
                 variant="outline"
                 size="sm"
                 onClick={handleSelectAllPending}
-                disabled={isLoading || !transactions?.some((t) => t.payment_status === "pending")}
+                disabled={isLoading || !transactions?.some((t) => t.payment_status === "pending" && t.payment_method !== "invoice")}
               >
                 Selecionar Pendentes
               </Button>
@@ -209,7 +214,10 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
               transactions={filteredTransactions}
               isLoading={isLoading}
               selectedTransactions={selectedTransactions}
-              onSelectTransaction={handleSelectTransaction}
+              onSelectTransaction={(id) => {
+                const transaction = filteredTransactions.find((t) => t.id === id);
+                handleSelectTransaction(id, transaction?.payment_status === "pending", transaction?.payment_method || "");
+              }}
               onOpenConfirmDialog={handleOpenConfirmDialog}
             />
           ) : (
@@ -248,10 +256,11 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
                           onCheckedChange={() =>
                             handleSelectTransaction(
                               transaction.id,
-                              transaction.payment_status === "pending"
+                              transaction.payment_status === "pending",
+                              transaction.payment_method
                             )
                           }
-                          disabled={transaction.payment_status !== "pending"}
+                          disabled={transaction.payment_status !== "pending" || transaction.payment_method === "invoice"} // Bloqueia faturadas
                         />
                       </TableCell>
                       <TableCell>
@@ -267,7 +276,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
                         {format(new Date(transaction.date), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell>
-                        {transaction.payment_status === "pending" && (
+                        {transaction.payment_status === "pending" && transaction.payment_method !== "invoice" && ( // Oculta botão para faturadas
                           <Button
                             variant="outline"
                             size="sm"
@@ -316,3 +325,21 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
 };
 
 export default RecentTransactions;
+
+export type Profiles = {
+
+  active_theme?: string | null;
+
+  avatar_url?: string | null;
+
+  created_at?: string;
+
+  id?: string;
+
+  updated_at?: string;
+
+  username?: string;
+
+  view_mode?: "list" | "table" | null;
+
+};
