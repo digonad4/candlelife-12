@@ -11,9 +11,9 @@ export default function Clients() {
   interface Client {
     id: string;
     name: string;
-    email: string;
-    document: string;
-    phone: string;
+    email: string | null;
+    document: string | null;
+    phone: string | null;
     // Add other fields as necessary
   }
 

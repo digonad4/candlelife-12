@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -20,10 +19,9 @@ export const ThemeSettings = () => {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
-  const updateTheme = async (newTheme: typeof themes[number]["id"]) => {
+  const updateTheme = (newTheme: typeof themes[number]["id"]) => {
     try {
       setTheme(newTheme);
-      
       toast({
         title: "Tema alterado",
         description: `O tema foi alterado para ${themes.find(t => t.id === newTheme)?.name.toLowerCase()}.`,
@@ -57,6 +55,7 @@ export const ThemeSettings = () => {
           {themes.map(({ id, name, icon: Icon }) => (
             <Label
               key={id}
+              htmlFor={id} // Vincula o label ao RadioGroupItem
               className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-accent transition-colors ${
                 theme === id ? "border-primary bg-accent/50" : "border-input"
               }`}

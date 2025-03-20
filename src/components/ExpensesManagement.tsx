@@ -183,15 +183,6 @@ const ExpensesManagement = () => {
           </CardContent>
         </Card>
       </div>
-
-      <Button
-        size="lg"
-        className="fixed bottom-7 right-12 rounded-full w-19 h-10 md:w-19 md:h-19 shadow-lg"
-        onClick={() => {/* Adicionar lógica para abrir modal de nova despesa */}}
-      >
-        <Plus className="w-6 h-6" />
-      </Button>
-
       <ConfirmPaymentsDialog
         isOpen={isConfirmDialogOpen}
         onOpenChange={setIsConfirmDialogOpen}
