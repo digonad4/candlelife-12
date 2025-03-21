@@ -55,7 +55,7 @@ export function FinancialSummary({ transactions }: FinancialSummaryProps) {
       .filter((t) => t.payment_status === "pending" && t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalAcumulado = totalLucros - totalGastos;
+    const totalAcumulado = totalLucros + totalGastos;
 
     return {
       totalDinheiroReceita,
@@ -139,7 +139,7 @@ export function FinancialSummary({ transactions }: FinancialSummaryProps) {
 
         {/* Seção Total Acumulado */}
         <div className="bg-muted rounded-lg p-4 flex flex-col justify-center items-center">
-          <h3 className="text-base font-medium text-muted-foreground mb-4">Total Acumulado</h3>
+          <h3 className="text-base font-medium text-muted-foreground mb-4">Total</h3>
           <span
             className={`text-3xl font-bold ${
               totals.totalAcumulado >= 0 ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
