@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -70,12 +69,13 @@ const Dashboard = () => {
       {/* Transações e valores */}
       <RecentTransactions startDate={startDate} endDate={endDate} />
 
+      {/* Botão redondo para adicionar transação */}
       <Button
         size="lg"
-        className="fixed bottom-7 right-12 rounded-full w-19 h-10 md:w-19 md:h-19 shadow-lg"
+        className="fixed bottom-7 right-12 rounded-full w-14 h-14 md:w-16 md:h-16 shadow-lg flex items-center justify-center"
         onClick={() => setIsModalOpen(true)}
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-1 h-2" />
       </Button>
 
       <ExpenseModal

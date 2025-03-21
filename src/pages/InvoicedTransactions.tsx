@@ -106,7 +106,7 @@ const InvoicedTransactions = () => {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground">Transações Faturadas</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-foreground">Faturadas</h1>
         {selectedTransactions.length > 0 && (
           <Button
             onClick={() => setIsConfirmDialogOpen(true)}
@@ -150,7 +150,7 @@ const InvoicedTransactions = () => {
       <div className="grid grid-cols-1 gap-6">
         <Card className="rounded-xl border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-card-foreground">Histórico de Transações Faturadas</CardTitle>
+            <CardTitle className="text-card-foreground">Histórico de Faturadas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

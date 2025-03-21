@@ -26,7 +26,7 @@ export function ExpenseChart({ startDate, endDate }: ExpenseChartProps) {
       <CardHeader>
         <CardTitle>Seu desempenho de {periodLabel}</CardTitle>
       </CardHeader>
-      <CardContent className="h-[400px] flex flex-col">
+      <CardContent className="h-[500px] flex flex-col">
         <div className="flex-1 h-full">
           <ChartData 
             transactions={transactions || []} 

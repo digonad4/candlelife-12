@@ -108,7 +108,7 @@ const ExpensesManagement = () => {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-2xl md:text-4xl font-bold text-foreground">Gestão de Despesas</h1>
+        <h1 className="text-2xl md:text-4xl font-bold text-foreground">Despesas</h1>
         {selectedTransactions.length > 0 && (
           <Button
             onClick={() => setIsConfirmDialogOpen(true)}
@@ -130,7 +130,7 @@ const ExpensesManagement = () => {
             onEndDateChange={(date) => date && setEndDate(date)}
           />
           <span className="text-sm font-medium text-muted-foreground  px-3 py-1 rounded-md">
-            Periodo {formattedDateRange}
+             {formattedDateRange}
           </span>
           {(dateRange !== "today" || paymentStatusFilter !== "all" || descriptionFilter !== "") && (
             <Button variant="outline" onClick={handleResetFilters}>

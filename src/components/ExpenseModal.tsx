@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -85,7 +84,7 @@ export function ExpenseModal({
           type,
           user_id: user.id,
           payment_method: paymentMethod,
-          payment_status: 'pending',
+          payment_status: type === "expense" ? "confirmed" : "pending", // Despesas confirmadas automaticamente
           date: new Date().toISOString()
         });
 

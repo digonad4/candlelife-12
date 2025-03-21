@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,16 +13,23 @@ export const AvatarSettings = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  useEffect(() => {
+    if (user) {
+      loadAvatar();
+    }
+  }, [user]);
+
   const loadAvatar = async () => {
     try {
+      setUploading(true); // Usamos uploading como loading aqui para consistência com o estado visual
       if (!user) return;
-      
+
       console.log("AvatarSettings loading avatar for user ID:", user.id);
 
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('avatar_url, username')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("avatar_url, username")
+        .eq("id", user.id)
         .maybeSingle();
 
       if (profileError) {
@@ -34,8 +40,27 @@ export const AvatarSettings = () => {
       console.log("AvatarSettings profile data loaded:", profile);
 
       if (profile) {
-        setAvatarUrl(profile.avatar_url);
-        setUsername(profile.username || '');
+        setAvatarUrl(profile.avatar_url || null);
+        setUsername(profile.username || "");
+      } else {
+        console.log("No profile found, creating one");
+
+        // Se o perfil não existir, cria um novo
+        const { error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            username: user.email?.split("@")[0] || "Usuário",
+            avatar_url: null,
+          });
+
+        if (insertError) {
+          console.error("Error creating profile:", insertError);
+          throw insertError;
+        }
+
+        setUsername(user.email?.split("@")[0] || "Usuário");
+        setAvatarUrl(null);
       }
     } catch (error) {
       console.error("Erro ao carregar avatar:", error);
@@ -44,6 +69,8 @@ export const AvatarSettings = () => {
         description: "Não foi possível carregar seu avatar.",
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -61,50 +88,50 @@ export const AvatarSettings = () => {
       }
 
       if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('Você precisa selecionar uma imagem para fazer upload.');
+        throw new Error("Você precisa selecionar uma imagem para fazer upload.");
       }
 
       const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = fileName;
 
       console.log("Uploading avatar:", filePath);
 
-      // Ensure the avatars bucket exists
+      // Verifica se o bucket "avatars" existe, cria se necessário
       const { data: buckets } = await supabase.storage.listBuckets();
-      if (!buckets?.find(bucket => bucket.name === 'avatars')) {
-        await supabase.storage.createBucket('avatars', {
-          public: true
+      if (!buckets?.find((bucket) => bucket.name === "avatars")) {
+        await supabase.storage.createBucket("avatars", {
+          public: true,
         });
       }
 
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from("avatars")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
+        .from("avatars")
         .getPublicUrl(filePath);
 
       console.log("Avatar uploaded, public URL:", publicUrl);
 
       const { error: updateError } = await supabase
-        .from('profiles')
-        .upsert({ 
+        .from("profiles")
+        .upsert({
           id: user.id,
           avatar_url: publicUrl,
           updated_at: new Date().toISOString(),
-          username: username
+          username: username || user.email?.split("@")[0] || "Usuário",
         });
 
       if (updateError) throw updateError;
 
       console.log("Profile updated with new avatar");
       setAvatarUrl(publicUrl);
-      
+
       toast({
         title: "Avatar atualizado",
         description: "Seu avatar foi atualizado com sucesso.",
@@ -113,7 +140,8 @@ export const AvatarSettings = () => {
       console.error("Erro ao fazer upload do avatar:", error);
       toast({
         title: "Erro",
-        description: (error instanceof Error ? error.message : "Não foi possível atualizar o avatar."),
+        description:
+          error instanceof Error ? error.message : "Não foi possível atualizar o avatar.",
         variant: "destructive",
       });
     } finally {
@@ -125,9 +153,7 @@ export const AvatarSettings = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-4">Avatar</h2>
-        <p className="text-muted-foreground">
-          Atualize sua foto de perfil.
-        </p>
+        <p className="text-muted-foreground">Atualize sua foto de perfil.</p>
       </div>
 
       <div className="flex flex-col items-center gap-6 sm:flex-row">
@@ -139,11 +165,11 @@ export const AvatarSettings = () => {
         </Avatar>
 
         <div className="flex flex-col gap-3">
-          <p className="text-center sm:text-left">{username || 'Usuário'}</p>
+          <p className="text-center sm:text-left">{username || "Usuário"}</p>
           <Button
             variant="outline"
             disabled={uploading}
-            onClick={() => document.getElementById('avatar-upload')?.click()}
+            onClick={() => document.getElementById("avatar-upload")?.click()}
             className="w-full"
           >
             {uploading ? (

@@ -1,16 +1,12 @@
-
 import { Transaction } from "@/types/transaction";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransactionItemRow } from "./TransactionItemRow";
 import { TransactionActions } from "./TransactionActions";
 
 interface DailyTransactionsListProps {
   days: [string, Transaction[]][];
-  currentDayIndex: number;
   selectedTransactions: Set<string>;
   isLoading: boolean;
-  onPageChange: (index: number) => void;
   onSelectTransaction: (id: string) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
@@ -23,10 +19,8 @@ interface DailyTransactionsListProps {
 
 export function DailyTransactionsList({
   days,
-  currentDayIndex,
   selectedTransactions,
   isLoading,
-  onPageChange,
   onSelectTransaction,
   onSelectAll,
   onDeselectAll,
@@ -34,13 +28,13 @@ export function DailyTransactionsList({
   onDelete,
   onConfirmPayment,
   onConfirmSelected,
-  onDeleteSelected
+  onDeleteSelected,
 }: DailyTransactionsListProps) {
-  const currentDay = days[currentDayIndex] || [];
-  const currentTransactions = currentDay[1] || [];
-  
-  const hasPendingSelected = Array.from(selectedTransactions).some(id => 
-    currentTransactions.find(t => t.id === id)?.payment_status === "pending"
+  // Verificar se há transações pendentes selecionadas em todos os dias
+  const hasPendingSelected = Array.from(selectedTransactions).some((id) =>
+    days
+      .flatMap(([, transactions]) => transactions)
+      .find((t) => t.id === id)?.payment_status === "pending"
   );
 
   if (isLoading) {
@@ -56,33 +50,9 @@ export function DailyTransactionsList({
   }
 
   return (
-    <>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium">{currentDay[0]}</h3>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => onPageChange(Math.max(0, currentDayIndex - 1))}
-            disabled={currentDayIndex === 0}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            {currentDayIndex + 1} de {days.length}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => onPageChange(Math.min(days.length - 1, currentDayIndex + 1))}
-            disabled={currentDayIndex === days.length - 1}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {currentTransactions.length > 0 && (
+    <div className="space-y-8">
+      {/* Ações globais para todas as transações */}
+      {selectedTransactions.size > 0 && (
         <TransactionActions
           selectedCount={selectedTransactions.size}
           hasPendingSelected={hasPendingSelected}
@@ -93,25 +63,29 @@ export function DailyTransactionsList({
         />
       )}
 
-      {currentTransactions.length > 0 ? (
-        <div className="space-y-4">
-          {currentTransactions.map((transaction) => (
-            <TransactionItemRow
-              key={transaction.id}
-              transaction={transaction}
-              isSelected={selectedTransactions.has(transaction.id)}
-              onSelect={onSelectTransaction}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onConfirmPayment={onConfirmPayment}
-            />
-          ))}
+      {/* Lista completa de dias */}
+      {days.map(([date, transactions]) => (
+        <div key={date} className="space-y-4">
+          <h3 className="text-lg font-medium text-foreground border-b pb-2">{date}</h3>
+          {transactions.length > 0 ? (
+            <div className="space-y-4">
+              {transactions.map((transaction) => (
+                <TransactionItemRow
+                  key={transaction.id}
+                  transaction={transaction}
+                  isSelected={selectedTransactions.has(transaction.id)}
+                  onSelect={onSelectTransaction}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onConfirmPayment={onConfirmPayment}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">Nenhuma transação neste dia</p>
+          )}
         </div>
-      ) : (
-        <p className="text-center text-muted-foreground py-8">
-          Nenhuma transação encontrada para este dia
-        </p>
-      )}
-    </>
+      ))}
+    </div>
   );
 }

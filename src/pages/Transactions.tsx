@@ -21,8 +21,50 @@ import {
 import { Transaction } from "@/types/transaction";
 import { EditTransactionForm, EditFormData } from "@/components/transactions/EditTransactionForm";
 import { DailyTransactionsList } from "@/components/transactions/DailyTransactionsList";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateFilter } from "@/components/dashboard/DateFilter";
+import { Button } from "@/components/ui/button";
+
+const TransactionSummary = ({
+  totalTransactions,
+  totalIncome,
+  totalExpenses,
+  balance,
+}: {
+  totalTransactions: number;
+  totalIncome: number;
+  totalExpenses: number;
+  balance: number;
+}) => (
+  <Card className="mb-6 bg-card">
+    <CardContent className="pt-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground">Total de Transações</p>
+          <p className="text-2xl font-bold text-foreground">{totalTransactions}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Receitas</p>
+          <p className="text-2xl font-bold text-green-600">
+            {totalIncome.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Despesas</p>
+          <p className="text-2xl font-bold text-red-600">
+            {totalExpenses.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Saldo</p>
+          <p className={`text-2xl font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
+            {balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          </p>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const Transactions = () => {
   const { user } = useAuth();
@@ -30,23 +72,23 @@ const Transactions = () => {
   const queryClient = useQueryClient();
 
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
-  const [currentPage, setCurrentPage] = useState(1); // Paginação começa em 1
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isConfirmPaymentDialogOpen, setIsConfirmPaymentDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [transactionToConfirm, setTransactionToConfirm] = useState<Transaction | null>(null);
-  const [searchTerm, setSearchTerm] = useState(""); // Termo de busca
-
-  const transactionsPerPage = 5; // Ajustado para 5 dias por página (pode mudar conforme necessidade)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateRange, setDateRange] = useState("today");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ["transactions", user?.id],
+    queryKey: ["transactions", user?.id, startDate, endDate],
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("transactions")
         .select(`
           *,
@@ -54,6 +96,14 @@ const Transactions = () => {
         `)
         .eq("user_id", user.id)
         .order("date", { ascending: false });
+
+      if (startDate && endDate) {
+        query = query
+          .gte("date", startDate.toISOString())
+          .lte("date", endDate.toISOString());
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data as Transaction[];
@@ -87,17 +137,72 @@ const Transactions = () => {
   }, {} as Record<string, Transaction[]>);
 
   const days = Object.entries(transactionsByDay);
-  const totalPages = Math.ceil(days.length / transactionsPerPage);
 
-  // Paginação dos dias
-  const startIndex = (currentPage - 1) * transactionsPerPage;
-  const endIndex = startIndex + transactionsPerPage;
-  const currentDays = days.slice(startIndex, endIndex);
+  // Calcular totais
+  const totalTransactions = filteredTransactions.length;
+  const totalIncome = filteredTransactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = filteredTransactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const balance = totalIncome - totalExpenses;
+
+  // Função de impressão ajustada
+  const handlePrint = () => {
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write("<html><head><title>CandleLife Finanças</title>");
+      printWindow.document.write(`
+        <style>
+          @media print {
+            body {
+              width: 58mm;
+              font-family: monospace;
+              font-size: 10px;
+              line-height: 1.2;
+              margin: 0;
+              padding: 5mm;
+            }
+            h1 { font-size: 12px; text-align: center; margin-bottom: 5px; }
+            h2 { font-size: 10px; margin: 5px 0; }
+            p { margin: 2px 0; }
+            .divider { border-top: 1px dashed #000; margin: 5px 0; }
+            .totals { margin-top: 10px; }
+          }
+        </style>
+      `);
+      printWindow.document.write("</head><body>");
+      printWindow.document.write("<h1>Extrato de Transações</h1>");
+      printWindow.document.write(`<p>Usuário: ${user?.user_metadata?.username || "N/A"}</p>`);
+      printWindow.document.write(`<p>Email: ${user?.email || "N/A"}</p>`);
+      printWindow.document.write(`<p>Período: ${startDate?.toLocaleDateString("pt-BR")} a ${endDate?.toLocaleDateString("pt-BR")}</p>`);
+      printWindow.document.write("<div class='divider'></div>");
+      days.forEach(([date, transactions]) => {
+        printWindow.document.write(``);
+        transactions.forEach((t) => {
+          printWindow.document.write(
+            `<p>${t.description} ${t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} (${t.type === "income" ? "R" : "D"})</p>`
+          );
+        });
+        printWindow.document.write("<div class='divider'></div>");
+      });
+      printWindow.document.write("<div class='totals'>");
+      printWindow.document.write(`<p>Total Transações: ${totalTransactions}</p>`);
+      printWindow.document.write(`<p>Receitas: ${totalIncome.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>`);
+      printWindow.document.write(`<p>Despesas: ${totalExpenses.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>`);
+      printWindow.document.write(`<p>Saldo: ${balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>`);
+      printWindow.document.write("</div>");
+      printWindow.document.write("</body></html>");
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
 
   // Funções de seleção
   const toggleSelection = (id: string) => {
     const transaction = filteredTransactions.find((t) => t.id === id);
-    if (transaction?.payment_method === "invoice") return;
+    if (transaction?.payment_method === "invoice" && transaction.payment_status !== "confirmed") return;
     const newSelected = new Set(selectedTransactions);
     if (newSelected.has(id)) {
       newSelected.delete(id);
@@ -109,9 +214,9 @@ const Transactions = () => {
 
   const selectAll = () => {
     const allIds = new Set(
-      currentDays
+      days
         .flatMap(([, transactions]) => transactions)
-        .filter((t) => t.payment_method !== "invoice")
+        .filter((t) => t.payment_method !== "invoice" || t.payment_status === "confirmed")
         .map((t) => t.id)
     );
     setSelectedTransactions(allIds);
@@ -279,7 +384,6 @@ const Transactions = () => {
     }
   };
 
-  // Handlers de eventos da UI
   const handleDeleteTransaction = (id: string) => {
     setTransactionToDelete(id);
     setIsDeleteDialogOpen(true);
@@ -298,28 +402,26 @@ const Transactions = () => {
     setIsConfirmPaymentDialogOpen(true);
   };
 
-  const handlePreviousPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
   return (
     <div className="min-h-screen flex bg-background">
       <AppSidebar />
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           <h1 className="text-4xl font-bold text-foreground">Transações</h1>
-
+          <DateFilter
+            dateRange={dateRange}
+            startDate={startDate}
+            endDate={endDate}
+            onDateRangeChange={setDateRange}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+          />
+          <div className="flex justify-end">
+            <Button onClick={handlePrint}>Imprimir Extrato</Button>
+          </div>
           <Card className="rounded-xl border-border bg-card">
             <CardHeader className="flex flex-col gap-4">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                 <CardTitle className="text-card-foreground">
                   {searchTerm ? "Resultados da Pesquisa" : "Histórico de Transações"}
                 </CardTitle>
@@ -327,74 +429,43 @@ const Transactions = () => {
                   type="text"
                   placeholder="Pesquisar por cliente, descrição, valor ou data..."
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1); // Reseta para a primeira página ao buscar
-                  }}
-                  className="w-full max-w-md"
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full md:w-1/3"
                 />
               </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <p className="text-center">Carregando...</p>
+                <p className="text-center text-muted-foreground">Carregando...</p>
               ) : days.length === 0 ? (
-                <p>Nenhuma transação encontrada.</p>
+                <p className="text-muted-foreground">Nenhuma transação encontrada para o período selecionado.</p>
               ) : (
-                <>
-                  <DailyTransactionsList
-                    days={currentDays}
-                    currentDayIndex={0}
-                    selectedTransactions={selectedTransactions}
-                    isLoading={isLoading}
-                    onPageChange={() => {}} // Não usado
-                    onSelectTransaction={toggleSelection}
-                    onSelectAll={selectAll}
-                    onDeselectAll={deselectAll}
-                    onEdit={handleEdit}
-                    onDelete={handleDeleteTransaction}
-                    onConfirmPayment={handleConfirmTransaction}
-                    onConfirmSelected={() => setIsConfirmPaymentDialogOpen(true)}
-                    onDeleteSelected={() => setIsDeleteDialogOpen(true)}
-                  />
-                  <div className="flex justify-between items-center mt-4">
-                    <Button
-                      onClick={handlePreviousPage}
-                      disabled={currentPage === 1}
-                      variant="outline"
-                    >
-                      Anterior
-                    </Button>
-                    <div className="flex gap-2">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <Button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          variant={currentPage === page ? "default" : "outline"}
-                        >
-                          {page}
-                        </Button>
-                      ))}
-                    </div>
-                    <Button
-                      onClick={handleNextPage}
-                      disabled={currentPage === totalPages || totalPages === 0}
-                      variant="outline"
-                    >
-                      Próximo
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Mostrando {startIndex + 1} - {Math.min(endIndex, days.length)} de {days.length} dias
-                  </p>
-                </>
+                <DailyTransactionsList
+                  days={days}
+                  selectedTransactions={selectedTransactions}
+                  isLoading={isLoading}
+                  onSelectTransaction={toggleSelection}
+                  onSelectAll={selectAll}
+                  onDeselectAll={deselectAll}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteTransaction}
+                  onConfirmPayment={handleConfirmTransaction}
+                  onConfirmSelected={() => setIsConfirmPaymentDialogOpen(true)}
+                  onDeleteSelected={() => setIsDeleteDialogOpen(true)}
+                />
               )}
             </CardContent>
           </Card>
+          <TransactionSummary
+            totalTransactions={totalTransactions}
+            totalIncome={totalIncome}
+            totalExpenses={totalExpenses}
+            balance={balance}
+          />
         </div>
       </main>
 
-      {/* Modal de Edição */}
+      {/* Modais */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="bg-card">
           <DialogHeader>
@@ -406,7 +477,6 @@ const Transactions = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmação de Exclusão Individual */}
       <AlertDialog open={isDeleteDialogOpen && !!transactionToDelete} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
@@ -424,7 +494,6 @@ const Transactions = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirmação de Pagamento Individual */}
       <AlertDialog open={isConfirmPaymentDialogOpen && !!transactionToConfirm} onOpenChange={setIsConfirmPaymentDialogOpen}>
         <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
@@ -442,7 +511,6 @@ const Transactions = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirmação de Exclusão Múltipla */}
       <AlertDialog open={isDeleteDialogOpen && !transactionToDelete} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
@@ -460,7 +528,6 @@ const Transactions = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirmação de Pagamento Múltiplo */}
       <AlertDialog open={isConfirmPaymentDialogOpen && !transactionToConfirm} onOpenChange={setIsConfirmPaymentDialogOpen}>
         <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
