@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -118,6 +119,7 @@ export const AvatarSettings = () => {
 
       console.log("Avatar uploaded, public URL:", publicUrl);
 
+      // We need to include username in the update
       const { error: updateError } = await supabase
         .from("profiles")
         .upsert({

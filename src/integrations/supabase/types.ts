@@ -47,6 +47,7 @@ export type Database = {
           id: string
           updated_at: string
           username: string
+          view_mode: string | null
         }
         Insert: {
           active_theme?: string | null
@@ -55,6 +56,7 @@ export type Database = {
           id: string
           updated_at?: string
           username: string
+          view_mode?: string | null
         }
         Update: {
           active_theme?: string | null
@@ -63,6 +65,7 @@ export type Database = {
           id?: string
           updated_at?: string
           username?: string
+          view_mode?: string | null
         }
         Relationships: []
       }
