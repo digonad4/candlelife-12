@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { useSidebar } from "@/hooks/useSidebar";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -91,7 +89,6 @@ const MOCK_COMMENTS: Record<string, Comment[]> = {
 };
 
 const Social = () => {
-  const { isSidebarOpen } = useSidebar();
   const { user } = useAuth();
   const { toast } = useToast();
   const [newPost, setNewPost] = useState("");
@@ -179,165 +176,160 @@ const Social = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <AppSidebar />
-      <div className={`flex-1 overflow-hidden transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-16"}`}>
-        <main className="p-6 md:p-8 max-w-3xl mx-auto space-y-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">Comunidade</h1>
+    <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-8">
+      <h1 className="text-3xl md:text-4xl font-bold text-foreground">Comunidade</h1>
 
-          <Card className="border-border">
-            <CardContent className="pt-6">
-              <div className="flex gap-3">
-                <Avatar className="h-10 w-10">
-                  {user?.user_metadata?.avatar_url ? (
-                    <AvatarImage src={user.user_metadata.avatar_url} />
+      <Card className="border-border">
+        <CardContent className="pt-6">
+          <div className="flex gap-3">
+            <Avatar className="h-10 w-10">
+              {user?.user_metadata?.avatar_url ? (
+                <AvatarImage src={user.user_metadata.avatar_url} />
+              ) : (
+                <AvatarFallback>
+                  {user?.user_metadata?.username?.[0]?.toUpperCase() || "U"}
+                </AvatarFallback>
+              )}
+            </Avatar>
+            <div className="flex-1">
+              <Textarea
+                placeholder="No que você está pensando?"
+                className="resize-none mb-3"
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+              />
+              <div className="flex justify-between items-center">
+                <Button size="sm" variant="outline" type="button">
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  Imagem
+                </Button>
+                <Button size="sm" onClick={handlePostSubmit} disabled={!newPost.trim()}>
+                  Publicar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="space-y-6">
+        {posts.map((post) => (
+          <Card key={post.id} className="border-border">
+            <CardHeader className="flex flex-row justify-between items-start space-y-0 pb-2">
+              <div className="flex items-center gap-3">
+                <Avatar 
+                  className="h-10 w-10 cursor-pointer" 
+                  onClick={() => openChat(post.userId, post.userName, post.userAvatar)}
+                >
+                  {post.userAvatar ? (
+                    <AvatarImage src={post.userAvatar} />
                   ) : (
-                    <AvatarFallback>
-                      {user?.user_metadata?.username?.[0]?.toUpperCase() || "U"}
-                    </AvatarFallback>
+                    <AvatarFallback>{post.userName[0].toUpperCase()}</AvatarFallback>
                   )}
                 </Avatar>
-                <div className="flex-1">
-                  <Textarea
-                    placeholder="No que você está pensando?"
-                    className="resize-none mb-3"
-                    value={newPost}
-                    onChange={(e) => setNewPost(e.target.value)}
-                  />
-                  <div className="flex justify-between items-center">
-                    <Button size="sm" variant="outline" type="button">
-                      <ImageIcon className="h-4 w-4 mr-2" />
-                      Imagem
-                    </Button>
-                    <Button size="sm" onClick={handlePostSubmit} disabled={!newPost.trim()}>
-                      Publicar
-                    </Button>
-                  </div>
+                <div>
+                  <h3 className="font-semibold hover:underline cursor-pointer" onClick={() => openChat(post.userId, post.userName, post.userAvatar)}>
+                    {post.userName}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {post.timestamp.toLocaleString("pt-BR", { dateStyle: "medium", timeStyle: "short" })}
+                  </p>
                 </div>
               </div>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-line">{post.content}</p>
             </CardContent>
-          </Card>
+            <CardFooter className="flex flex-col">
+              <div className="flex justify-between items-center w-full border-t border-b py-2 mb-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex gap-1 items-center"
+                  onClick={() => toggleLike(post.id)}
+                >
+                  <Heart className={`h-5 w-5 ${likedPosts.includes(post.id) ? "fill-red-500 text-red-500" : ""}`} />
+                  <span>{post.likes}</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex gap-1 items-center"
+                  onClick={() => toggleComments(post.id)}
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  <span>{post.comments}</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="flex gap-1 items-center">
+                  <Share className="h-5 w-5" />
+                </Button>
+              </div>
 
-          <div className="space-y-6">
-            {posts.map((post) => (
-              <Card key={post.id} className="border-border">
-                <CardHeader className="flex flex-row justify-between items-start space-y-0 pb-2">
-                  <div className="flex items-center gap-3">
-                    <Avatar 
-                      className="h-10 w-10 cursor-pointer" 
-                      onClick={() => openChat(post.userId, post.userName, post.userAvatar)}
-                    >
-                      {post.userAvatar ? (
-                        <AvatarImage src={post.userAvatar} />
-                      ) : (
-                        <AvatarFallback>{post.userName[0].toUpperCase()}</AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div>
-                      <h3 className="font-semibold hover:underline cursor-pointer" onClick={() => openChat(post.userId, post.userName, post.userAvatar)}>
-                        {post.userName}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {post.timestamp.toLocaleString("pt-BR", { dateStyle: "medium", timeStyle: "short" })}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-5 w-5" />
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <p className="whitespace-pre-line">{post.content}</p>
-                </CardContent>
-                <CardFooter className="flex flex-col">
-                  <div className="flex justify-between items-center w-full border-t border-b py-2 mb-3">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="flex gap-1 items-center"
-                      onClick={() => toggleLike(post.id)}
-                    >
-                      <Heart className={`h-5 w-5 ${likedPosts.includes(post.id) ? "fill-red-500 text-red-500" : ""}`} />
-                      <span>{post.likes}</span>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="flex gap-1 items-center"
-                      onClick={() => toggleComments(post.id)}
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                      <span>{post.comments}</span>
-                    </Button>
-                    <Button variant="ghost" size="sm" className="flex gap-1 items-center">
-                      <Share className="h-5 w-5" />
-                    </Button>
-                  </div>
-
-                  {expandedComments.includes(post.id) && (
-                    <div className="w-full space-y-4">
-                      {comments[post.id]?.map((comment) => (
-                        <div key={comment.id} className="flex gap-2">
-                          <Avatar 
-                            className="h-8 w-8 cursor-pointer" 
-                            onClick={() => openChat(comment.userId, comment.userName, comment.userAvatar)}
-                          >
-                            {comment.userAvatar ? (
-                              <AvatarImage src={comment.userAvatar} />
-                            ) : (
-                              <AvatarFallback>{comment.userName[0].toUpperCase()}</AvatarFallback>
-                            )}
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="bg-muted p-2 rounded-lg">
-                              <h4 className="font-medium text-sm hover:underline cursor-pointer" onClick={() => openChat(comment.userId, comment.userName, comment.userAvatar)}>
-                                {comment.userName}
-                              </h4>
-                              <p className="text-sm">{comment.content}</p>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {comment.timestamp.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                            </p>
-                          </div>
+              {expandedComments.includes(post.id) && (
+                <div className="w-full space-y-4">
+                  {comments[post.id]?.map((comment) => (
+                    <div key={comment.id} className="flex gap-2">
+                      <Avatar 
+                        className="h-8 w-8 cursor-pointer" 
+                        onClick={() => openChat(comment.userId, comment.userName, comment.userAvatar)}
+                      >
+                        {comment.userAvatar ? (
+                          <AvatarImage src={comment.userAvatar} />
+                        ) : (
+                          <AvatarFallback>{comment.userName[0].toUpperCase()}</AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="bg-muted p-2 rounded-lg">
+                          <h4 className="font-medium text-sm hover:underline cursor-pointer" onClick={() => openChat(comment.userId, comment.userName, comment.userAvatar)}>
+                            {comment.userName}
+                          </h4>
+                          <p className="text-sm">{comment.content}</p>
                         </div>
-                      ))}
-
-                      <div className="flex gap-2 mt-2">
-                        <Avatar className="h-8 w-8">
-                          {user?.user_metadata?.avatar_url ? (
-                            <AvatarImage src={user.user_metadata.avatar_url} />
-                          ) : (
-                            <AvatarFallback>
-                              {user?.user_metadata?.username?.[0]?.toUpperCase() || "U"}
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                        <div className="flex-1 flex gap-2">
-                          <Input
-                            placeholder="Escreva um comentário..."
-                            value={newComments[post.id] || ""}
-                            onChange={(e) => setNewComments((prev) => ({ 
-                              ...prev, 
-                              [post.id]: e.target.value 
-                            }))}
-                            className="flex-1"
-                          />
-                          <Button 
-                            size="icon" 
-                            onClick={() => handleCommentSubmit(post.id)} 
-                            disabled={!newComments[post.id]?.trim()}
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {comment.timestamp.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                        </p>
                       </div>
                     </div>
-                  )}
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </main>
+                  ))}
+
+                  <div className="flex gap-2 mt-2">
+                    <Avatar className="h-8 w-8">
+                      {user?.user_metadata?.avatar_url ? (
+                        <AvatarImage src={user.user_metadata.avatar_url} />
+                      ) : (
+                        <AvatarFallback>
+                          {user?.user_metadata?.username?.[0]?.toUpperCase() || "U"}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className="flex-1 flex gap-2">
+                      <Input
+                        placeholder="Escreva um comentário..."
+                        value={newComments[post.id] || ""}
+                        onChange={(e) => setNewComments((prev) => ({ 
+                          ...prev, 
+                          [post.id]: e.target.value 
+                        }))}
+                        className="flex-1"
+                      />
+                      <Button 
+                        size="icon" 
+                        onClick={() => handleCommentSubmit(post.id)} 
+                        disabled={!newComments[post.id]?.trim()}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardFooter>
+          </Card>
+        ))}
       </div>
 
       <ChatModal 

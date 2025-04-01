@@ -18,9 +18,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>
-            <SidebarProvider>
-              <App />
-              <Toaster />
+            <SidebarProvider defaultOpen={true}>
+              <div className="min-h-screen flex w-full">
+                <App />
+                <Toaster />
+              </div>
             </SidebarProvider>
           </ThemeProvider>
         </AuthProvider>
