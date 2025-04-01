@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -59,11 +58,9 @@ export function ClientTransactionsDialog({
       if (!user || !clientId) return [];
       const { data, error } = await supabase
         .from("transactions")
-        .select()
-        .eq("user_id", user.id)
-        .eq("client_id", clientId)
-        .eq("payment_method", "invoice")
-        .order("date", { ascending: false });
+        .select("*")
+        .eq("client_id", client_id || '')
+        .eq("user_id", user.id);
       
       if (error) throw error;
       return data as Transaction[];

@@ -1,8 +1,9 @@
+
 import "./App.css";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { useTheme } from "./context/ThemeContext";
-import { useSidebar } from "./context/SidebarContext";
+import { useSidebar } from "./hooks/useSidebar";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
@@ -11,9 +12,9 @@ import Transactions from "./pages/Transactions";
 import NotFound from "./pages/NotFound";
 import Clients from "./pages/Clients";
 import InvoicedTransactions from "./pages/InvoicedTransactions";
-import ExpensesManagement from "@/components/ExpensesManagement"; // Já está importado
+import Expenses from "./pages/Expenses";
+import Social from "./pages/Social";
 import { useEffect } from "react";
-import { AppSidebar } from "./components/AppSidebar";
 
 function App() {
   const { user } = useAuth();
@@ -35,8 +36,7 @@ function App() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {user && <AppSidebar />}
-      <div className={`flex-1 overflow-hidden transition-all duration-300 ${user && isSidebarOpen ? "ml-64" : user ? "ml-16" : "ml-0"}`}>
+      <div className={`flex-1 overflow-hidden transition-all duration-300`}>
         <main className="h-full hide-scrollbar overflow-y-auto">
           <Routes>
             <Route path="/" element={<RedirectToCorrectLanding />} />
@@ -76,10 +76,18 @@ function App() {
               path="/expenses" 
               element={
                 <AuthenticatedRoute>
-                  <ExpensesManagement />
+                  <Expenses />
                 </AuthenticatedRoute>
               } 
-            /> {/* Nova rota adicionada */}
+            />
+            <Route 
+              path="/social" 
+              element={
+                <AuthenticatedRoute>
+                  <Social />
+                </AuthenticatedRoute>
+              } 
+            />
             <Route 
               path="/settings" 
               element={
