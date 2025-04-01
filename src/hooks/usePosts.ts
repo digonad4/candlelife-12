@@ -111,7 +111,7 @@ export const usePosts = () => {
     }) => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      let imageUrl = null;
+      let imageUrl: string | null = null;
 
       // Upload da imagem se existir
       if (imageFile) {
