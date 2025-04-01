@@ -8,6 +8,7 @@ import {
 import { useUserSessions, UserSession } from "@/hooks/useUserSessions";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getDeviceIcon, formatSessionDate } from "@/integrations/supabase/client";
 
 export function SessionsManager() {
   const { 
@@ -17,14 +18,7 @@ export function SessionsManager() {
     terminateAllOtherSessions 
   } = useUserSessions();
   
-  const formatSessionDate = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), {
-      addSuffix: true,
-      locale: ptBR
-    });
-  };
-  
-  const getDeviceIcon = (deviceInfo: string) => {
+  const getDeviceIconComponent = (deviceInfo: string) => {
     if (deviceInfo.toLowerCase().includes("android") || 
         deviceInfo.toLowerCase().includes("iphone") || 
         deviceInfo.toLowerCase().includes("ios")) {
@@ -69,6 +63,7 @@ export function SessionsManager() {
             session={session} 
             onTerminate={terminateSession.mutate} 
             isTerminating={terminateSession.isPending}
+            getDeviceIconComponent={getDeviceIconComponent}
           />
         ))}
         
@@ -85,18 +80,20 @@ export function SessionsManager() {
 function SessionCard({ 
   session, 
   onTerminate, 
-  isTerminating 
+  isTerminating,
+  getDeviceIconComponent
 }: { 
   session: UserSession;
   onTerminate: (id: string) => void;
   isTerminating: boolean;
+  getDeviceIconComponent: (deviceInfo: string) => JSX.Element;
 }) {
   return (
     <Card className={`border ${session.is_current ? "border-primary/50" : "border-border"}`}>
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
           <div className="flex gap-3">
-            {getDeviceIcon(session.device_info)}
+            {getDeviceIconComponent(session.device_info)}
             
             <div>
               <h3 className="font-medium">

@@ -17,6 +17,7 @@ import Social from "./pages/Social";
 import { useEffect } from "react";
 import { AppSidebar } from "./components/AppSidebar";
 import Index from "./pages/Index";
+import { supabase } from "./integrations/supabase/client";
 
 function App() {
   const { user } = useAuth();
@@ -32,8 +33,6 @@ function App() {
     if (user) {
       const registerSession = async () => {
         try {
-          const { supabase } = await import("@/integrations/supabase/client");
-          
           // Obter informações sobre o dispositivo
           const userAgent = navigator.userAgent;
           let deviceInfo = "Dispositivo desconhecido";

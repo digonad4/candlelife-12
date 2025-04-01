@@ -7,6 +7,9 @@ import { useAuth } from "@/context/AuthContext";
 export type TwoFactorStatus = {
   enabled: boolean;
   secret?: string | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export const useTwoFactorAuth = () => {

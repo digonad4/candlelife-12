@@ -22,7 +22,9 @@ export function TwoFactorManager() {
   
   // Resetar o estado do código quando o status muda
   useEffect(() => {
-    setVerificationCode("");
+    if (twoFactorStatus) {
+      setVerificationCode("");
+    }
   }, [twoFactorStatus?.enabled]);
   
   // Função para iniciar o processo de configuração
