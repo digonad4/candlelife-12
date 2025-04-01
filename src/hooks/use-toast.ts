@@ -157,7 +157,6 @@ function toast({ ...props }: Toast) {
     type: actionTypes.ADD_TOAST,
     toast: {
       ...props,
-      id,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()

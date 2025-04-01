@@ -16,7 +16,8 @@ import { useSidebar } from "@/hooks/useSidebar";
 const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { isSidebarOpen } = useSidebar();
+  const sidebarContext = useSidebar();
+  const isSidebarOpen = sidebarContext?.isSidebarOpen || false;
 
   return (
     <div className="min-h-screen flex bg-background">

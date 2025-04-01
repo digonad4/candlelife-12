@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useSidebar } from "@/hooks/useSidebar";
@@ -6,12 +5,12 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Heart, MessageCircle, Share, MoreHorizontal, Send, Image as ImageIcon } from "lucide-react";
 import { ChatModal } from "@/components/chat/ChatModal";
 
-// Mock data for demonstration
 const MOCK_POSTS = [
   {
     id: "1",
@@ -54,7 +53,6 @@ type Comment = {
   timestamp: Date;
 };
 
-// Mock comments
 const MOCK_COMMENTS: Record<string, Comment[]> = {
   "1": [
     {
@@ -93,7 +91,8 @@ const MOCK_COMMENTS: Record<string, Comment[]> = {
 };
 
 const Social = () => {
-  const { isSidebarOpen } = useSidebar();
+  const sidebarContext = useSidebar();
+  const isSidebarOpen = sidebarContext?.isSidebarOpen || false;
   const { user } = useAuth();
   const { toast } = useToast();
   const [newPost, setNewPost] = useState("");

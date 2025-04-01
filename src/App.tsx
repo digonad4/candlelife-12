@@ -19,7 +19,8 @@ import { useEffect } from "react";
 function App() {
   const { user } = useAuth();
   const { theme } = useTheme();
-  const { isSidebarOpen } = useSidebar();
+  const sidebarContext = useSidebar();
+  const isSidebarOpen = sidebarContext?.isSidebarOpen || false;
   
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);

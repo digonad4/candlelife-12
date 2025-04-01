@@ -59,7 +59,7 @@ export function ClientTransactionsDialog({
       const { data, error } = await supabase
         .from("transactions")
         .select("*")
-        .eq("client_id", client_id || '')
+        .eq("client_id", clientId || '')
         .eq("user_id", user.id);
       
       if (error) throw error;
