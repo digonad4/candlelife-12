@@ -1,11 +1,13 @@
 
 import { Comment } from "@/hooks/usePosts";
 import { CommentItem } from "./CommentItem";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type CommentsListProps = {
   comments: Comment[];
   isLoading: boolean;
+  error?: Error | null;
   currentUserId?: string;
   onDeleteComment: (commentId: string) => void;
 };
@@ -13,9 +15,23 @@ type CommentsListProps = {
 export function CommentsList({ 
   comments, 
   isLoading, 
+  error,
   currentUserId,
   onDeleteComment 
 }: CommentsListProps) {
+  // Se houver um erro ao carregar
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-3">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Erro ao carregar comentários: {error.message}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Se estiver carregando
   if (isLoading) {
     return (
       <div className="flex justify-center py-4">
@@ -24,7 +40,8 @@ export function CommentsList({
     );
   }
   
-  if (comments.length === 0) {
+  // Se não houver comentários
+  if (!comments || comments.length === 0) {
     return (
       <div className="text-center py-4 text-muted-foreground">
         Nenhum comentário ainda. Seja o primeiro a comentar!
@@ -32,6 +49,7 @@ export function CommentsList({
     );
   }
   
+  // Renderiza lista de comentários
   return (
     <>
       {comments.map((comment) => (

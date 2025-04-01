@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
@@ -36,68 +36,107 @@ export const usePosts = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
+  
+  // Adicionar retry e delay para consultas que falharem
+  const queryOptions = {
+    retry: 3,
+    retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  };
 
   // Buscar posts com username e avatar do autor
-  const { data: posts = [], isLoading: isLoadingPosts } = useQuery({
+  const { data: posts = [], isLoading: isLoadingPosts, error: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ["posts"],
     queryFn: async () => {
+      try {
+        // Verificar se o usuário está autenticado
+        if (!user) {
+          console.log("Usuário não autenticado, retornando lista vazia");
+          return [];
+        }
+
+        const { data, error } = await supabase
+          .from("posts")
+          .select(`
+            *,
+            profiles:user_id(username, avatar_url)
+          `)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Erro ao buscar posts:", error);
+          throw new Error(error.message);
+        }
+
+        if (!data) {
+          console.log("Nenhum dado retornado, retornando lista vazia");
+          return [];
+        }
+
+        // Buscar contagem de comentários para cada post
+        const postsWithComments = await Promise.all(
+          data.map(async (post) => {
+            const { count, error: countError } = await supabase
+              .from("comments")
+              .select("*", { count: "exact", head: true })
+              .eq("post_id", post.id);
+
+            if (countError) {
+              console.error("Erro ao contar comentários:", countError);
+              return { ...post, comments_count: 0 };
+            }
+
+            return { ...post, comments_count: count || 0 };
+          })
+        );
+
+        return postsWithComments;
+      } catch (error) {
+        console.error("Erro não tratado ao buscar posts:", error);
+        throw error;
+      }
+    },
+    ...queryOptions,
+    enabled: !!user,
+  });
+
+  // Efeito para mostrar toast quando há erro na consulta de posts
+  useEffect(() => {
+    if (postsError) {
+      toast({
+        title: "Erro",
+        description: `Não foi possível carregar as publicações: ${(postsError as Error).message}`,
+        variant: "destructive",
+      });
+    }
+  }, [postsError, toast]);
+
+  // Buscar comentários de um post específico
+  const getComments = async (postId: string): Promise<Comment[]> => {
+    if (!postId) {
+      console.error("ID do post é indefinido ou nulo");
+      return [];
+    }
+
+    try {
       const { data, error } = await supabase
-        .from("posts")
+        .from("comments")
         .select(`
           *,
           profiles:user_id(username, avatar_url)
         `)
-        .order("created_at", { ascending: false });
+        .eq("post_id", postId)
+        .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("Erro ao buscar posts:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar as publicações.",
-          variant: "destructive",
-        });
-        return [];
+        console.error("Erro ao buscar comentários:", error);
+        throw error;
       }
 
-      // Buscar contagem de comentários para cada post
-      const postsWithComments = await Promise.all(
-        data.map(async (post) => {
-          const { count, error: countError } = await supabase
-            .from("comments")
-            .select("*", { count: "exact", head: true })
-            .eq("post_id", post.id);
-
-          if (countError) {
-            console.error("Erro ao contar comentários:", countError);
-            return { ...post, comments_count: 0 };
-          }
-
-          return { ...post, comments_count: count || 0 };
-        })
-      );
-
-      return postsWithComments;
-    },
-    enabled: !!user,
-  });
-
-  // Buscar comentários de um post específico
-  const getComments = async (postId: string): Promise<Comment[]> => {
-    const { data, error } = await supabase
-      .from("comments")
-      .select(`
-        *,
-        profiles:user_id(username, avatar_url)
-      `)
-      .eq("post_id", postId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Erro ao buscar comentários:", error);
+      return data || [];
+    } catch (error) {
+      console.error("Erro não tratado ao buscar comentários:", error);
       throw error;
     }
-
-    return data;
   };
 
   // Criar um novo post
@@ -465,7 +504,9 @@ export const usePosts = () => {
   return {
     posts,
     isLoadingPosts,
+    postsError,
     isUploading,
+    refetchPosts,
     getComments,
     createPost,
     updatePost,
