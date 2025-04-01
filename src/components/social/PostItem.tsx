@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Heart, MessageCircle, Share, MoreHorizontal, 
-  Send, Trash, Edit, Loader2 
+  Send, Trash, Edit, Loader2, UserIcon 
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -135,7 +135,7 @@ export function PostItem({ post, onEdit }: PostItemProps) {
             <AvatarImage src={comment.profiles.avatar_url} />
           ) : (
             <AvatarFallback>
-              {comment.profiles?.username?.[0]?.toUpperCase() || "U"}
+              {comment.profiles?.username ? comment.profiles.username[0].toUpperCase() : <UserIcon className="h-4 w-4" />}
             </AvatarFallback>
           )}
         </Avatar>
@@ -186,7 +186,9 @@ export function PostItem({ post, onEdit }: PostItemProps) {
               {authorAvatar ? (
                 <AvatarImage src={authorAvatar} />
               ) : (
-                <AvatarFallback>{authorName[0].toUpperCase()}</AvatarFallback>
+                <AvatarFallback>
+                  {authorName && authorName.length > 0 ? authorName[0].toUpperCase() : <UserIcon className="h-5 w-5" />}
+                </AvatarFallback>
               )}
             </Avatar>
             <div>
@@ -279,7 +281,9 @@ export function PostItem({ post, onEdit }: PostItemProps) {
                     <AvatarImage src={user.user_metadata.avatar_url} />
                   ) : (
                     <AvatarFallback>
-                      {user?.user_metadata?.username?.[0]?.toUpperCase() || "U"}
+                      {user?.user_metadata?.username 
+                        ? user.user_metadata.username[0].toUpperCase() 
+                        : <UserIcon className="h-4 w-4" />}
                     </AvatarFallback>
                   )}
                 </Avatar>

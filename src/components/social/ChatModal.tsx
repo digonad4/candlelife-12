@@ -9,7 +9,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, UserIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -104,7 +104,11 @@ export function ChatModal({
               {recipientAvatar ? (
                 <AvatarImage src={recipientAvatar} />
               ) : (
-                <AvatarFallback>{recipientName[0].toUpperCase()}</AvatarFallback>
+                <AvatarFallback>
+                  {recipientName && recipientName.length > 0 
+                    ? recipientName[0].toUpperCase() 
+                    : <UserIcon className="h-4 w-4" />}
+                </AvatarFallback>
               )}
             </Avatar>
             <DialogTitle>{recipientName}</DialogTitle>
@@ -137,7 +141,9 @@ export function ChatModal({
                             <AvatarImage src={msg.sender_profile.avatar_url} />
                           ) : (
                             <AvatarFallback>
-                              {msg.sender_profile?.username?.[0]?.toUpperCase() || "U"}
+                              {msg.sender_profile?.username && msg.sender_profile.username.length > 0
+                                ? msg.sender_profile.username[0].toUpperCase()
+                                : <UserIcon className="h-4 w-4" />}
                             </AvatarFallback>
                           )}
                         </Avatar>

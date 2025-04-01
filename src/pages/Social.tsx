@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Bell } from "lucide-react";
+import { Bell, UserIcon } from "lucide-react";
 import { PostEditor } from "@/components/social/PostEditor";
 import { PostItem } from "@/components/social/PostItem";
 import { ChatModal } from "@/components/social/ChatModal";
@@ -124,7 +124,11 @@ const Social = () => {
                           {chatUser.avatar_url ? (
                             <AvatarImage src={chatUser.avatar_url} />
                           ) : (
-                            <AvatarFallback>{chatUser.username[0].toUpperCase()}</AvatarFallback>
+                            <AvatarFallback>
+                              {chatUser.username && chatUser.username.length > 0
+                                ? chatUser.username[0].toUpperCase()
+                                : <UserIcon className="h-4 w-4" />}
+                            </AvatarFallback>
                           )}
                         </Avatar>
                         {chatUser.unread_count > 0 && (

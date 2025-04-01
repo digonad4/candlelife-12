@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { Image as ImageIcon, X, Loader2, UserIcon } from "lucide-react";
 import { usePosts } from "@/hooks/usePosts";
 
 type PostEditorProps = {
@@ -122,7 +122,9 @@ export function PostEditor({ editingPost, onCancelEdit }: PostEditorProps) {
               <AvatarImage src={user.user_metadata.avatar_url} />
             ) : (
               <AvatarFallback>
-                {user?.user_metadata?.username?.[0]?.toUpperCase() || "U"}
+                {user?.user_metadata?.username && user.user_metadata.username.length > 0
+                  ? user.user_metadata.username[0].toUpperCase()
+                  : <UserIcon className="h-4 w-4" />}
               </AvatarFallback>
             )}
           </Avatar>
