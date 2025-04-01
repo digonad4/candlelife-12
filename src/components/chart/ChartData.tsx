@@ -5,13 +5,8 @@ import { GoogleChartWrapperChartType } from "react-google-charts";
 import { parseISO, format, startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface TransactionData {
-  date: string;
-  amount: number;
-}
-
 interface ChartDataProps {
-  transactions: TransactionData[];
+  transactions: Array<{ date: string; amount: number }>;
   chartType: GoogleChartWrapperChartType;
   timeRange: string;
   isLoading: boolean;
@@ -24,7 +19,7 @@ export function ChartData({ transactions, chartType, timeRange, isLoading }: Cha
     }
 
     let accumulatedValue = 0;
-    const processedTransactions: Array<{ date: string; amount: number }> = [];
+    const processedTransactions = [];
 
     if (timeRange === "individual") { // Velas individuais
       return [

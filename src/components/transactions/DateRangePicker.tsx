@@ -21,7 +21,7 @@ export function DateRangePicker({ dateRange, onDateRangeChange }: DateRangePicke
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleRangeSelect = (range: { from: Date; to: Date; } | undefined) => {
+  const handleRangeSelect = (range: { from: Date; to: Date } | undefined) => {
     if (!range || !range.from || !range.to) return;
 
     const start = parseISO(format(range.from, "yyyy-MM-dd"));
@@ -98,11 +98,8 @@ export function DateRangePicker({ dateRange, onDateRangeChange }: DateRangePicke
         <div className="absolute z-10 mt-40 p-4 bg-muted border border-gray-200 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <DayPicker
             mode="range"
-            selected={{ 
-              from: parseISO(dateRange.start), 
-              to: parseISO(dateRange.end) 
-            }}
-            onSelect={(range: any) => handleRangeSelect(range)}
+            selected={{ from: parseISO(dateRange.start), to: parseISO(dateRange.end) }}
+            onSelect={handleRangeSelect}
             locale={ptBR}
             className="rounded-lg"
             modifiers={{
@@ -112,7 +109,7 @@ export function DateRangePicker({ dateRange, onDateRangeChange }: DateRangePicke
               head: { 
                 background: "#e5e7eb", 
                 borderRadius: "8px 8px 0 0",
-                color: "#1f2937" 
+                color: "#1f2937" // Cinza escuro para texto
               },
               day: { borderRadius: "4px" },
               table: { background: "transparent" },
@@ -121,7 +118,7 @@ export function DateRangePicker({ dateRange, onDateRangeChange }: DateRangePicke
               tbody: "bg-green-100 text-green-900 dark:bg-green-700 dark:text-green-100",
               caption: "text-lg font-medium text-gray-800 dark:text-gray-200",
               nav_button: "text-gray-600 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-400",
-              cell: "text-gray-800 dark:text-gray-200", 
+              cell: "text-gray-800 dark:text-gray-200", // Texto dos dias
             }}
             footer={
               <Button

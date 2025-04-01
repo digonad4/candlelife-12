@@ -37,54 +37,40 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
     ? format(endDate, "yyyy-MM-dd'T23:59:59.999Z'")
     : format(new Date(), "yyyy-MM-dd'T23:59:59.999Z'");
 
+  // Carregar a preferência do usuário ao iniciar
   useEffect(() => {
     const fetchViewMode = async () => {
       if (!user) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("view_mode")
-          .eq("id", user.id)
-          .single();
-          
-        if (error) {
-          console.error("Erro ao carregar view_mode:", error);
-          return;
-        }
-        
-        if (data && data.view_mode) {
-          setViewMode(data.view_mode as "list" | "table");
-        }
-      } catch (error) {
-        console.error("Erro ao buscar view_mode:", error);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("view_mode")
+        .eq("id", user.id)
+        .single();
+      if (error) {
+        console.error("Erro ao carregar view_mode:", error);
+        return;
+      }
+      if (data && data.view_mode) {
+        setViewMode(data.view_mode as "list" | "table");
       }
     };
-    
     fetchViewMode();
   }, [user]);
 
+  // Salvar a preferência do usuário
   const saveViewMode = async (newMode: "list" | "table") => {
     if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ 
-          view_mode: newMode 
-        })
-        .eq("id", user.id);
-        
-      if (error) {
-        toast({
-          title: "Erro",
-          description: "Falha ao salvar preferência de visualização.",
-          variant: "destructive",
-        });
-        console.error("Erro ao salvar view_mode:", error);
-      }
-    } catch (error) {
-      console.error("Erro ao atualizar view_mode:", error);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ view_mode: newMode })
+      .eq("id", user.id);
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar preferência de visualização.",
+        variant: "destructive",
+      });
+      console.error("Erro ao salvar view_mode:", error);
     }
   };
 
@@ -128,6 +114,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
   };
 
   const handleSelectTransaction = (id: string, isPending: boolean, paymentMethod: string) => {
+    // Bloqueia seleção se for faturada (payment_method: "invoice")
     if (!isPending || paymentMethod === "invoice") return;
     setSelectedTransactions((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
@@ -138,6 +125,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
     if (ids) {
       setSelectedTransactions(ids.filter((id) => {
         const transaction = transactions?.find((t) => t.id === id);
+        // Apenas transações pendentes não faturadas podem ser selecionadas
         return transaction?.payment_status === "pending" && transaction?.payment_method !== "invoice";
       }));
     }
@@ -148,7 +136,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
 
   const handleSelectAllPending = () => {
     const pendingNonInvoiced = (transactions || []).filter(
-      (t) => t.payment_status === "pending" && t.payment_method !== "invoice"
+      (t) => t.payment_status === "pending" && t.payment_method !== "invoice" // Apenas não faturadas
     );
     const pendingIds = pendingNonInvoiced.map((t) => t.id);
     setSelectedTransactions(pendingIds);
@@ -272,7 +260,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
                               transaction.payment_method
                             )
                           }
-                          disabled={transaction.payment_status !== "pending" || transaction.payment_method === "invoice"}
+                          disabled={transaction.payment_status !== "pending" || transaction.payment_method === "invoice"} // Bloqueia faturadas
                         />
                       </TableCell>
                       <TableCell>
@@ -288,7 +276,7 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
                         {format(new Date(transaction.date), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell>
-                        {transaction.payment_status === "pending" && transaction.payment_method !== "invoice" && (
+                        {transaction.payment_status === "pending" && transaction.payment_method !== "invoice" && ( // Oculta botão para faturadas
                           <Button
                             variant="outline"
                             size="sm"
@@ -339,11 +327,19 @@ const RecentTransactions = ({ startDate, endDate }: RecentTransactionsProps) => 
 export default RecentTransactions;
 
 export type Profiles = {
+
   active_theme?: string | null;
+
   avatar_url?: string | null;
+
   created_at?: string;
+
   id?: string;
+
   updated_at?: string;
+
   username?: string;
+
   view_mode?: "list" | "table" | null;
+
 };
