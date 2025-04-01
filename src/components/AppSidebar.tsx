@@ -1,6 +1,6 @@
 
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet } from "lucide-react";
+import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare } from "lucide-react";
 import { useSidebar } from "../hooks/useSidebar";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -85,6 +85,7 @@ export function AppSidebar() {
           {renderNavItem(Users, "Clientes", "/clients")}
           {renderNavItem(FileText, "Faturados", "/invoiced")}
           {renderNavItem(Wallet, "Gestão de Despesas", "/expenses")} 
+          {renderNavItem(MessageSquare, "Comunidade", "/social")}
           {renderNavItem(Settings, "Configurações", "/settings")}
         </ul>
       </nav>

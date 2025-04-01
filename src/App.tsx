@@ -27,6 +27,54 @@ function App() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  // Registrar a sessão atual do usuário quando ele fizer login
+  useEffect(() => {
+    if (user) {
+      const registerSession = async () => {
+        try {
+          const { supabase } = await import("@/integrations/supabase/client");
+          
+          // Obter informações sobre o dispositivo
+          const userAgent = navigator.userAgent;
+          let deviceInfo = "Dispositivo desconhecido";
+          
+          if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
+            deviceInfo = "Dispositivo móvel";
+          } else {
+            deviceInfo = "Computador";
+          }
+          
+          // Buscar se já existe uma sessão com esse dispositivo
+          const { data: existingSessions } = await supabase
+            .from("user_sessions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("device_info", deviceInfo);
+            
+          // Se não existir, criar uma nova
+          if (!existingSessions || existingSessions.length === 0) {
+            await supabase
+              .from("user_sessions")
+              .insert({
+                user_id: user.id,
+                device_info: deviceInfo,
+              });
+          } else {
+            // Se existir, atualizar o timestamp
+            await supabase
+              .from("user_sessions")
+              .update({ last_active: new Date().toISOString() })
+              .eq("id", existingSessions[0].id);
+          }
+        } catch (error) {
+          console.error("Erro ao registrar sessão:", error);
+        }
+      };
+      
+      registerSession();
+    }
+  }, [user]);
+
   // Component to handle redirects based on authentication
   const AuthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
     return user ? <>{children}</> : <Navigate to="/login" replace />;

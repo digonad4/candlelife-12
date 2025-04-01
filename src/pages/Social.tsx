@@ -1,336 +1,239 @@
-import { useState } from "react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, MessageCircle, Share, MoreHorizontal, Send, Image as ImageIcon } from "lucide-react";
-import { ChatModal } from "@/components/chat/ChatModal";
-
-const MOCK_POSTS = [
-  {
-    id: "1",
-    userId: "user-1",
-    userName: "João Silva",
-    userAvatar: "",
-    content: "Acabei de fechar um ótimo negócio! 🎉 As transações foram registradas no sistema. Alguém mais conseguiu bater a meta de hoje?",
-    likes: 12,
-    comments: 3,
-    timestamp: new Date(Date.now() - 3600000 * 3),
-  },
-  {
-    id: "2",
-    userId: "user-2",
-    userName: "Maria Oliveira",
-    userAvatar: "",
-    content: "Estou tendo problemas com o relatório mensal. Alguém pode me ajudar com as configurações?",
-    likes: 5,
-    comments: 7,
-    timestamp: new Date(Date.now() - 3600000 * 5),
-  },
-  {
-    id: "3",
-    userId: "user-3",
-    userName: "Carlos Mendes",
-    userAvatar: "",
-    content: "Compartilhando uma dica: utilizem a função de filtro por data nas transações para ter uma visão mais organizada. Melhorou muito meu fluxo de trabalho!",
-    likes: 18,
-    comments: 4,
-    timestamp: new Date(Date.now() - 3600000 * 8),
-  },
-];
-
-type Comment = {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatar?: string;
-  content: string;
-  timestamp: Date;
-};
-
-const MOCK_COMMENTS: Record<string, Comment[]> = {
-  "1": [
-    {
-      id: "c1",
-      userId: "user-2",
-      userName: "Maria Oliveira",
-      content: "Parabéns pela conquista! Também consegui bater minha meta hoje.",
-      timestamp: new Date(Date.now() - 3600000 * 2),
-    },
-    {
-      id: "c2",
-      userId: "user-3",
-      userName: "Carlos Mendes",
-      content: "Quais estratégias você usou?",
-      timestamp: new Date(Date.now() - 3600000 * 1),
-    },
-  ],
-  "2": [
-    {
-      id: "c3",
-      userId: "user-3",
-      userName: "Carlos Mendes",
-      content: "Posso te ajudar, me chama no chat.",
-      timestamp: new Date(Date.now() - 3600000 * 4),
-    },
-  ],
-  "3": [
-    {
-      id: "c4",
-      userId: "user-1",
-      userName: "João Silva",
-      content: "Ótima dica! Vou implementar isso no meu fluxo também.",
-      timestamp: new Date(Date.now() - 3600000 * 7),
-    },
-  ],
-};
+import { Bell } from "lucide-react";
+import { PostEditor } from "@/components/social/PostEditor";
+import { PostItem } from "@/components/social/PostItem";
+import { ChatModal } from "@/components/social/ChatModal";
+import { usePosts, Post } from "@/hooks/usePosts";
+import { useMessages } from "@/hooks/useMessages";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetTrigger 
+} from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Social = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [newPost, setNewPost] = useState("");
-  const [posts, setPosts] = useState(MOCK_POSTS);
-  const [comments, setComments] = useState(MOCK_COMMENTS);
-  const [expandedComments, setExpandedComments] = useState<string[]>([]);
-  const [newComments, setNewComments] = useState<Record<string, string>>({});
-  const [likedPosts, setLikedPosts] = useState<string[]>([]);
+  const { posts, isLoadingPosts } = usePosts();
+  const { chatUsers, isLoadingChatUsers, getTotalUnreadCount } = useMessages();
+  
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRecipient, setChatRecipient] = useState({ id: "", name: "", avatar: "" });
-
-  const handlePostSubmit = () => {
-    if (!newPost.trim() || !user) return;
-
-    const newPostObj = {
-      id: Date.now().toString(),
-      userId: user.id,
-      userName: user.user_metadata?.username || "Usuário",
-      userAvatar: user.user_metadata?.avatar_url || "",
-      content: newPost,
-      likes: 0,
-      comments: 0,
-      timestamp: new Date(),
-    };
-
-    setPosts([newPostObj, ...posts]);
-    setNewPost("");
-    toast({
-      title: "Publicação criada",
-      description: "Sua publicação foi compartilhada com sucesso!",
-    });
-  };
-
-  const toggleComments = (postId: string) => {
-    setExpandedComments((prev) =>
-      prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]
-    );
-  };
-
-  const handleCommentSubmit = (postId: string) => {
-    if (!newComments[postId]?.trim() || !user) return;
-
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      userId: user.id,
-      userName: user.user_metadata?.username || "Usuário",
-      userAvatar: user.user_metadata?.avatar_url,
-      content: newComments[postId],
-      timestamp: new Date(),
-    };
-
-    setComments((prev) => ({
-      ...prev,
-      [postId]: [...(prev[postId] || []), newComment],
-    }));
-
-    setPosts((prev) =>
-      prev.map((post) =>
-        post.id === postId ? { ...post, comments: post.comments + 1 } : post
-      )
-    );
-
-    setNewComments((prev) => ({ ...prev, [postId]: "" }));
-  };
-
-  const toggleLike = (postId: string) => {
-    const isLiked = likedPosts.includes(postId);
-
-    setLikedPosts((prev) =>
-      isLiked ? prev.filter((id) => id !== postId) : [...prev, postId]
-    );
-
-    setPosts((prev) =>
-      prev.map((post) =>
-        post.id === postId
-          ? { ...post, likes: isLiked ? post.likes - 1 : post.likes + 1 }
-          : post
-      )
-    );
-  };
-
+  
+  // Mostrar erro se não estiver autenticado
+  useEffect(() => {
+    if (!user) {
+      toast({
+        title: "Acesso restrito",
+        description: "Você precisa estar autenticado para acessar a comunidade.",
+        variant: "destructive",
+      });
+    }
+  }, [user, toast]);
+  
   const openChat = (userId: string, userName: string, userAvatar?: string) => {
-    setChatRecipient({ id: userId, name: userName, avatar: userAvatar || "" });
+    // Não permitir chat com o próprio usuário
+    if (userId === user?.id) {
+      toast({
+        title: "Operação não permitida",
+        description: "Você não pode iniciar um chat consigo mesmo.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setChatRecipient({ 
+      id: userId, 
+      name: userName, 
+      avatar: userAvatar || "" 
+    });
     setIsChatOpen(true);
   };
+  
+  const handleEditPost = (post: Post) => {
+    setEditingPost(post);
+    // Scrollar para o editor
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  
+  const handleCancelEdit = () => {
+    setEditingPost(null);
+  };
+  
+  const totalUnreadMessages = getTotalUnreadCount();
 
   return (
     <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-8">
-      <h1 className="text-3xl md:text-4xl font-bold text-foreground">Comunidade</h1>
-
-      <Card className="border-border">
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <Avatar className="h-10 w-10">
-              {user?.user_metadata?.avatar_url ? (
-                <AvatarImage src={user.user_metadata.avatar_url} />
-              ) : (
-                <AvatarFallback>
-                  {user?.user_metadata?.username?.[0]?.toUpperCase() || "U"}
-                </AvatarFallback>
-              )}
-            </Avatar>
-            <div className="flex-1">
-              <Textarea
-                placeholder="No que você está pensando?"
-                className="resize-none mb-3"
-                value={newPost}
-                onChange={(e) => setNewPost(e.target.value)}
-              />
-              <div className="flex justify-between items-center">
-                <Button size="sm" variant="outline" type="button">
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  Imagem
-                </Button>
-                <Button size="sm" onClick={handlePostSubmit} disabled={!newPost.trim()}>
-                  Publicar
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-6">
-        {posts.map((post) => (
-          <Card key={post.id} className="border-border">
-            <CardHeader className="flex flex-row justify-between items-start space-y-0 pb-2">
-              <div className="flex items-center gap-3">
-                <Avatar 
-                  className="h-10 w-10 cursor-pointer" 
-                  onClick={() => openChat(post.userId, post.userName, post.userAvatar)}
-                >
-                  {post.userAvatar ? (
-                    <AvatarImage src={post.userAvatar} />
-                  ) : (
-                    <AvatarFallback>{post.userName[0].toUpperCase()}</AvatarFallback>
-                  )}
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold hover:underline cursor-pointer" onClick={() => openChat(post.userId, post.userName, post.userAvatar)}>
-                    {post.userName}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {post.timestamp.toLocaleString("pt-BR", { dateStyle: "medium", timeStyle: "short" })}
-                  </p>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-5 w-5" />
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl md:text-4xl font-bold text-foreground">Comunidade</h1>
+        
+        <div className="flex items-center gap-3">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {totalUnreadMessages > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0"
+                  >
+                    {totalUnreadMessages > 9 ? "9+" : totalUnreadMessages}
+                  </Badge>
+                )}
               </Button>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-line">{post.content}</p>
-            </CardContent>
-            <CardFooter className="flex flex-col">
-              <div className="flex justify-between items-center w-full border-t border-b py-2 mb-3">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex gap-1 items-center"
-                  onClick={() => toggleLike(post.id)}
-                >
-                  <Heart className={`h-5 w-5 ${likedPosts.includes(post.id) ? "fill-red-500 text-red-500" : ""}`} />
-                  <span>{post.likes}</span>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex gap-1 items-center"
-                  onClick={() => toggleComments(post.id)}
-                >
-                  <MessageCircle className="h-5 w-5" />
-                  <span>{post.comments}</span>
-                </Button>
-                <Button variant="ghost" size="sm" className="flex gap-1 items-center">
-                  <Share className="h-5 w-5" />
-                </Button>
-              </div>
-
-              {expandedComments.includes(post.id) && (
-                <div className="w-full space-y-4">
-                  {comments[post.id]?.map((comment) => (
-                    <div key={comment.id} className="flex gap-2">
-                      <Avatar 
-                        className="h-8 w-8 cursor-pointer" 
-                        onClick={() => openChat(comment.userId, comment.userName, comment.userAvatar)}
-                      >
-                        {comment.userAvatar ? (
-                          <AvatarImage src={comment.userAvatar} />
-                        ) : (
-                          <AvatarFallback>{comment.userName[0].toUpperCase()}</AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="bg-muted p-2 rounded-lg">
-                          <h4 className="font-medium text-sm hover:underline cursor-pointer" onClick={() => openChat(comment.userId, comment.userName, comment.userAvatar)}>
-                            {comment.userName}
-                          </h4>
-                          <p className="text-sm">{comment.content}</p>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {comment.timestamp.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                        </p>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Mensagens</SheetTitle>
+              </SheetHeader>
+              
+              <div className="mt-6 space-y-4">
+                {isLoadingChatUsers ? (
+                  Array(3).fill(0).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-40" />
                       </div>
                     </div>
-                  ))}
+                  ))
+                ) : chatUsers.length > 0 ? (
+                  chatUsers.map((chatUser) => (
+                    <div 
+                      key={chatUser.id}
+                      className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-muted transition-colors"
+                      onClick={() => {
+                        openChat(chatUser.id, chatUser.username, chatUser.avatar_url || undefined);
+                      }}
+                    >
+                      <div className="relative">
+                        <Avatar className="h-10 w-10">
+                          {chatUser.avatar_url ? (
+                            <AvatarImage src={chatUser.avatar_url} />
+                          ) : (
+                            <AvatarFallback>{chatUser.username[0].toUpperCase()}</AvatarFallback>
+                          )}
+                        </Avatar>
+                        {chatUser.unread_count > 0 && (
+                          <Badge 
+                            variant="destructive" 
+                            className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0"
+                          >
+                            {chatUser.unread_count > 9 ? "9+" : chatUser.unread_count}
+                          </Badge>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium">{chatUser.username}</p>
+                        {chatUser.last_message && (
+                          <p className="text-sm text-muted-foreground truncate max-w-[200px]">
+                            {chatUser.last_message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma conversa iniciada. Clique no nome de um usuário em qualquer publicação para iniciar uma conversa.
+                  </div>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
 
-                  <div className="flex gap-2 mt-2">
-                    <Avatar className="h-8 w-8">
-                      {user?.user_metadata?.avatar_url ? (
-                        <AvatarImage src={user.user_metadata.avatar_url} />
-                      ) : (
-                        <AvatarFallback>
-                          {user?.user_metadata?.username?.[0]?.toUpperCase() || "U"}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div className="flex-1 flex gap-2">
-                      <Input
-                        placeholder="Escreva um comentário..."
-                        value={newComments[post.id] || ""}
-                        onChange={(e) => setNewComments((prev) => ({ 
-                          ...prev, 
-                          [post.id]: e.target.value 
-                        }))}
-                        className="flex-1"
-                      />
-                      <Button 
-                        size="icon" 
-                        onClick={() => handleCommentSubmit(post.id)} 
-                        disabled={!newComments[post.id]?.trim()}
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
+      <Tabs defaultValue="feed" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="feed">Feed da Comunidade</TabsTrigger>
+          <TabsTrigger value="my-posts">Minhas Publicações</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="feed">
+          <PostEditor editingPost={editingPost} onCancelEdit={handleCancelEdit} />
+          
+          {isLoadingPosts ? (
+            Array(3).fill(0).map((_, i) => (
+              <Card key={i} className="border-border mb-6">
+                <div className="p-4">
+                  <div className="flex items-start gap-3 mb-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-24" />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
                 </div>
+              </Card>
+            ))
+          ) : posts.length > 0 ? (
+            posts.map((post) => (
+              <PostItem
+                key={post.id}
+                post={post}
+                onEdit={handleEditPost}
+              />
+            ))
+          ) : (
+            <Card className="border-border">
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">
+                  Nenhuma publicação encontrada. Seja o primeiro a compartilhar algo com a comunidade!
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="my-posts">
+          <PostEditor editingPost={editingPost} onCancelEdit={handleCancelEdit} />
+          
+          {isLoadingPosts ? (
+            <div className="text-center py-8">Carregando suas publicações...</div>
+          ) : (
+            <>
+              {posts.filter(post => post.user_id === user?.id).length > 0 ? (
+                posts
+                  .filter(post => post.user_id === user?.id)
+                  .map((post) => (
+                    <PostItem
+                      key={post.id}
+                      post={post}
+                      onEdit={handleEditPost}
+                    />
+                  ))
+              ) : (
+                <Card className="border-border">
+                  <CardContent className="p-8 text-center">
+                    <p className="text-muted-foreground">
+                      Você ainda não fez nenhuma publicação. Use o editor acima para compartilhar algo com a comunidade!
+                    </p>
+                  </CardContent>
+                </Card>
               )}
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <ChatModal 
         isOpen={isChatOpen}
