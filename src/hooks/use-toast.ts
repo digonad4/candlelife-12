@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import {
   Toast,
@@ -78,7 +77,7 @@ export const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         toasts: [
-          { id: genId(), ...action.toast },
+          { ...action.toast, id: genId() },
           ...state.toasts.slice(0, TOAST_LIMIT - 1),
         ],
       }
@@ -146,18 +145,18 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ ...props }: Toast) {
   const id = genId()
 
-  const update = (props: ToasterToast) =>
+  const update = (props: Partial<ToasterToast> & { id: string }) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
-      toast: { ...props, id },
+      toast: props,
     })
+    
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
 
   dispatch({
     type: actionTypes.ADD_TOAST,
     toast: {
       ...props,
-      id,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()

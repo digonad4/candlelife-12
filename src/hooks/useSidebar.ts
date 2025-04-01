@@ -1,4 +1,5 @@
 
-import { useSidebar } from "@/components/ui/sidebar";
+// Export the useSidebar hook from the sidebar component
+import { useSidebar as useUISidebar } from "@/components/ui/sidebar";
 
-export { useSidebar };
+export { useUISidebar as useSidebar };

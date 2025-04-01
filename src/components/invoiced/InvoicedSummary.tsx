@@ -24,6 +24,8 @@ export const InvoicedSummary = () => {
   }, [user]);
 
   const loadInvoicedSummary = async () => {
+    if (!user) return;
+    
     try {
       setIsLoading(true);
       
@@ -34,7 +36,7 @@ export const InvoicedSummary = () => {
           id, amount, client_id,
           client:clients(id, name)
         `)
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .eq('payment_method', 'invoice')
         .order('date', { ascending: false });
       

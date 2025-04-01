@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -92,14 +93,14 @@ export function ClientTransactionsDialog({
   };
 
   const handleConfirmPayments = async () => {
-    if (selectedTransactions.length === 0) return;
+    if (selectedTransactions.length === 0 || !user) return;
 
     try {
       const { error } = await supabase
         .from("transactions")
         .update({ payment_status: "confirmed" })
         .in("id", selectedTransactions)
-        .eq("user_id", user?.id);
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
