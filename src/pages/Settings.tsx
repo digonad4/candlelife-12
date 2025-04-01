@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,8 +15,7 @@ import { useSidebar } from "@/hooks/useSidebar";
 const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const sidebarContext = useSidebar();
-  const isSidebarOpen = sidebarContext?.isSidebarOpen || false;
+  const { isSidebarOpen } = useSidebar();
 
   return (
     <div className="min-h-screen flex bg-background">

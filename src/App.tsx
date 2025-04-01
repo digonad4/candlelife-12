@@ -1,4 +1,3 @@
-
 import "./App.css";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
@@ -19,8 +18,7 @@ import { useEffect } from "react";
 function App() {
   const { user } = useAuth();
   const { theme } = useTheme();
-  const sidebarContext = useSidebar();
-  const isSidebarOpen = sidebarContext?.isSidebarOpen || false;
+  const { isSidebarOpen } = useSidebar();
   
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);

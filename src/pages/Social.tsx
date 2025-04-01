@@ -91,8 +91,7 @@ const MOCK_COMMENTS: Record<string, Comment[]> = {
 };
 
 const Social = () => {
-  const sidebarContext = useSidebar();
-  const isSidebarOpen = sidebarContext?.isSidebarOpen || false;
+  const { isSidebarOpen } = useSidebar();
   const { user } = useAuth();
   const { toast } = useToast();
   const [newPost, setNewPost] = useState("");
