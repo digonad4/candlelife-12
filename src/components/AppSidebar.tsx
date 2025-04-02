@@ -1,6 +1,5 @@
-
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare, Bell } from "lucide-react";
+import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare } from "lucide-react";
 import { useSidebar } from "../hooks/useSidebar";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -40,9 +39,10 @@ export function AppSidebar() {
                 <span className={`flex items-center ${isSidebarOpen ? "w-full" : ""}`}>
                   <Icon size={20} className={isSidebarOpen ? "mr-3" : ""} />
                   {isSidebarOpen && <span>{label}</span>}
-                  {notificationCount && notificationCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
+                  {/* Exibe o Badge apenas se notificationCount for maior que 0 */}
+                  {notificationCount !== undefined && notificationCount > 0 && (
+                    <Badge
+                      variant="destructive"
                       className={`flex items-center justify-center p-0 h-5 w-5 text-xs ${isSidebarOpen ? "ml-2" : "absolute -top-1 -right-1"}`}
                     >
                       {notificationCount > 9 ? "9+" : notificationCount}
@@ -53,7 +53,7 @@ export function AppSidebar() {
               {!isSidebarOpen && (
                 <TooltipContent side="right">
                   <p>{label}</p>
-                  {notificationCount && notificationCount > 0 && (
+                  {notificationCount !== undefined && notificationCount > 0 && (
                     <p className="text-xs text-destructive">{notificationCount} mensagens não lidas</p>
                   )}
                 </TooltipContent>
@@ -77,7 +77,7 @@ export function AppSidebar() {
             isSidebarOpen ? "opacity-100" : "opacity-0"
           } transition-opacity duration-300`}
         >
-          Candle Life 
+          Candle Life
         </h1>
         <button
           className="sidebar-toggle items-center p-2 rounded-md hover:bg-sidebar-accent absolute right-2 top-2 z-20"
@@ -99,7 +99,7 @@ export function AppSidebar() {
           {renderNavItem(Receipt, "Transações", "/transactions")}
           {renderNavItem(Users, "Clientes", "/clients")}
           {renderNavItem(FileText, "Faturados", "/invoiced")}
-          {renderNavItem(Wallet, "Gestão de Despesas", "/expenses")} 
+          {renderNavItem(Wallet, "Gestão de Despesas", "/expenses")}
           {renderNavItem(MessageSquare, "Comunidade", "/social", totalUnreadMessages)}
           {renderNavItem(Settings, "Configurações", "/settings")}
         </ul>
