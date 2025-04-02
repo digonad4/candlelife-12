@@ -3,8 +3,8 @@ import { User } from "@supabase/supabase-js";
 
 export type Post = {
   id: string;
-  content: string;
   user_id: string;
+  content: string;
   image_url: string | null;
   created_at: string;
   updated_at: string;
@@ -12,7 +12,16 @@ export type Post = {
     username: string;
     avatar_url: string | null;
   };
-  comments_count?: number;
+  comments_count: number;
+  reactions: {
+    like: number;
+    heart: number;
+    laugh: number;
+    wow: number;
+    sad: number;
+  };
+  my_reaction: 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | null;
+  reactions_count: number;
 };
 
 export type Comment = {
@@ -25,6 +34,21 @@ export type Comment = {
     username: string;
     avatar_url: string | null;
   };
+};
+
+export type Reaction = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  type: 'like' | 'heart' | 'laugh' | 'wow' | 'sad';
+  created_at: string;
+};
+
+export type ReactionResult = {
+  postId: string;
+  reactionType: 'like' | 'heart' | 'laugh' | 'wow' | 'sad';
+  action: 'added' | 'updated' | 'removed';
+  previousType?: 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | null;
 };
 
 export type QueryOptions = {

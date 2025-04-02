@@ -45,10 +45,6 @@ export function CommentsSection({
     
     try {
       await onAddComment(content);
-      toast({
-        title: "Sucesso",
-        description: "Comentário adicionado com sucesso!",
-      });
     } catch (err) {
       setError(err as Error);
       toast({

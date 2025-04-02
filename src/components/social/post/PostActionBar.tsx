@@ -1,90 +1,55 @@
 
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Share } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { MessageSquare } from "lucide-react";
+import { ReactionBar } from "./ReactionBar";
 
-type PostActionBarProps = {
+interface PostActionBarProps {
   commentsCount: number;
   onToggleComments: () => void;
-};
-
-export function PostActionBar({ commentsCount, onToggleComments }: PostActionBarProps) {
-  const [likeCount, setLikeCount] = useState(0);
-  const [liked, setLiked] = useState(false);
-  
-  const handleLikeClick = () => {
-    if (liked) {
-      setLikeCount(prev => Math.max(0, prev - 1));
-      setLiked(false);
-    } else {
-      setLikeCount(prev => prev + 1);
-      setLiked(true);
-    }
+  postId: string;
+  reactions: {
+    like: number;
+    heart: number;
+    laugh: number;
+    wow: number;
+    sad: number;
   };
-  
-  const handleShare = () => {
-    // Implementação futura
-    alert("Função de compartilhamento será implementada em breve!");
-  };
+  myReaction: string | null;
+  onReact: (type: 'like' | 'heart' | 'laugh' | 'wow' | 'sad') => void;
+  reactionsCount: number;
+  isLoading?: boolean;
+}
 
+export function PostActionBar({ 
+  commentsCount, 
+  onToggleComments, 
+  postId,
+  reactions,
+  myReaction,
+  onReact,
+  reactionsCount,
+  isLoading 
+}: PostActionBarProps) {
   return (
-    <div className="flex justify-between items-center w-full border-t border-b py-2 mb-3">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className={`flex gap-1 items-center ${liked ? 'text-red-500' : ''}`}
-              onClick={handleLikeClick}
-            >
-              <Heart className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
-              <span>{likeCount}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Curtir</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+    <div className="flex justify-between items-center">
+      <ReactionBar 
+        postId={postId}
+        reactions={reactions}
+        myReaction={myReaction}
+        onReact={onReact}
+        reactionsCount={reactionsCount}
+      />
       
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="flex gap-1 items-center"
-              onClick={onToggleComments}
-            >
-              <MessageCircle className="h-5 w-5" />
-              <span>{commentsCount || 0}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Ver comentários</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="flex gap-1 items-center"
-              onClick={handleShare}
-            >
-              <Share className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Compartilhar</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="flex items-center gap-1.5 text-sm" 
+        onClick={onToggleComments}
+        disabled={isLoading}
+      >
+        <MessageSquare className="h-4 w-4" />
+        <span>{commentsCount > 0 ? `${commentsCount} comentários` : "Comentar"}</span>
+      </Button>
     </div>
   );
 }

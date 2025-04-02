@@ -21,6 +21,7 @@ export const useCommentMutations = () => {
     }) => {
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Inserir o comentário sem tentar fazer seleção com join
       const { data, error } = await supabase
         .from("comments")
         .insert({
@@ -28,20 +29,27 @@ export const useCommentMutations = () => {
           user_id: user.id,
           content,
         })
-        .select(
-          `
-          *,
-          profiles:user_id(username, avatar_url)
-        `
-        )
-        .single();
+        .select('*');
 
       if (error) {
         console.error("Erro ao adicionar comentário:", error);
         throw error;
       }
 
-      return data;
+      // Buscar o perfil do usuário separadamente
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("username, avatar_url")
+        .eq("id", user.id)
+        .single();
+
+      // Combinar o comentário com os dados do perfil manualmente
+      const commentWithProfile = {
+        ...data[0],
+        profiles: profileData || { username: "Usuário", avatar_url: null }
+      };
+
+      return commentWithProfile;
     },
     onSuccess: (newComment) => {
       // Incrementar a contagem de comentários localmente

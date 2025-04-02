@@ -123,6 +123,7 @@ export function PostEditorForm({
         onChange={handleImageSelect}
         className="hidden"
         ref={fileInputRef}
+        title="Selecione uma imagem para upload"
       />
       
       <PostEditorActions 

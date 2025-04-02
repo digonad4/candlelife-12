@@ -5,6 +5,7 @@ import { useSidebar as useShadcnSidebar } from "@/components/ui/sidebar";
 export interface SidebarContextType {
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
+  isMobile?: boolean;
 }
 
 export const useSidebar = () => {
@@ -16,10 +17,10 @@ export const useSidebar = () => {
   }
   
   // Cast do contexto para o tipo esperado com as propriedades que precisamos
-  const { state, toggleSidebar } = context;
+  const { state, toggleSidebar, isMobile } = context;
   
   // Mapear a propriedade state para isSidebarOpen para compatibilidade
   const isSidebarOpen = state === "expanded";
   
-  return { isSidebarOpen, toggleSidebar };
+  return { isSidebarOpen, toggleSidebar, isMobile };
 };

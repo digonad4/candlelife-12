@@ -50,13 +50,37 @@ export const useMessages = () => {
           filter: `recipient_id=eq.${user.id}`
         },
         (payload) => {
-          // Quando receber uma nova mensagem
+          console.log("Nova mensagem recebida:", payload);
+          
+          // Nova mensagem recebida - atualiza todas as queries relacionadas
           queryClient.invalidateQueries({ queryKey: ['messages'] });
           queryClient.invalidateQueries({ queryKey: ['chatUsers'] });
           
           const newMessage = payload.new as Message;
           if (newMessage.sender_id !== user.id) {
             queryClient.invalidateQueries({ queryKey: ['chat', newMessage.sender_id] });
+            
+            // Buscar informações do remetente para o toast
+            const fetchSenderInfo = async () => {
+              const { data: senderProfile } = await supabase
+                .from("profiles")
+                .select("username")
+                .eq("id", newMessage.sender_id)
+                .single();
+                
+              if (senderProfile) {
+                // Mostrar notificação de nova mensagem
+                toast({
+                  title: `Nova mensagem de ${senderProfile.username}`,
+                  description: newMessage.content.length > 60 
+                    ? newMessage.content.substring(0, 60) + '...' 
+                    : newMessage.content,
+                  duration: 5000,
+                });
+              }
+            };
+            
+            fetchSenderInfo();
           }
         }
       )
@@ -65,7 +89,7 @@ export const useMessages = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient]);
+  }, [user, queryClient, toast]);
 
   // Buscar todos os usuários com quem o usuário atual tem conversas
   const { data: chatUsers = [], isLoading: isLoadingChatUsers } = useQuery({

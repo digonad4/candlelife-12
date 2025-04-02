@@ -119,6 +119,7 @@ const Social = () => {
             editingPost={editingPost}
             onEdit={handleEditPost}
             onCancelEdit={handleCancelEdit}
+            openChat={openChat}
           />
         </TabsContent>
         
@@ -131,6 +132,7 @@ const Social = () => {
             onCancelEdit={handleCancelEdit}
             showMyPostsOnly={true}
             currentUserId={user?.id}
+            openChat={openChat}
           />
         </TabsContent>
       </Tabs>

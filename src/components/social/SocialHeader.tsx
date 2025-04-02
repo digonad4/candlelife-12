@@ -24,12 +24,11 @@ export const SocialHeader = ({ openChat }: SocialHeaderProps) => {
     // Reset quaisquer toasts de erro pendentes quando o componente montar
     return () => {
       toast({
-        id: "error-notification",
         duration: 0,
         onOpenChange: () => {},
       });
     };
-  }, []);
+  }, [toast]);
 
   return (
     <div className="flex justify-between items-center">

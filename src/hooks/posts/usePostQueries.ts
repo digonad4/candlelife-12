@@ -1,87 +1,86 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Post, Comment, defaultQueryOptions } from "./types";
+import { Post, Comment, defaultQueryOptions, Reaction } from "./types";
 
 export const usePostQueries = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
 
-  // Buscar posts com username e avatar do autor
   const { 
     data: posts = [], 
     isLoading: isLoadingPosts, 
     error: postsError, 
     refetch: refetchPosts 
-  } = useQuery({
+  } = useQuery<Post[]>({
     queryKey: ["posts"],
     queryFn: async () => {
       try {
-        // Verificar se o usuário está autenticado
-        if (!user) {
-          console.log("Usuário não autenticado, retornando lista vazia");
-          return [];
-        }
+        if (!user) return [];
 
-        // Primeiro buscar todos os posts
-        const { data: postsData, error: postsError } = await supabase
+        const { data: postsData, error: postsQueryError } = await supabase
           .from("posts")
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (postsError) {
-          console.error("Erro ao buscar posts:", postsError);
-          throw new Error(postsError.message);
+        if (postsQueryError) {
+          console.error("Erro ao buscar posts:", postsQueryError);
+          throw new Error(postsQueryError.message);
         }
 
-        if (!postsData) {
-          console.log("Nenhum dado retornado, retornando lista vazia");
-          return [];
-        }
+        if (!postsData) return [];
 
-        // Buscar perfis para cada post manualmente em vez de usar joins
         const postsWithProfiles = await Promise.all(
           postsData.map(async (post) => {
-            // Buscar perfil do autor
-            const { data: profileData, error: profileError } = await supabase
+            const { data: profileData } = await supabase
               .from("profiles")
               .select("username, avatar_url")
               .eq("id", post.user_id)
               .single();
 
-            if (profileError) {
-              console.error("Erro ao buscar perfil do usuário:", profileError);
-              return { 
-                ...post, 
-                profiles: { username: "Usuário desconhecido", avatar_url: null },
-                comments_count: 0 
-              };
-            }
-
-            // Contar comentários
-            const { count, error: countError } = await supabase
+            const { count: commentsCount } = await supabase
               .from("comments")
               .select("*", { count: "exact", head: true })
               .eq("post_id", post.id);
 
-            if (countError) {
-              console.error("Erro ao contar comentários:", countError);
-              return { 
-                ...post, 
-                profiles: profileData || { username: "Usuário desconhecido", avatar_url: null },
-                comments_count: 0 
-              };
+            // Use RPC functions to get reaction details
+            const { data: reactionCounts } = await supabase.rpc('get_reaction_counts_by_post', { post_id: post.id });
+            const { count: reactionsCount } = await supabase.rpc('get_total_reactions_count', { post_id: post.id });
+            
+            const { data: myReactionData } = await supabase.rpc('get_user_reaction', { 
+              post_id: post.id,
+              user_id: user.id 
+            });
+
+            // Set default reaction counts
+            const reactions = {
+              like: 0,
+              heart: 0,
+              laugh: 0,
+              wow: 0,
+              sad: 0
+            };
+            
+            // Update reaction counts from RPC result
+            if (reactionCounts && reactionCounts.length > 0) {
+              reactionCounts.forEach((item: any) => {
+                if (item.type && reactions.hasOwnProperty(item.type)) {
+                  reactions[item.type as keyof typeof reactions] = item.count;
+                }
+              });
             }
 
-            // Retornar post com perfil e contagem de comentários
             return { 
               ...post, 
               profiles: profileData || { username: "Usuário desconhecido", avatar_url: null },
-              comments_count: count || 0 
+              comments_count: commentsCount || 0,
+              reactions_count: reactionsCount || 0,
+              reactions,
+              my_reaction: myReactionData?.type || null,
+              image_url: post.image_url || null
             };
           })
         );
@@ -96,7 +95,6 @@ export const usePostQueries = () => {
     enabled: !!user,
   });
 
-  // Buscar comentários de um post específico
   const getComments = async (postId: string): Promise<Comment[]> => {
     if (!postId) {
       console.error("ID do post é indefinido ou nulo");
@@ -104,7 +102,6 @@ export const usePostQueries = () => {
     }
 
     try {
-      // Buscar comentários
       const { data: commentsData, error: commentsError } = await supabase
         .from("comments")
         .select("*")
@@ -116,31 +113,37 @@ export const usePostQueries = () => {
         throw commentsError;
       }
 
-      // Buscar perfis para cada comentário
-      const commentsWithProfiles = await Promise.all(
-        (commentsData || []).map(async (comment) => {
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("username, avatar_url")
-            .eq("id", comment.user_id)
-            .single();
+      if (!commentsData || commentsData.length === 0) {
+        return [];
+      }
 
-          if (profileError) {
-            console.error("Erro ao buscar perfil para comentário:", profileError);
-            return {
-              ...comment,
-              profiles: { username: "Usuário desconhecido", avatar_url: null }
-            };
-          }
+      const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
 
-          return {
-            ...comment,
-            profiles: profileData || { username: "Usuário desconhecido", avatar_url: null }
-          };
-        })
-      );
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds);
 
-      return commentsWithProfiles || [];
+      if (profilesError) {
+        console.error("Erro ao buscar perfis para comentários:", profilesError);
+      }
+
+      const profilesMap = new Map();
+      if (profilesData) {
+        profilesData.forEach(profile => {
+          profilesMap.set(profile.id, profile);
+        });
+      }
+
+      const commentsWithProfiles = commentsData.map(comment => {
+        const profile = profilesMap.get(comment.user_id);
+        return {
+          ...comment,
+          profiles: profile || { username: "Usuário desconhecido", avatar_url: null }
+        };
+      });
+
+      return commentsWithProfiles;
     } catch (error) {
       console.error("Erro não tratado ao buscar comentários:", error);
       throw error;

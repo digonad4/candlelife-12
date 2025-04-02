@@ -1,89 +1,133 @@
 
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserIcon, MoreHorizontal, Edit, Trash } from "lucide-react";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MoreVertical, Pencil, Trash2, UserIcon } from "lucide-react";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import { useState } from "react";
+import { usePosts } from "@/hooks/usePosts";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
-type PostHeaderProps = {
-  authorName: string;
-  authorAvatar: string | null;
-  createdAt: string;
-  updatedAt: string;
-  isAuthor: boolean;
+interface PostHeaderProps {
+  author: {
+    username: string;
+    avatar_url?: string | null;
+    id: string;
+  };
+  date: string;
+  postId: string;
+  canEdit: boolean;
   onEdit: () => void;
-  onDeleteClick: () => void;
-};
+  openChat: (userId: string, userName: string, userAvatar?: string) => void;
+}
 
-export function PostHeader({ 
-  authorName, 
-  authorAvatar, 
-  createdAt, 
-  updatedAt,
-  isAuthor,
-  onEdit,
-  onDeleteClick
-}: PostHeaderProps) {
-  const formatPostDate = (date: string) => {
-    return formatDistanceToNow(new Date(date), {
-      addSuffix: true,
-      locale: ptBR
-    });
+export function PostHeader({ author, date, postId, canEdit, onEdit, openChat }: PostHeaderProps) {
+  const { toast } = useToast();
+  const { deletePost } = usePosts();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const formattedDate = format(new Date(date), "d 'de' MMMM 'de' yyyy 'às' HH:mm", {
+    locale: ptBR,
+  });
+  
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+      await deletePost.mutateAsync(postId);
+      toast({
+        title: "Publicação excluída",
+        description: "A publicação foi excluída com sucesso.",
+      });
+    } catch (err) {
+      toast({
+        title: "Erro ao excluir",
+        description: `Não foi possível excluir a publicação: ${(err as Error).message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const handleOpenChat = () => {
+    if (!author || !author.id) {
+      console.error("Dados do autor incompletos:", author);
+      toast({
+        title: "Erro",
+        description: "Não foi possível iniciar o chat. Dados do usuário incompletos.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    openChat(author.id, author.username, author.avatar_url || undefined);
   };
 
   return (
-    <div className="flex flex-row justify-between items-start space-y-0 pb-2">
+    <div className="flex justify-between items-center">
       <div className="flex items-center gap-3">
         <Avatar className="h-10 w-10">
-          {authorAvatar ? (
-            <AvatarImage src={authorAvatar} />
+          {author.avatar_url ? (
+            <AvatarImage src={author.avatar_url} alt={author.username} />
           ) : (
             <AvatarFallback>
-              {authorName && authorName.length > 0 ? authorName[0].toUpperCase() : <UserIcon className="h-5 w-5" />}
+              <UserIcon className="h-4 w-4" />
             </AvatarFallback>
           )}
         </Avatar>
+        
         <div>
-          <h3 className="font-semibold">
-            {authorName}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {formatPostDate(createdAt)}
-            {updatedAt !== createdAt && " (editado)"}
-          </p>
+          <div 
+            className="font-medium cursor-pointer hover:underline" 
+            onClick={handleOpenChat}
+          >
+            {author.username}
+          </div>
+          <div className="text-xs text-muted-foreground">{formattedDate}</div>
         </div>
       </div>
       
-      {isAuthor && (
+      {canEdit && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
-              <MoreHorizontal className="h-5 w-5" />
+              <MoreVertical className="h-4 w-4" />
+              <span className="sr-only">Opções</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={onEdit}>
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
+              <Pencil className="h-4 w-4 mr-2" />
+              <span>Editar</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
+              onClick={() => setIsDeleteDialogOpen(true)}
               className="text-destructive focus:text-destructive"
-              onClick={onDeleteClick}
             >
-              <Trash className="h-4 w-4 mr-2" />
-              Excluir
+              <Trash2 className="h-4 w-4 mr-2" />
+              <span>Excluir</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      
+      <DeleteConfirmDialog 
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }
