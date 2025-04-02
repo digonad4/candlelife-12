@@ -1,6 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ReactNode } from "react";
 
 type PostContentProps = {
   content: string;
@@ -9,11 +10,11 @@ type PostContentProps = {
 
 export function PostContent({ content, imageUrl }: PostContentProps) {
   // Função para converter URLs em links clicáveis
-  const formatTextWithLinks = (text: string) => {
+  const formatTextWithLinks = (text: string): ReactNode[] => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     
     const parts = text.split(urlRegex);
-    const result = [];
+    const result: ReactNode[] = [];
     
     for (let i = 0; i < parts.length; i++) {
       if (i % 2 === 0) {
