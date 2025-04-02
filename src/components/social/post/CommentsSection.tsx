@@ -31,6 +31,15 @@ export function CommentsSection({
   const [error, setError] = useState<Error | null>(null);
   
   const handleAddComment = async (content: string) => {
+    if (!content || content.trim() === "") {
+      toast({
+        title: "Erro",
+        description: "O comentário não pode estar vazio",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     setError(null);
     
@@ -39,7 +48,6 @@ export function CommentsSection({
       toast({
         title: "Sucesso",
         description: "Comentário adicionado com sucesso!",
-        duration: 3000,
       });
     } catch (err) {
       setError(err as Error);
@@ -47,7 +55,6 @@ export function CommentsSection({
         title: "Erro",
         description: `Não foi possível adicionar o comentário: ${(err as Error).message}`,
         variant: "destructive",
-        duration: 4000,
       });
     } finally {
       setIsSubmitting(false);
@@ -57,12 +64,15 @@ export function CommentsSection({
   const handleDeleteComment = async (commentId: string) => {
     try {
       await onDeleteComment(commentId);
+      toast({
+        title: "Sucesso",
+        description: "Comentário excluído com sucesso!",
+      });
     } catch (err) {
       toast({
         title: "Erro",
         description: `Não foi possível excluir o comentário: ${(err as Error).message}`,
         variant: "destructive",
-        duration: 4000,
       });
     }
   };
@@ -80,7 +90,7 @@ export function CommentsSection({
   return (
     <div className="w-full space-y-4">
       <CommentsList 
-        comments={comments} 
+        comments={comments || []} 
         isLoading={isLoading}
         currentUserId={currentUserId}
         onDeleteComment={handleDeleteComment}

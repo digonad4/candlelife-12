@@ -1,7 +1,6 @@
 
-import { useMemo } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type PostContentProps = {
   content: string;
@@ -9,50 +8,73 @@ type PostContentProps = {
 };
 
 export function PostContent({ content, imageUrl }: PostContentProps) {
-  // Trata conteúdo potencialmente nulo com fallback seguro
-  const safeContent = useMemo(() => {
-    return typeof content === 'string' ? content : '';
-  }, [content]);
-
-  // Verifica se a URL da imagem é válida
-  const isValidImageUrl = useMemo(() => {
-    return imageUrl && typeof imageUrl === 'string' && imageUrl.trim().length > 0;
-  }, [imageUrl]);
-
-  // Trata erros de carregamento de imagem
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.style.display = 'none';
+  // Função para converter URLs em links clicáveis
+  const formatTextWithLinks = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
     
-    // Adiciona um elemento para mostrar erro
-    const errorElement = document.createElement('div');
-    errorElement.className = "mt-2 text-sm text-destructive";
-    errorElement.textContent = "Erro ao carregar imagem";
-    e.currentTarget.parentNode?.appendChild(errorElement);
+    const parts = text.split(urlRegex);
+    const result = [];
+    
+    for (let i = 0; i < parts.length; i++) {
+      if (i % 2 === 0) {
+        // Texto normal
+        result.push(<span key={i}>{parts[i]}</span>);
+      } else {
+        // URL
+        result.push(
+          <a 
+            key={i} 
+            href={parts[i]} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline"
+          >
+            {parts[i]}
+          </a>
+        );
+      }
+    }
+    
+    return result;
   };
 
   return (
-    <div>
-      {safeContent ? (
-        <p className="whitespace-pre-line">{safeContent}</p>
-      ) : (
-        <Alert variant="destructive" className="mb-3">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Conteúdo não disponível
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {isValidImageUrl && (
-        <div className="mt-3">
-          <img 
-            src={imageUrl} 
-            alt="Imagem do post" 
-            className="rounded-md max-h-96 object-cover" 
-            onError={handleImageError}
-          />
+    <div className="space-y-3">
+      {content && content.length > 0 && (
+        <div className="whitespace-pre-wrap break-words">
+          {formatTextWithLinks(content)}
         </div>
       )}
+      
+      {imageUrl && (
+        <a 
+          href={imageUrl} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="block"
+        >
+          <img 
+            src={imageUrl} 
+            alt="Imagem da publicação" 
+            className="rounded-md max-h-96 w-auto object-contain"
+            onError={(e) => {
+              e.currentTarget.src = '/placeholder.svg';
+              e.currentTarget.alt = 'Imagem indisponível';
+            }}
+          />
+        </a>
+      )}
     </div>
+  );
+}
+
+export function PostContentSkeleton() {
+  return (
+    <Card className="space-y-2 p-2">
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-2/3" />
+      <Skeleton className="h-40 w-full" />
+    </Card>
   );
 }

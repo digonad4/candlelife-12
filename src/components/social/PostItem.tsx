@@ -9,6 +9,8 @@ import { PostContent } from "./post/PostContent";
 import { PostActionBar } from "./post/PostActionBar";
 import { CommentsSection } from "./post/CommentsSection";
 import { DeleteConfirmDialog } from "./post/DeleteConfirmDialog";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { useToast } from "@/hooks/use-toast";
 
 type PostItemProps = {
   post: Post;
@@ -17,6 +19,7 @@ type PostItemProps = {
 
 export function PostItem({ post, onEdit }: PostItemProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { 
     getComments, 
     addComment, 
@@ -27,6 +30,7 @@ export function PostItem({ post, onEdit }: PostItemProps) {
   const [showComments, setShowComments] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   
   const isAuthor = user?.id === post.user_id;
   const authorName = post.profiles?.username || "Usuário";
@@ -36,11 +40,14 @@ export function PostItem({ post, onEdit }: PostItemProps) {
   const { 
     data: comments = [], 
     isLoading: isLoadingComments,
-    refetch: refetchComments
+    refetch: refetchComments,
+    error: commentsError
   } = useQuery({
     queryKey: ["comments", post.id],
     queryFn: () => getComments(post.id),
     enabled: showComments,
+    retry: 3,
+    retryDelay: 1000,
   });
   
   const toggleComments = () => {
@@ -56,8 +63,11 @@ export function PostItem({ post, onEdit }: PostItemProps) {
         postId: post.id,
         content: content.trim()
       });
+      setError(null);
     } catch (error) {
       console.error("Erro ao adicionar comentário:", error);
+      setError(error as Error);
+      throw error;
     }
   };
   
@@ -67,8 +77,11 @@ export function PostItem({ post, onEdit }: PostItemProps) {
         commentId,
         postId: post.id
       });
+      setError(null);
     } catch (error) {
       console.error("Erro ao excluir comentário:", error);
+      setError(error as Error);
+      throw error;
     }
   };
   
@@ -77,11 +90,28 @@ export function PostItem({ post, onEdit }: PostItemProps) {
     try {
       await deletePost.mutateAsync(post.id);
       setConfirmDelete(false);
+      toast({
+        title: "Sucesso",
+        description: "Publicação excluída com sucesso!",
+      });
     } catch (error) {
       console.error("Erro ao excluir post:", error);
+      toast({
+        title: "Erro",
+        description: `Não foi possível excluir a publicação: ${(error as Error).message}`,
+        variant: "destructive",
+      });
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleRetryComments = () => {
+    refetchComments();
+    toast({
+      title: "Recarregando",
+      description: "Tentando carregar os comentários novamente...",
+    });
   };
 
   return (
@@ -101,7 +131,7 @@ export function PostItem({ post, onEdit }: PostItemProps) {
         
         <CardContent>
           <PostContent 
-            content={post.content}
+            content={post.content || ""}
             imageUrl={post.image_url}
           />
         </CardContent>
@@ -113,15 +143,23 @@ export function PostItem({ post, onEdit }: PostItemProps) {
           />
 
           {showComments && (
-            <CommentsSection 
-              postId={post.id}
-              comments={comments}
-              isLoading={isLoadingComments}
-              user={user}
-              currentUserId={user?.id}
-              onAddComment={handleAddComment}
-              onDeleteComment={handleDeleteComment}
-            />
+            commentsError || error ? (
+              <ErrorMessage
+                title="Erro ao carregar comentários"
+                message={(commentsError as Error)?.message || error?.message || "Ocorreu um erro ao carregar os comentários."}
+                onRetry={handleRetryComments}
+              />
+            ) : (
+              <CommentsSection 
+                postId={post.id}
+                comments={comments}
+                isLoading={isLoadingComments}
+                user={user}
+                currentUserId={user?.id}
+                onAddComment={handleAddComment}
+                onDeleteComment={handleDeleteComment}
+              />
+            )
           )}
         </CardFooter>
       </Card>

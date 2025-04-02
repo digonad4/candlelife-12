@@ -18,7 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>
-            <SidebarProvider defaultOpen={true}>
+            <SidebarProvider defaultOpen={false}>
               <div className="min-h-screen flex w-full">
                 <App />
                 <Toaster />

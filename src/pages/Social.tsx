@@ -8,9 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SocialHeader } from "@/components/social/SocialHeader";
 import { FeedContent } from "@/components/social/FeedContent";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { ErrorMessage } from "@/components/ui/error-message";
 
 const Social = () => {
   const navigate = useNavigate();
@@ -34,7 +32,6 @@ const Social = () => {
         title: "Acesso restrito",
         description: "Você precisa estar autenticado para acessar a comunidade.",
         variant: "destructive",
-        duration: 5000,
       });
       navigate('/login', { replace: true });
     }
@@ -60,7 +57,6 @@ const Social = () => {
         title: "Operação não permitida",
         description: "Você não pode iniciar um chat consigo mesmo.",
         variant: "destructive",
-        duration: 3000,
       });
       return;
     }
@@ -88,7 +84,6 @@ const Social = () => {
     toast({
       title: "Recarregando",
       description: "Tentando carregar as publicações novamente...",
-      duration: 3000,
     });
   };
 
@@ -98,21 +93,11 @@ const Social = () => {
       <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-8">
         <SocialHeader openChat={openChat} />
         
-        <Alert variant="destructive" className="my-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Erro ao carregar publicações</AlertTitle>
-          <AlertDescription>
-            Não foi possível carregar as publicações da comunidade. 
-            Por favor, tente novamente em alguns momentos.
-          </AlertDescription>
-          <Button 
-            variant="outline" 
-            className="mt-2" 
-            onClick={handleRetryFetch}
-          >
-            Tentar novamente
-          </Button>
-        </Alert>
+        <ErrorMessage
+          title="Erro ao carregar publicações"
+          message="Não foi possível carregar as publicações da comunidade. Por favor, tente novamente em alguns momentos."
+          onRetry={handleRetryFetch}
+        />
       </div>
     );
   }

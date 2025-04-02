@@ -8,17 +8,17 @@ export interface SidebarContextType {
 }
 
 export const useSidebar = () => {
-  // Using useShadcnSidebar directly since it's already a hook that returns the context
+  // Usando useShadcnSidebar diretamente já que é um hook que retorna o contexto
   const context = useShadcnSidebar();
   
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider");
   }
   
-  // Cast the context to our expected type with the properties we need
+  // Cast do contexto para o tipo esperado com as propriedades que precisamos
   const { state, toggleSidebar } = context;
   
-  // Map the state property to isSidebarOpen for backward compatibility
+  // Mapear a propriedade state para isSidebarOpen para compatibilidade
   const isSidebarOpen = state === "expanded";
   
   return { isSidebarOpen, toggleSidebar };

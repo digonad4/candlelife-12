@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 5
-const TOAST_REMOVE_DELAY = 5000 // Alterado para 5 segundos (era 1000000)
+const TOAST_REMOVE_DELAY = 5000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -94,8 +94,7 @@ export const reducer = (state: State, action: Action): State => {
     case actionTypes.DISMISS_TOAST: {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+      // Side effects - Add toast to remove queue
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -154,7 +153,7 @@ function toast({ ...props }: Toast) {
     
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
 
-  // Adicionando auto-dismiss após um tempo
+  // Auto-dismiss toast after duration
   setTimeout(() => {
     dismiss();
   }, props.duration || 5000);
