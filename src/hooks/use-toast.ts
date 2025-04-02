@@ -94,7 +94,7 @@ export const reducer = (state: State, action: Action): State => {
     case actionTypes.DISMISS_TOAST: {
       const { toastId } = action
 
-      // Side effects - Add toast to remove queue
+      // Corrigir: Garantir que todos os toasts sejam removidos corretamente
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -153,10 +153,13 @@ function toast({ ...props }: Toast) {
     
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
 
-  // Auto-dismiss toast after duration
-  setTimeout(() => {
-    dismiss();
-  }, props.duration || 5000);
+  // Auto-dismiss toast após a duração especificada
+  const duration = props.duration || 5000
+  if (duration !== 0) {
+    setTimeout(() => {
+      dismiss();
+    }, duration);
+  }
 
   dispatch({
     type: actionTypes.ADD_TOAST,
@@ -165,6 +168,7 @@ function toast({ ...props }: Toast) {
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()
+        if (props.onOpenChange) props.onOpenChange(open)
       },
     },
   })

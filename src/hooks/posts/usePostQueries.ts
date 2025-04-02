@@ -43,15 +43,24 @@ export const usePostQueries = () => {
           return [];
         }
 
-        // Buscar perfis para cada post
+        // Buscar perfis para cada post manualmente em vez de usar joins
         const postsWithProfiles = await Promise.all(
           postsData.map(async (post) => {
             // Buscar perfil do autor
-            const { data: profileData } = await supabase
+            const { data: profileData, error: profileError } = await supabase
               .from("profiles")
               .select("username, avatar_url")
               .eq("id", post.user_id)
               .single();
+
+            if (profileError) {
+              console.error("Erro ao buscar perfil do usuário:", profileError);
+              return { 
+                ...post, 
+                profiles: { username: "Usuário desconhecido", avatar_url: null },
+                comments_count: 0 
+              };
+            }
 
             // Contar comentários
             const { count, error: countError } = await supabase
@@ -110,11 +119,19 @@ export const usePostQueries = () => {
       // Buscar perfis para cada comentário
       const commentsWithProfiles = await Promise.all(
         (commentsData || []).map(async (comment) => {
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from("profiles")
             .select("username, avatar_url")
             .eq("id", comment.user_id)
             .single();
+
+          if (profileError) {
+            console.error("Erro ao buscar perfil para comentário:", profileError);
+            return {
+              ...comment,
+              profiles: { username: "Usuário desconhecido", avatar_url: null }
+            };
+          }
 
           return {
             ...comment,

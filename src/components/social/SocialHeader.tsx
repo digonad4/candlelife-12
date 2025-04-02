@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMessages } from "@/hooks/useMessages";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 interface SocialHeaderProps {
   openChat: (userId: string, userName: string, userAvatar?: string) => void;
@@ -16,6 +17,19 @@ interface SocialHeaderProps {
 export const SocialHeader = ({ openChat }: SocialHeaderProps) => {
   const { chatUsers, isLoadingChatUsers, getTotalUnreadCount } = useMessages();
   const totalUnreadMessages = getTotalUnreadCount();
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Reset quaisquer toasts de erro pendentes quando o componente montar
+    return () => {
+      toast({
+        id: "error-notification",
+        duration: 0,
+        onOpenChange: () => {},
+      });
+    };
+  }, []);
 
   return (
     <div className="flex justify-between items-center">
@@ -64,7 +78,7 @@ export const SocialHeader = ({ openChat }: SocialHeaderProps) => {
                     <div className="relative">
                       <Avatar className="h-10 w-10">
                         {chatUser.avatar_url ? (
-                          <AvatarImage src={chatUser.avatar_url} />
+                          <AvatarImage src={chatUser.avatar_url} alt={chatUser.username} />
                         ) : (
                           <AvatarFallback>
                             {chatUser.username && chatUser.username.length > 0

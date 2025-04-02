@@ -1,23 +1,27 @@
 
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare, Bell } from "lucide-react";
 import { useSidebar } from "../hooks/useSidebar";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserProfile } from "./UserProfile";
+import { Badge } from "@/components/ui/badge";
+import { useMessages } from "@/hooks/useMessages";
 
 export function AppSidebar() {
   const { isSidebarOpen, toggleSidebar } = useSidebar();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { getTotalUnreadCount } = useMessages();
+  const totalUnreadMessages = getTotalUnreadCount();
 
   const handleLogout = async () => {
     await signOut();
     navigate("/login");
   };
 
-  const renderNavItem = (icon: React.ElementType, label: string, to: string) => {
+  const renderNavItem = (icon: React.ElementType, label: string, to: string, notificationCount?: number) => {
     const Icon = icon;
 
     return (
@@ -27,7 +31,7 @@ export function AppSidebar() {
             <NavLink
               to={to}
               className={({ isActive }) =>
-                `flex items-center p-3 rounded-md transition-colors
+                `flex items-center p-3 rounded-md transition-colors relative
                 ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
                 ${!isSidebarOpen && "justify-center"}`
               }
@@ -36,11 +40,22 @@ export function AppSidebar() {
                 <span className={`flex items-center ${isSidebarOpen ? "w-full" : ""}`}>
                   <Icon size={20} className={isSidebarOpen ? "mr-3" : ""} />
                   {isSidebarOpen && <span>{label}</span>}
+                  {notificationCount && notificationCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className={`flex items-center justify-center p-0 h-5 w-5 text-xs ${isSidebarOpen ? "ml-2" : "absolute -top-1 -right-1"}`}
+                    >
+                      {notificationCount > 9 ? "9+" : notificationCount}
+                    </Badge>
+                  )}
                 </span>
               </TooltipTrigger>
               {!isSidebarOpen && (
                 <TooltipContent side="right">
                   <p>{label}</p>
+                  {notificationCount && notificationCount > 0 && (
+                    <p className="text-xs text-destructive">{notificationCount} mensagens não lidas</p>
+                  )}
                 </TooltipContent>
               )}
             </NavLink>
@@ -85,7 +100,7 @@ export function AppSidebar() {
           {renderNavItem(Users, "Clientes", "/clients")}
           {renderNavItem(FileText, "Faturados", "/invoiced")}
           {renderNavItem(Wallet, "Gestão de Despesas", "/expenses")} 
-          {renderNavItem(MessageSquare, "Comunidade", "/social")}
+          {renderNavItem(MessageSquare, "Comunidade", "/social", totalUnreadMessages)}
           {renderNavItem(Settings, "Configurações", "/settings")}
         </ul>
       </nav>
