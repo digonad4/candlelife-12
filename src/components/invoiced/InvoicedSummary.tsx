@@ -1,133 +1,107 @@
-
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
-interface ClientSummary {
-  client_id: string;
-  client_name: string;
-  total_amount: number;
-  transactions_count: number;
+interface InvoicedSummaryProps {
+  startDate?: Date;
+  endDate?: Date;
 }
 
-export const InvoicedSummary = () => {
+const InvoicedSummary = ({ startDate, endDate }: InvoicedSummaryProps) => {
   const { user } = useAuth();
-  const [clientSummaries, setClientSummaries] = useState<ClientSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [totalInvoiced, setTotalInvoiced] = useState(0);
 
-  useEffect(() => {
-    if (user) {
-      loadInvoicedSummary();
-    }
-  }, [user]);
+  const { data: summary, isLoading } = useQuery({
+    queryKey: ["invoiced-summary", user?.id, startDate, endDate],
+    queryFn: async () => {
+      if (!user?.id) return null;
 
-  const loadInvoicedSummary = async () => {
-    try {
-      setIsLoading(true);
-      
-      // First get all invoiced transactions
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select(`
-          id, amount, client_id,
-          client:clients(id, name)
-        `)
-        .eq('user_id', user?.id)
-        .eq('payment_method', 'invoice')
-        .order('date', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Process transactions to get totals by client
-      const clientTotalsMap = new Map<string, ClientSummary>();
-      let overallTotal = 0;
-      
-      transactions?.forEach((transaction: any) => {
-        const clientId = transaction.client_id;
-        const clientName = transaction.client?.name || 'Cliente não especificado';
-        const amount = Number(transaction.amount);
-        
-        overallTotal += amount;
-        
-        if (clientId) {
-          if (clientTotalsMap.has(clientId)) {
-            const existing = clientTotalsMap.get(clientId)!;
-            existing.total_amount += amount;
-            existing.transactions_count += 1;
-            clientTotalsMap.set(clientId, existing);
-          } else {
-            clientTotalsMap.set(clientId, {
-              client_id: clientId,
-              client_name: clientName,
-              total_amount: amount,
-              transactions_count: 1
-            });
-          }
-        }
-      });
-      
-      // Convert map to array and sort by amount
-      const summaries = Array.from(clientTotalsMap.values())
-        .sort((a, b) => b.total_amount - a.total_amount);
-      
-      setClientSummaries(summaries);
-      setTotalInvoiced(overallTotal);
-    } catch (error) {
-      console.error('Error loading invoiced summary:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const userId = user.id;
+
+      let query = supabase
+        .from("transactions")
+        .select("count")
+        .eq("user_id", userId)
+        .eq("payment_method", "invoice");
+
+      if (startDate) {
+        query = query.gte("date", format(startDate, "yyyy-MM-dd'T00:00:00.000Z'"));
+      }
+      if (endDate) {
+        query = query.lte("date", format(endDate, "yyyy-MM-dd'T23:59:59.999Z'"));
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Erro ao buscar o resumo de faturas:", error);
+        throw error;
+      }
+
+      const totalInvoices = data ? data[0]?.count || 0 : 0;
+
+      query = supabase
+        .from("transactions")
+        .select("count")
+        .eq("user_id", userId)
+        .eq("payment_method", "invoice")
+        .eq("payment_status", "pending");
+
+      if (startDate) {
+        query = query.gte("date", format(startDate, "yyyy-MM-dd'T00:00:00.000Z'"));
+      }
+      if (endDate) {
+        query = query.lte("date", format(endDate, "yyyy-MM-dd'T23:59:59.999Z'"));
+      }
+
+      const { data: pendingData, error: pendingError } = await query;
+
+      if (pendingError) {
+        console.error("Erro ao buscar faturas pendentes:", pendingError);
+        throw pendingError;
+      }
+
+      const pendingInvoices = pendingData ? pendingData[0]?.count || 0 : 0;
+
+      return {
+        totalInvoices,
+        pendingInvoices,
+      };
+    },
+    enabled: !!user?.id,
+  });
 
   if (isLoading) {
-    return (
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Resumo Faturado por Cliente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <Card className="rounded-xl border-border bg-card">
+      <CardHeader>
+        <CardTitle>Resumo de Faturas</CardTitle>
+      </CardHeader>
+      <CardContent>
+        Carregando...
+      </CardContent>
+    </Card>;
   }
 
   return (
-    <Card className="mt-6">
+    <Card className="rounded-xl border-border bg-card">
       <CardHeader>
-        <CardTitle>Resumo Faturado por Cliente</CardTitle>
+        <CardTitle>Resumo de Faturas</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 p-4 bg-muted rounded-lg">
-          <p className="text-lg font-bold">Total Geral Faturado: <span className="text-green-600">R$ {totalInvoiced.toFixed(2)}</span></p>
-        </div>
-        
-        {clientSummaries.length > 0 ? (
-          <div className="space-y-4">
-            {clientSummaries.map((summary) => (
-              <div key={summary.client_id} className="border-b pb-3 last:border-0">
-                <div className="flex justify-between items-center mb-1">
-                  <h3 className="font-medium">{summary.client_name}</h3>
-                  <span className="text-green-600 font-bold">R$ {summary.total_amount.toFixed(2)}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {summary.transactions_count} {summary.transactions_count === 1 ? 'transação' : 'transações'}
-                </p>
-              </div>
-            ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Total de Faturas</p>
+            <p className="text-2xl font-bold text-foreground">{summary?.totalInvoices || 0}</p>
           </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-8">
-            Nenhuma transação faturada encontrada
-          </p>
-        )}
+          <div>
+            <p className="text-sm text-muted-foreground">Faturas Pendentes</p>
+            <p className="text-2xl font-bold text-orange-500">{summary?.pendingInvoices || 0}</p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
 };
+
+export default InvoicedSummary;

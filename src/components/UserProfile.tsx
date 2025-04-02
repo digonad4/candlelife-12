@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { UserRound, Loader2 } from "lucide-react";
+import { UserIcon, Loader2 } from "lucide-react";
 
 export const UserProfile = () => {
   const { user } = useAuth();
@@ -51,17 +51,18 @@ export const UserProfile = () => {
     }
   };
 
-  const getInitials = () => {
-    if (!username) return "U";
-    return username.charAt(0).toUpperCase();
-  };
-
   return (
     <div className="flex items-center gap-3">
       <Avatar className="border border-border">
         <AvatarImage src={avatarUrl || undefined} alt={username} />
         <AvatarFallback>
-          {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <UserRound className="h-5 w-5" />}
+          {isLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : username && username.length > 0 ? (
+            username[0].toUpperCase()
+          ) : (
+            <UserIcon className="h-5 w-5" />
+          )}
         </AvatarFallback>
       </Avatar>
       <div className={`transition-opacity duration-300 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>

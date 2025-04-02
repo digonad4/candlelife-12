@@ -30,7 +30,6 @@ export function ClientTransactionsDialog({
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [clientName, setClientName] = useState("");
 
-  // Get client name
   useEffect(() => {
     if (clientId && user) {
       supabase
@@ -47,25 +46,21 @@ export function ClientTransactionsDialog({
     }
   }, [clientId, user]);
 
-  // Reset selections when dialog opens/closes
   useEffect(() => {
     if (!open) {
       setSelectedTransactions([]);
     }
   }, [open]);
 
-  // Query invoiced transactions for this client
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["client-transactions", user?.id, clientId],
     queryFn: async () => {
       if (!user || !clientId) return [];
       const { data, error } = await supabase
         .from("transactions")
-        .select()
-        .eq("user_id", user.id)
-        .eq("client_id", clientId)
-        .eq("payment_method", "invoice")
-        .order("date", { ascending: false });
+        .select("*")
+        .eq("client_id", clientId || '')
+        .eq("user_id", user.id);
       
       if (error) throw error;
       return data as Transaction[];
@@ -76,7 +71,6 @@ export function ClientTransactionsDialog({
   const pendingTransactions = transactions?.filter(t => t.payment_status === "pending") || [];
   const confirmedTransactions = transactions?.filter(t => t.payment_status === "confirmed") || [];
 
-  // Calculate totals
   const pendingTotal = pendingTransactions.reduce((sum, t) => sum + t.amount, 0);
   const confirmedTotal = confirmedTransactions.reduce((sum, t) => sum + t.amount, 0);
 
@@ -96,14 +90,14 @@ export function ClientTransactionsDialog({
   };
 
   const handleConfirmPayments = async () => {
-    if (selectedTransactions.length === 0) return;
+    if (selectedTransactions.length === 0 || !user) return;
 
     try {
       const { error } = await supabase
         .from("transactions")
         .update({ payment_status: "confirmed" })
         .in("id", selectedTransactions)
-        .eq("user_id", user?.id);
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
@@ -112,12 +106,10 @@ export function ClientTransactionsDialog({
         description: `${selectedTransactions.length} pagamento(s) confirmado(s) com sucesso`,
       });
       
-      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["client-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
       
-      // Reset selections
       setSelectedTransactions([]);
       setIsConfirmDialogOpen(false);
     } catch (error: unknown) {
@@ -144,7 +136,6 @@ export function ClientTransactionsDialog({
             <div className="py-10 text-center text-muted-foreground">Carregando transações...</div>
           ) : (
             <div className="space-y-6">
-              {/* Pending transactions section */}
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">Pagamentos Pendentes ({pendingTransactions.length})</h3>
@@ -199,7 +190,7 @@ export function ClientTransactionsDialog({
                           <div>
                             <p className="font-medium">{transaction.description}</p>
                             <p className="text-sm text-muted-foreground">
-                              {format(new Date(transaction.date), "dd/MM/yyyy", { locale: ptBR })}
+                              {transaction.date ? format(new Date(transaction.date), "dd/MM/yyyy", { locale: ptBR }) : ""}
                             </p>
                           </div>
                         </div>
@@ -210,7 +201,6 @@ export function ClientTransactionsDialog({
                         </div>
                       </div>
                     ))}
-                    {/* Pending Total */}
                     <div className="mt-4 p-3 bg-muted rounded-lg flex justify-between items-center">
                       <span className="font-semibold text-foreground">Total Pendente:</span>
                       <span className={`font-semibold ${pendingTotal < 0 ? "text-red-500" : "text-green-500"}`}>
@@ -221,7 +211,6 @@ export function ClientTransactionsDialog({
                 )}
               </div>
 
-              {/* Confirmed transactions section */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Pagamentos Confirmados ({confirmedTransactions.length})</h3>
                 
@@ -239,7 +228,7 @@ export function ClientTransactionsDialog({
                         <div>
                           <p className="font-medium">{transaction.description}</p>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(transaction.date), "dd/MM/yyyy", { locale: ptBR })}
+                            {transaction.date ? format(new Date(transaction.date), "dd/MM/yyyy", { locale: ptBR }) : ""}
                           </p>
                         </div>
                         <div className="text-right">
@@ -250,7 +239,6 @@ export function ClientTransactionsDialog({
                         </div>
                       </div>
                     ))}
-                    {/* Confirmed Total */}
                     <div className="mt-4 p-3 bg-muted rounded-lg flex justify-between items-center">
                       <span className="font-semibold text-foreground">Total Confirmado:</span>
                       <span className={`font-semibold ${confirmedTotal < 0 ? "text-red-500" : "text-green-500"}`}>

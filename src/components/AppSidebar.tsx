@@ -1,6 +1,7 @@
+
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet } from "lucide-react"; // Adicionei Wallet
-import { useSidebar } from "../context/SidebarContext";
+import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare } from "lucide-react";
+import { useSidebar } from "../hooks/useSidebar";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -83,7 +84,8 @@ export function AppSidebar() {
           {renderNavItem(Receipt, "Transações", "/transactions")}
           {renderNavItem(Users, "Clientes", "/clients")}
           {renderNavItem(FileText, "Faturados", "/invoiced")}
-          {renderNavItem(Wallet, "Gestão de Despesas", "/expenses")} {/* Novo item */}
+          {renderNavItem(Wallet, "Gestão de Despesas", "/expenses")} 
+          {renderNavItem(MessageSquare, "Comunidade", "/social")}
           {renderNavItem(Settings, "Configurações", "/settings")}
         </ul>
       </nav>
