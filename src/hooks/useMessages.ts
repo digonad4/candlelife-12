@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
@@ -94,11 +93,7 @@ export const useMessages = () => {
       // Buscar últimas mensagens enviadas e recebidas
       const { data: messages, error } = await supabase
         .from("messages")
-        .select(`
-          *,
-          sender_profile:sender_id(username, avatar_url),
-          recipient_profile:recipient_id(username, avatar_url)
-        `)
+        .select("*")
         .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order("created_at", { ascending: false });
 
@@ -111,21 +106,24 @@ export const useMessages = () => {
       const userIds = new Set<string>();
       const userMap = new Map<string, ChatUser>();
 
-      for (const message of messages) {
+      for (const message of messages || []) {
         const otherUserId = message.sender_id === user.id ? message.recipient_id : message.sender_id;
         
         if (!userIds.has(otherUserId)) {
           userIds.add(otherUserId);
           
-          const profile = message.sender_id === user.id 
-            ? message.recipient_profile 
-            : message.sender_profile;
+          // Buscar perfil do outro usuário
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("username, avatar_url")
+            .eq("id", otherUserId)
+            .single();
             
-          if (profile) {
+          if (profileData) {
             userMap.set(otherUserId, {
               id: otherUserId,
-              username: profile.username,
-              avatar_url: profile.avatar_url,
+              username: profileData.username,
+              avatar_url: profileData.avatar_url,
               unread_count: 0,
               last_message: message.content,
               last_message_time: message.created_at
@@ -183,13 +181,9 @@ export const useMessages = () => {
         queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
 
         // Buscar todas as mensagens da conversa
-        const { data, error } = await supabase
+        const { data: messagesData, error } = await supabase
           .from("messages")
-          .select(`
-            *,
-            sender_profile:sender_id(username, avatar_url),
-            recipient_profile:recipient_id(username, avatar_url)
-          `)
+          .select("*")
           .or(`and(sender_id.eq.${user.id},recipient_id.eq.${userId}),and(sender_id.eq.${userId},recipient_id.eq.${user.id})`)
           .order("created_at", { ascending: true });
 
@@ -198,7 +192,38 @@ export const useMessages = () => {
           throw error;
         }
 
-        return data || [];
+        // Buscar perfis para cada mensagem
+        const messagesWithProfiles = await Promise.all(
+          (messagesData || []).map(async (message) => {
+            // Buscar perfil do remetente
+            const { data: senderProfile } = await supabase
+              .from("profiles")
+              .select("username, avatar_url")
+              .eq("id", message.sender_id)
+              .single();
+
+            // Buscar perfil do destinatário
+            const { data: recipientProfile } = await supabase
+              .from("profiles")
+              .select("username, avatar_url")
+              .eq("id", message.recipient_id)
+              .single();
+
+            return {
+              ...message,
+              sender_profile: senderProfile || { 
+                username: "Usuário desconhecido", 
+                avatar_url: null 
+              },
+              recipient_profile: recipientProfile || { 
+                username: "Usuário desconhecido", 
+                avatar_url: null 
+              }
+            };
+          })
+        );
+
+        return messagesWithProfiles || [];
       },
       enabled: !!user && !!userId,
     });

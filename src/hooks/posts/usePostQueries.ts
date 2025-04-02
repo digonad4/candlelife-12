@@ -27,27 +27,33 @@ export const usePostQueries = () => {
           return [];
         }
 
-        const { data, error } = await supabase
+        // Primeiro buscar todos os posts
+        const { data: postsData, error: postsError } = await supabase
           .from("posts")
-          .select(`
-            *,
-            profiles:user_id(username, avatar_url)
-          `)
+          .select("*")
           .order("created_at", { ascending: false });
 
-        if (error) {
-          console.error("Erro ao buscar posts:", error);
-          throw new Error(error.message);
+        if (postsError) {
+          console.error("Erro ao buscar posts:", postsError);
+          throw new Error(postsError.message);
         }
 
-        if (!data) {
+        if (!postsData) {
           console.log("Nenhum dado retornado, retornando lista vazia");
           return [];
         }
 
-        // Buscar contagem de comentários para cada post
-        const postsWithComments = await Promise.all(
-          data.map(async (post) => {
+        // Buscar perfis para cada post
+        const postsWithProfiles = await Promise.all(
+          postsData.map(async (post) => {
+            // Buscar perfil do autor
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("username, avatar_url")
+              .eq("id", post.user_id)
+              .single();
+
+            // Contar comentários
             const { count, error: countError } = await supabase
               .from("comments")
               .select("*", { count: "exact", head: true })
@@ -55,14 +61,23 @@ export const usePostQueries = () => {
 
             if (countError) {
               console.error("Erro ao contar comentários:", countError);
-              return { ...post, comments_count: 0 };
+              return { 
+                ...post, 
+                profiles: profileData || { username: "Usuário desconhecido", avatar_url: null },
+                comments_count: 0 
+              };
             }
 
-            return { ...post, comments_count: count || 0 };
+            // Retornar post com perfil e contagem de comentários
+            return { 
+              ...post, 
+              profiles: profileData || { username: "Usuário desconhecido", avatar_url: null },
+              comments_count: count || 0 
+            };
           })
         );
 
-        return postsWithComments;
+        return postsWithProfiles;
       } catch (error) {
         console.error("Erro não tratado ao buscar posts:", error);
         throw error;
@@ -80,21 +95,35 @@ export const usePostQueries = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      // Buscar comentários
+      const { data: commentsData, error: commentsError } = await supabase
         .from("comments")
-        .select(`
-          *,
-          profiles:user_id(username, avatar_url)
-        `)
+        .select("*")
         .eq("post_id", postId)
         .order("created_at", { ascending: true });
 
-      if (error) {
-        console.error("Erro ao buscar comentários:", error);
-        throw error;
+      if (commentsError) {
+        console.error("Erro ao buscar comentários:", commentsError);
+        throw commentsError;
       }
 
-      return data || [];
+      // Buscar perfis para cada comentário
+      const commentsWithProfiles = await Promise.all(
+        (commentsData || []).map(async (comment) => {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("username, avatar_url")
+            .eq("id", comment.user_id)
+            .single();
+
+          return {
+            ...comment,
+            profiles: profileData || { username: "Usuário desconhecido", avatar_url: null }
+          };
+        })
+      );
+
+      return commentsWithProfiles || [];
     } catch (error) {
       console.error("Erro não tratado ao buscar comentários:", error);
       throw error;

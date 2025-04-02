@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
@@ -18,45 +17,55 @@ export const useUserSessions = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // Registrar a sessão atual
   const registerCurrentSession = async () => {
     if (!user) return;
     
-    // Obter informações do dispositivo atual
     const deviceInfo = getDeviceInfo();
     
-    // Verificar se já existe uma sessão com esse dispositivo
-    const { data: existingSessions } = await supabase
-      .from("user_sessions")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("device_info", deviceInfo);
-      
-    // Se não existir, criar uma nova
-    if (!existingSessions || existingSessions.length === 0) {
-      await supabase
+    try {
+      const { data: existingSessions, error: queryError } = await supabase
         .from("user_sessions")
-        .insert({
-          user_id: user.id,
-          device_info: deviceInfo,
-        });
-    } else {
-      // Se existir, atualizar o timestamp
-      await supabase
-        .from("user_sessions")
-        .update({ last_active: new Date().toISOString() })
-        .eq("id", existingSessions[0].id);
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("device_info", deviceInfo);
+        
+      if (queryError) {
+        console.error("Erro ao consultar sessões:", queryError);
+        return;
+      }
+        
+      if (!existingSessions || existingSessions.length === 0) {
+        const { error: insertError } = await supabase
+          .from("user_sessions")
+          .insert({
+            user_id: user.id,
+            device_info: deviceInfo,
+          });
+          
+        if (insertError) {
+          console.error("Erro ao criar sessão:", insertError);
+        }
+      } else {
+        const { error: updateError } = await supabase
+          .from("user_sessions")
+          .update({ last_active: new Date().toISOString() })
+          .eq("id", existingSessions[0].id);
+          
+        if (updateError) {
+          console.error("Erro ao atualizar sessão:", updateError);
+        }
+      }
+    } catch (err) {
+      console.error("Erro não tratado ao registrar sessão:", err);
     }
   };
 
-  // Obter informações sobre o dispositivo
   const getDeviceInfo = () => {
     const browser = getBrowser();
     const os = getOS();
     return `${browser} em ${os}`;
   };
 
-  // Identificar o navegador
   const getBrowser = () => {
     const userAgent = navigator.userAgent;
     
@@ -77,7 +86,6 @@ export const useUserSessions = () => {
     }
   };
 
-  // Identificar o sistema operacional
   const getOS = () => {
     const userAgent = navigator.userAgent;
     
@@ -96,43 +104,43 @@ export const useUserSessions = () => {
     }
   };
 
-  // Buscar todas as sessões do usuário
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["userSessions"],
     queryFn: async () => {
       if (!user) return [];
 
-      // Registrar ou atualizar a sessão atual
-      await registerCurrentSession();
-      
-      const deviceInfo = getDeviceInfo();
-      
-      const { data, error } = await supabase
-        .from("user_sessions")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("last_active", { ascending: false });
+      try {
+        await registerCurrentSession();
+        
+        const deviceInfo = getDeviceInfo();
+        
+        const { data, error } = await supabase
+          .from("user_sessions")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("last_active", { ascending: false });
 
-      if (error) {
-        console.error("Erro ao buscar sessões:", error);
-        throw error;
+        if (error) {
+          console.error("Erro ao buscar sessões:", error);
+          throw error;
+        }
+
+        return (data || []).map(session => ({
+          ...session,
+          is_current: session.device_info === deviceInfo
+        }));
+      } catch (err) {
+        console.error("Erro não tratado ao buscar sessões:", err);
+        return [];
       }
-
-      // Marcar a sessão atual
-      return data.map(session => ({
-        ...session,
-        is_current: session.device_info === deviceInfo
-      }));
     },
     enabled: !!user,
   });
 
-  // Encerrar uma sessão específica
   const terminateSession = useMutation({
     mutationFn: async (sessionId: string) => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Verificar se é a sessão atual
       const currentSession = sessions.find(s => s.is_current && s.id === sessionId);
       if (currentSession) {
         throw new Error("Você não pode encerrar sua sessão atual. Use a opção 'Sair' para isso.");
@@ -167,7 +175,6 @@ export const useUserSessions = () => {
     },
   });
 
-  // Encerrar todas as outras sessões
   const terminateAllOtherSessions = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Usuário não autenticado");
