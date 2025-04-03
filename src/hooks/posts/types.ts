@@ -1,6 +1,8 @@
 
 import { User } from "@supabase/supabase-js";
 
+export type ReactionType = 'like' | 'heart' | 'laugh' | 'wow' | 'sad';
+
 export type Post = {
   id: string;
   user_id: string;
@@ -20,7 +22,7 @@ export type Post = {
     wow: number;
     sad: number;
   };
-  my_reaction: 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | null;
+  my_reaction: ReactionType | null;
   reactions_count: number;
 };
 
@@ -40,24 +42,24 @@ export type Reaction = {
   id: string;
   post_id: string;
   user_id: string;
-  type: 'like' | 'heart' | 'laugh' | 'wow' | 'sad';
+  type: ReactionType;
   created_at: string;
 };
 
 export type ReactionResult = {
   postId: string;
-  reactionType: 'like' | 'heart' | 'laugh' | 'wow' | 'sad';
+  reactionType: ReactionType;
   action: 'added' | 'updated' | 'removed';
-  previousType: 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | null;
+  previousType: ReactionType | null;
 };
 
 export type ReactionCount = {
-  type: 'like' | 'heart' | 'laugh' | 'wow' | 'sad';
+  type: ReactionType;
   count: number;
 };
 
 export type UserReaction = {
-  type: 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | null;
+  type: ReactionType | null;
 };
 
 export type QueryOptions = {
