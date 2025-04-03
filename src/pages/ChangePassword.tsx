@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -32,6 +33,15 @@ const ChangePassword = () => {
 
   const passwordStrength = validatePassword(newPassword);
   const isPasswordValid = Object.values(passwordStrength).every(Boolean);
+
+  // Function to open chat
+  const openChat = (userId: string, userName: string, userAvatar?: string) => {
+    window.dispatchEvent(
+      new CustomEvent("open-chat", {
+        detail: { userId, userName, userAvatar }
+      })
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +114,7 @@ const ChangePassword = () => {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <AppSidebar />
+      <AppSidebar openChat={openChat} />
       <main className="flex-1 p-8">
         <div className="max-w-md mx-auto space-y-8">
           <h1 className="text-4xl font-bold text-foreground">Alterar Senha</h1>

@@ -1,14 +1,18 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useOutletContext } from "react-router-dom";
 import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare } from "lucide-react";
 import { useSidebar } from "../hooks/useSidebar";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserProfile } from "./UserProfile";
-import { Badge } from "@/components/ui/badge";
 import { useMessages } from "@/hooks/useMessages";
+import { NotificationBadge } from "./ui/notification-badge";
 
-export const AppSidebar = () => {
+interface AppSidebarProps {
+  openChat: (userId: string, userName: string, userAvatar?: string) => void;
+}
+
+export const AppSidebar = ({ openChat }: AppSidebarProps) => {
   const { isSidebarOpen, toggleSidebar } = useSidebar();
   const { signOut } = useAuth();
   const navigate = useNavigate();
@@ -18,6 +22,16 @@ export const AppSidebar = () => {
   const handleLogout = async () => {
     await signOut();
     navigate("/login");
+  };
+  
+  // Function to open chat modal from app-wide context
+  const openChatInner = (userId: string, userName: string, userAvatar?: string) => {
+    // Dispatch a custom event to be caught by the AppLayout component
+    window.dispatchEvent(
+      new CustomEvent("open-chat", {
+        detail: { userId, userName, userAvatar }
+      })
+    );
   };
 
   const renderNavItem = (icon: React.ElementType, label: string, to: string, notificationCount?: number) => {
@@ -41,12 +55,9 @@ export const AppSidebar = () => {
                   {isSidebarOpen && <span>{label}</span>}
                   {/* Exibe o Badge apenas se notificationCount for maior que 0 */}
                   {notificationCount !== undefined && notificationCount > 0 && (
-                    <Badge
-                      variant="destructive"
-                      className={`flex items-center justify-center p-0 h-5 w-5 text-xs ${isSidebarOpen ? "ml-2" : "absolute -top-1 -right-1"}`}
-                    >
+                    <span className={`flex items-center justify-center bg-destructive text-destructive-foreground rounded-full text-xs font-bold h-5 w-5 p-0 ${isSidebarOpen ? "ml-2" : "absolute -top-1 -right-1"}`}>
                       {notificationCount > 9 ? "9+" : notificationCount}
-                    </Badge>
+                    </span>
                   )}
                 </span>
               </TooltipTrigger>
@@ -81,7 +92,7 @@ export const AppSidebar = () => {
         isSidebarOpen ? "w-64" : "w-16"
       } fixed inset-y-0 left-0 z-10 transition-width duration-300 ease-in-out overflow-hidden shadow-md border-r border-sidebar-border flex flex-col`}
     >
-      <div className="sidebar-header py-4 px-4 flex items-center relative">
+      <div className="sidebar-header py-4 px-4 flex items-center justify-between">
         <h1
           className={`text-lg font-bold ${
             isSidebarOpen ? "opacity-100" : "opacity-0"
@@ -89,12 +100,18 @@ export const AppSidebar = () => {
         >
           Candle Life
         </h1>
-        <button
-          className="sidebar-toggle items-center p-2 rounded-md hover:bg-sidebar-accent absolute right-2 top-2 z-20"
-          onClick={toggleSidebar}
-        >
-          ☰
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Show notification badge in the sidebar */}
+          <div className={`${isSidebarOpen ? 'block' : 'hidden'}`}>
+            <NotificationBadge openChat={openChat} />
+          </div>
+          <button
+            className="sidebar-toggle items-center p-2 rounded-md hover:bg-sidebar-accent"
+            onClick={toggleSidebar}
+          >
+            ☰
+          </button>
+        </div>
       </div>
 
       {isSidebarOpen && (
@@ -135,4 +152,4 @@ export const AppSidebar = () => {
       </div>
     </aside>
   );
-};
+}

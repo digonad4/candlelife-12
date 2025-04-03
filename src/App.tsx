@@ -74,6 +74,15 @@ function App() {
     }
   }, [user]);
 
+  // Function to open chat modal
+  const openChat = (userId: string, userName: string, userAvatar?: string) => {
+    window.dispatchEvent(
+      new CustomEvent("open-chat", {
+        detail: { userId, userName, userAvatar }
+      })
+    );
+  };
+
   // Component to handle redirects based on authentication
   const AuthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
     return user ? <>{children}</> : <Navigate to="/login" replace />;
@@ -81,7 +90,7 @@ function App() {
 
   return (
     <>
-      {user && <AppSidebar />}
+      {user && <AppSidebar openChat={openChat} />}
       <div className={`flex-1 overflow-hidden transition-all duration-300 ${user && isSidebarOpen ? "ml-64" : user ? "ml-16" : "ml-0"}`}>
         <main className="h-full hide-scrollbar overflow-y-auto">
           <Routes>

@@ -1,18 +1,20 @@
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
 
-type Theme = "light" | "dark" | "cyberpunk" | "dracula" | "nord" | "purple" | "green";
+type Theme = "light" | "dark" | "cyberpunk" | "dracula" | "nord" | "purple" | "green" | "ocean" | "sunset" | "forest" | "coffee" | "pastel" | "neon" | "vintage" | "midnight" | "royal";
 
 interface ThemeContextType {
   theme: Theme;
-  setTheme: (theme: Theme) => void;
+  setTheme: (theme: Theme) => Promise<void>;
+  isUpdating: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: "light",
-  setTheme: () => null,
+  setTheme: async () => { /* void return instead of null */ },
+  isUpdating: false,
 });
 
 export const useTheme = () => {
@@ -28,6 +30,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>(
     () => (localStorage.getItem("theme") as Theme) || "light"
   );
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Load user's theme preference from Supabase when signed in
   useEffect(() => {
@@ -56,22 +59,28 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user]);
 
   // Update both localStorage and state
-  const setTheme = async (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem("theme", newTheme);
+  const setTheme = useCallback(async (newTheme: Theme) => {
+    setIsUpdating(true);
     
-    // If user is authenticated, save their preference to their profile
-    if (user) {
-      try {
-        await supabase
+    try {
+      setThemeState(newTheme);
+      localStorage.setItem("theme", newTheme);
+      
+      // If user is authenticated, save their preference to their profile
+      if (user) {
+        const { error } = await supabase
           .from('profiles')
           .update({ active_theme: newTheme })
           .eq('id', user.id);
-      } catch (error) {
-        console.error("Error saving theme preference:", error);
+          
+        if (error) throw error;
       }
+    } catch (error) {
+      console.error("Error saving theme preference:", error);
+    } finally {
+      setIsUpdating(false);
     }
-  };
+  }, [user]);
 
   // Apply theme to document
   useEffect(() => {
@@ -79,7 +88,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, isUpdating }}>
       {children}
     </ThemeContext.Provider>
   );

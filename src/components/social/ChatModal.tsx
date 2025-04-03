@@ -1,10 +1,18 @@
 
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState, useEffect, useRef } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Send, Trash2, MoreVertical } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
-import { useMessages } from "@/hooks/useMessages";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useMessages, Message } from "@/hooks/useMessages";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -15,256 +23,234 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Message } from "@/hooks/messages/types";
+import { useToast } from "@/hooks/use-toast";
 
-// Import our refactored components
-import { ChatHeader } from "./chat/ChatHeader";
-import { UserSearch } from "./chat/UserSearch";
-import { ChatMessages } from "./chat/ChatMessages";
-import { ChatMessageInput } from "./chat/ChatMessageInput";
-
-type ChatModalProps = {
+interface ChatModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   recipientId: string;
   recipientName: string;
   recipientAvatar?: string;
-};
+}
 
-type UserSearchResult = {
-  id: string;
-  username: string;
-  avatar_url: string | null;
-};
-
-export function ChatModal({
+export const ChatModal = ({
   isOpen,
   onOpenChange,
   recipientId,
   recipientName,
   recipientAvatar,
-}: ChatModalProps) {
+}: ChatModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { 
-    sendMessage, 
-    clearConversation, 
-    deleteMessage 
-  } = useMessages();
-  const [message, setMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { getConversation, sendMessage, clearConversation, deleteMessage } = useMessages();
   
-  // Buscar mensagens da conversa
-  const { 
-    data: conversation, 
-    isLoading, 
-    isError, 
-    refetch 
-  } = useMessages().getConversation(recipientId);
-  
-  // Refetch messages when modal opens
+  const { data: messages = [], isLoading, refetch } = getConversation(recipientId);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   useEffect(() => {
     if (isOpen) {
       refetch();
     }
   }, [isOpen, refetch]);
 
-  // Search for users
-  const searchUsers = async (query: string) => {
-    if (!query.trim() || query.length < 3) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, username, avatar_url")
-        .ilike("username", `%${query}%`)
-        .limit(5);
-
-      if (error) throw error;
-
-      // Filter out current user
-      const filteredData = data.filter(profile => profile.id !== user?.id);
-      setSearchResults(filteredData);
-    } catch (error) {
-      console.error("Error searching users:", error);
-    } finally {
-      setIsSearching(false);
-    }
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.trim()) {
-        searchUsers(searchQuery);
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !user) return;
+
+    sendMessage.mutate(
+      { recipientId, content: newMessage },
+      {
+        onSuccess: () => {
+          setNewMessage("");
+          refetch();
+          setTimeout(scrollToBottom, 100);
+        }
       }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-  
-  const handleSendMessage = async () => {
-    if (!message.trim() || !user) return;
-    
-    setIsSubmitting(true);
-    try {
-      await sendMessage.mutateAsync({
-        recipientId,
-        content: message.trim()
-      });
-      setMessage("");
-    } catch (error) {
-      console.error("Erro ao enviar mensagem:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
-  
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
-  const handleSelectUser = (selectedUser: UserSearchResult) => {
-    onOpenChange(false);
-    // This will close the current chat and then open a new one with the selected user
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('open-chat', { 
-        detail: { 
-          userId: selectedUser.id, 
-          userName: selectedUser.username, 
-          userAvatar: selectedUser.avatar_url 
-        } 
-      }));
-    }, 100);
-    setIsSearchOpen(false);
-    setSearchQuery("");
+  const handleClearConversation = () => {
+    clearConversation.mutate(recipientId, {
+      onSuccess: () => {
+        setIsDeleteDialogOpen(false);
+        refetch();
+        toast({
+          title: "Conversa limpa",
+          description: "Todas as mensagens foram removidas."
+        });
+      }
+    });
   };
 
-  const handleClearConversation = async () => {
-    if (!recipientId || !user) return;
-    
-    try {
-      await clearConversation.mutateAsync(recipientId);
-      setIsClearDialogOpen(false);
-    } catch (error) {
-      console.error("Erro ao limpar conversa:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível limpar a conversa. Tente novamente mais tarde.",
-        variant: "destructive"
-      });
+  const handleDeleteMessage = (messageId: string) => {
+    if (messageToDelete) {
+      deleteMessage.mutate(
+        messageToDelete, 
+        {
+          onSuccess: () => {
+            refetch();
+            setMessageToDelete(null);
+            toast({
+              title: "Mensagem excluída",
+              description: "A mensagem foi excluída com sucesso."
+            });
+          },
+          onError: (error) => {
+            toast({
+              title: "Erro",
+              description: `Não foi possível excluir a mensagem: ${error.message}`,
+              variant: "destructive",
+            });
+            setMessageToDelete(null);
+          }
+        }
+      );
     }
   };
 
-  const handleDeleteMessage = async () => {
-    if (!selectedMessageId || !user) return;
-    
-    try {
-      await deleteMessage.mutateAsync(selectedMessageId);
-      setIsDeleteDialogOpen(false);
-      setSelectedMessageId(null);
-    } catch (error) {
-      console.error("Erro ao excluir mensagem:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir a mensagem. Tente novamente mais tarde.",
-        variant: "destructive"
-      });
-    }
+  const confirmDeleteMessage = (messageId: string) => {
+    setMessageToDelete(messageId);
+    handleDeleteMessage(messageId);
   };
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md h-[500px] flex flex-col p-0">
-          <ChatHeader 
-            recipientName={recipientName}
-            recipientAvatar={recipientAvatar}
-            onSearchClick={() => setIsSearchOpen(true)}
-            onClearChat={() => setIsClearDialogOpen(true)}
-          />
-          
-          <UserSearch 
-            isOpen={isSearchOpen}
-            onOpenChange={setIsSearchOpen}
-            searchQuery={searchQuery}
-            onSearchChange={(e) => setSearchQuery(e.target.value)}
-            isSearching={isSearching}
-            searchResults={searchResults}
-            onSelectUser={handleSelectUser}
-            trigger={<div />} // Empty div as we're controlling open state
-          />
-          
-          <ChatMessages 
-            messages={conversation || []}
-            isLoading={isLoading}
-            isError={isError}
-            currentUserId={user?.id}
-            onDeleteMessage={(messageId) => {
-              setSelectedMessageId(messageId);
-              setIsDeleteDialogOpen(true);
-            }}
-          />
-          
-          <ChatMessageInput 
-            message={message}
-            onMessageChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyPress}
-            onSendMessage={handleSendMessage}
-            isSubmitting={isSubmitting}
-          />
+        <DialogContent className="sm:max-w-md md:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  {recipientAvatar ? (
+                    <AvatarImage src={recipientAvatar} alt={recipientName} />
+                  ) : (
+                    <AvatarFallback>{recipientName.charAt(0).toUpperCase()}</AvatarFallback>
+                  )}
+                </Avatar>
+                <span>{recipientName}</span>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpar conversa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col h-[400px]">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {isLoading ? (
+                <div className="text-center py-4">Carregando mensagens...</div>
+              ) : messages.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  Nenhuma mensagem para exibir. Envie uma mensagem para iniciar a conversa.
+                </div>
+              ) : (
+                messages.map((message: Message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.sender_id === user?.id ? "justify-end" : "justify-start"}`}
+                  >
+                    <div className="group relative">
+                      <div
+                        className={`max-w-[80%] rounded-lg p-3 ${
+                          message.sender_id === user?.id
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        <p>{message.content}</p>
+                        <p className="text-xs opacity-70 mt-1">
+                          {new Date(message.created_at).toLocaleTimeString([], { 
+                            hour: "2-digit", 
+                            minute: "2-digit" 
+                          })}
+                        </p>
+                      </div>
+                      
+                      {message.sender_id === user?.id && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute top-0 right-0 -mt-2 -mr-2 opacity-0 group-hover:opacity-100 h-6 w-6 bg-background/80"
+                          onClick={() => confirmDeleteMessage(message.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            <div className="p-2 border-t">
+              <div className="flex items-end gap-2">
+                <Textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Digite sua mensagem..."
+                  className="min-h-[60px] resize-none"
+                  disabled={sendMessage.isPending}
+                />
+                <Button 
+                  size="icon" 
+                  type="button" 
+                  onClick={handleSendMessage}
+                  disabled={sendMessage.isPending || !newMessage.trim()}
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
-      
-      {/* Diálogo de confirmação para limpar conversa */}
-      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Limpar conversa</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja limpar todas as mensagens desta conversa? Esta ação não pode ser desfeita.
+              Tem certeza que deseja limpar toda esta conversa? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearConversation} className="bg-destructive">
-              Limpar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {/* Diálogo de confirmação para excluir mensagem */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir mensagem</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta mensagem? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteMessage} className="bg-destructive">
-              Excluir
+            <AlertDialogAction 
+              onClick={handleClearConversation}
+              disabled={clearConversation.isPending}
+            >
+              {clearConversation.isPending ? "Limpando..." : "Limpar conversa"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
   );
-}
+};

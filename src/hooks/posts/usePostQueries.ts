@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,26 +46,35 @@ export const usePostQueries = () => {
               .select("*", { count: "exact", head: true })
               .eq("post_id", post.id);
 
-            // Get reaction counts directly using normal queries instead of RPC
-            const { data: reactionCounts } = await supabase
-              .from("reactions")
-              .select("type, count(*)")
-              .eq("post_id", post.id)
-              .group("type");
+            // Get individual reaction counts - using correct approach for Supabase
+            const { data: reactionCountsData, error: reactionCountsError } = await supabase
+              .rpc('get_reaction_counts_by_post', { post_id: post.id });
+
+            if (reactionCountsError) {
+              console.error("Erro ao buscar contagem de reações:", reactionCountsError);
+            }
 
             // Get total reactions count
-            const { count: reactionsCount } = await supabase
+            const { count: reactionsCount, error: reactionsCountError } = await supabase
               .from("reactions")
               .select("*", { count: "exact", head: true })
               .eq("post_id", post.id);
 
+            if (reactionsCountError) {
+              console.error("Erro ao buscar contagem total de reações:", reactionsCountError);
+            }
+
             // Get user's reaction if logged in
-            const { data: myReactionData } = await supabase
+            const { data: myReactionData, error: myReactionError } = await supabase
               .from("reactions")
               .select("type")
               .eq("post_id", post.id)
               .eq("user_id", user.id)
               .maybeSingle();
+
+            if (myReactionError) {
+              console.error("Erro ao buscar reação do usuário:", myReactionError);
+            }
 
             // Set default reaction counts
             const reactions = {
@@ -78,10 +86,10 @@ export const usePostQueries = () => {
             };
             
             // Process reaction counts data
-            if (reactionCounts && Array.isArray(reactionCounts) && reactionCounts.length > 0) {
-              reactionCounts.forEach((item) => {
+            if (reactionCountsData && Array.isArray(reactionCountsData) && reactionCountsData.length > 0) {
+              reactionCountsData.forEach((item) => {
                 if (item && item.type && typeof reactions[item.type as keyof typeof reactions] !== 'undefined') {
-                  reactions[item.type as keyof typeof reactions] = parseInt(item.count);
+                  reactions[item.type as keyof typeof reactions] = parseInt(item.count as unknown as string);
                 }
               });
             }

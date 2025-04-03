@@ -13,6 +13,11 @@ export const useMessageRealtime = () => {
 
   useEffect(() => {
     if (!user) return;
+    
+    // Request notification permission
+    if (typeof Notification !== 'undefined' && Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission();
+    }
 
     const channel = supabase
       .channel('messages-changes')
@@ -42,6 +47,7 @@ export const useMessageRealtime = () => {
                 .single();
                 
               if (senderProfile) {
+                // Show in-app toast notification
                 toast({
                   title: `Nova mensagem de ${senderProfile.username}`,
                   description: newMessage.content.length > 60 
@@ -50,24 +56,40 @@ export const useMessageRealtime = () => {
                   duration: 5000,
                 });
                 
-                if (Notification.permission === "granted") {
-                  const notification = new Notification(`Nova mensagem de ${senderProfile.username}`, {
-                    body: newMessage.content.length > 60 
-                      ? newMessage.content.substring(0, 60) + '...' 
-                      : newMessage.content,
-                    icon: '/favicon.ico'
-                  });
-                  
-                  notification.onclick = () => {
-                    window.focus();
-                    window.dispatchEvent(new CustomEvent('open-chat', { 
-                      detail: { 
-                        userId: newMessage.sender_id, 
-                        userName: senderProfile.username
-                      } 
-                    }));
-                  };
+                // Show browser notification
+                if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+                  try {
+                    const notification = new Notification(`Nova mensagem de ${senderProfile.username}`, {
+                      body: newMessage.content.length > 60 
+                        ? newMessage.content.substring(0, 60) + '...' 
+                        : newMessage.content,
+                      icon: '/favicon.ico',
+                      tag: 'new-message', // Prevents duplicate notifications
+                      requireInteraction: true // Notification persists until user interacts with it
+                    });
+                    
+                    notification.onclick = () => {
+                      window.focus();
+                      window.dispatchEvent(new CustomEvent('open-chat', { 
+                        detail: { 
+                          userId: newMessage.sender_id, 
+                          userName: senderProfile.username
+                        } 
+                      }));
+                    };
+                  } catch (error) {
+                    console.error("Error showing notification:", error);
+                  }
                 }
+
+                // Emit a custom event that can be caught by any component in the app
+                window.dispatchEvent(new CustomEvent('new-message', { 
+                  detail: { 
+                    senderId: newMessage.sender_id,
+                    senderName: senderProfile.username,
+                    messageContent: newMessage.content
+                  } 
+                }));
               }
             };
             
@@ -76,10 +98,6 @@ export const useMessageRealtime = () => {
         }
       )
       .subscribe();
-
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-      Notification.requestPermission();
-    }
 
     return () => {
       supabase.removeChannel(channel);

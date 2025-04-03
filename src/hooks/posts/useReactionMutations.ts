@@ -46,7 +46,8 @@ export const useReactionMutations = () => {
         return {
           action: "added",
           previousType: null,
-          postId
+          postId,
+          reactionType
         };
       } else if (existingReaction.type === reactionType) {
         // Same reaction - remove it
@@ -64,7 +65,8 @@ export const useReactionMutations = () => {
         return {
           action: "removed",
           previousType: existingReaction.type,
-          postId
+          postId,
+          reactionType
         };
       } else {
         // Different reaction - update it
@@ -82,7 +84,8 @@ export const useReactionMutations = () => {
         return {
           action: "updated",
           previousType: existingReaction.type,
-          postId
+          postId,
+          reactionType
         };
       }
     },
