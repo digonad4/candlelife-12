@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Heart, ThumbsUp, Smile, Frown, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ReactionBarProps {
   postId: string;
@@ -34,6 +35,8 @@ export const ReactionBar = ({ postId, reactions, myReaction, onReact, reactionsC
   const activeReaction = myReaction ? reactionIcons[myReaction as keyof typeof reactionIcons] : null;
   
   const handleReact = (type: 'like' | 'heart' | 'laugh' | 'wow' | 'sad') => {
+    // Se o usuário já reagiu com este tipo, então estamos removendo a reação
+    // ou se ele reagiu com outro tipo, estamos mudando a reação
     onReact(type);
     setIsOpen(false);
   };
@@ -56,44 +59,51 @@ export const ReactionBar = ({ postId, reactions, myReaction, onReact, reactionsC
 
   return (
     <div className="flex items-center gap-2">
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={cn(
-              "flex items-center gap-1.5 text-sm", 
-              myReaction && activeReaction?.color
-            )}
-            onClick={() => myReaction ? onReact(myReaction as 'like') : setIsOpen(true)}
-          >
-            {activeReaction ? (
-              <activeReaction.icon className="h-4 w-4" />
-            ) : (
-              <PrimaryIcon className="h-4 w-4" />
-            )}
-            <span>
-              {myReaction 
-                ? activeReaction?.label 
-                : reactionsCount > 0 ? `${reactionsCount}` : "Reagir"}
-            </span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-2 flex gap-1" align="start">
-          {Object.entries(reactionIcons).map(([type, { icon: Icon, label, color }]) => (
-            <Button
-              key={type}
-              variant="ghost"
-              size="icon"
-              className={cn("rounded-full hover:scale-125 transition-transform", color)}
-              onClick={() => handleReact(type as 'like' | 'heart' | 'laugh' | 'wow' | 'sad')}
-              title={label}
+      <TooltipProvider delayDuration={300}>
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={cn(
+                "flex items-center gap-1.5 text-sm", 
+                myReaction && activeReaction?.color
+              )}
+              onClick={() => myReaction ? onReact(myReaction as 'like') : setIsOpen(true)}
             >
-              <Icon className="h-5 w-5" />
+              {activeReaction ? (
+                <activeReaction.icon className="h-4 w-4" />
+              ) : (
+                <PrimaryIcon className="h-4 w-4" />
+              )}
+              <span>
+                {myReaction 
+                  ? activeReaction?.label 
+                  : reactionsCount > 0 ? `${reactionsCount}` : "Reagir"}
+              </span>
             </Button>
-          ))}
-        </PopoverContent>
-      </Popover>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-2 flex gap-1" align="start">
+            {Object.entries(reactionIcons).map(([type, { icon: Icon, label, color }]) => (
+              <Tooltip key={type}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("rounded-full hover:scale-125 transition-transform", color)}
+                    onClick={() => handleReact(type as 'like' | 'heart' | 'laugh' | 'wow' | 'sad')}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{label}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </PopoverContent>
+        </Popover>
+      </TooltipProvider>
       
       {reactionsCount > 0 && (
         <div className="text-xs text-muted-foreground flex items-center gap-1">

@@ -8,7 +8,7 @@ import { UserProfile } from "./UserProfile";
 import { Badge } from "@/components/ui/badge";
 import { useMessages } from "@/hooks/useMessages";
 
-export function AppSidebar() {
+export const AppSidebar = () => {
   const { isSidebarOpen, toggleSidebar } = useSidebar();
   const { signOut } = useAuth();
   const navigate = useNavigate();
@@ -65,6 +65,16 @@ export function AppSidebar() {
     );
   };
 
+  const sidebarItems = [
+    renderNavItem(LayoutDashboard, "Dashboard", "/dashboard"),
+    renderNavItem(Receipt, "Transações", "/transactions"),
+    renderNavItem(Users, "Clientes", "/clients"),
+    renderNavItem(FileText, "Faturados", "/invoiced"),
+    renderNavItem(Wallet, "Gestão de Despesas", "/expenses"),
+    renderNavItem(MessageSquare, "Comunidade", "/social", totalUnreadMessages),
+    renderNavItem(Settings, "Configurações", "/settings")
+  ];
+
   return (
     <aside
       className={`sidebar bg-sidebar ${
@@ -95,13 +105,7 @@ export function AppSidebar() {
 
       <nav className="sidebar-nav mt-4 flex-1">
         <ul className="space-y-2 px-2">
-          {renderNavItem(LayoutDashboard, "Dashboard", "/dashboard")}
-          {renderNavItem(Receipt, "Transações", "/transactions")}
-          {renderNavItem(Users, "Clientes", "/clients")}
-          {renderNavItem(FileText, "Faturados", "/invoiced")}
-          {renderNavItem(Wallet, "Gestão de Despesas", "/expenses")}
-          {renderNavItem(MessageSquare, "Comunidade", "/social", totalUnreadMessages)}
-          {renderNavItem(Settings, "Configurações", "/settings")}
+          {sidebarItems}
         </ul>
       </nav>
 
@@ -131,4 +135,4 @@ export function AppSidebar() {
       </div>
     </aside>
   );
-}
+};

@@ -50,6 +50,20 @@ const Social = () => {
     }
   }, [postsError, refetchPosts, user]);
   
+  // Listen for custom events to open chat
+  useEffect(() => {
+    const handleOpenChat = (event: CustomEvent<{ userId: string; userName: string; userAvatar?: string }>) => {
+      const { userId, userName, userAvatar } = event.detail;
+      openChat(userId, userName, userAvatar);
+    };
+    
+    window.addEventListener('open-chat' as any, handleOpenChat as EventListener);
+    
+    return () => {
+      window.removeEventListener('open-chat' as any, handleOpenChat as EventListener);
+    };
+  }, []);
+  
   const openChat = (userId: string, userName: string, userAvatar?: string) => {
     // Não permitir chat com o próprio usuário
     if (userId === user?.id) {

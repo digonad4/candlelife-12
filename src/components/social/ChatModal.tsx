@@ -9,12 +9,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2, UserIcon } from "lucide-react";
+import { Send, Loader2, UserIcon, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type ChatModalProps = {
   isOpen: boolean;
@@ -22,6 +24,12 @@ type ChatModalProps = {
   recipientId: string;
   recipientName: string;
   recipientAvatar?: string;
+};
+
+type UserSearchResult = {
+  id: string;
+  username: string;
+  avatar_url: string | null;
 };
 
 export function ChatModal({
@@ -35,6 +43,10 @@ export function ChatModal({
   const { sendMessage } = useMessages();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
   
   // Buscar mensagens da conversa
@@ -58,6 +70,44 @@ export function ChatModal({
       refetch();
     }
   }, [isOpen, refetch]);
+
+  // Search for users
+  const searchUsers = async (query: string) => {
+    if (!query.trim() || query.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .ilike("username", `%${query}%`)
+        .limit(5);
+
+      if (error) throw error;
+
+      // Filter out current user
+      const filteredData = data.filter(profile => profile.id !== user?.id);
+      setSearchResults(filteredData);
+    } catch (error) {
+      console.error("Error searching users:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchUsers(searchQuery);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
   const handleSendMessage = async () => {
     if (!message.trim() || !user) return;
@@ -95,10 +145,26 @@ export function ChatModal({
     });
   };
 
+  const handleSelectUser = (selectedUser: UserSearchResult) => {
+    onOpenChange(false);
+    // This will close the current chat and then open a new one with the selected user
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('open-chat', { 
+        detail: { 
+          userId: selectedUser.id, 
+          userName: selectedUser.username, 
+          userAvatar: selectedUser.avatar_url 
+        } 
+      }));
+    }, 100);
+    setIsSearchOpen(false);
+    setSearchQuery("");
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md h-[500px] flex flex-col p-0">
-        <DialogHeader className="p-4 border-b">
+        <DialogHeader className="p-4 border-b flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Avatar>
               {recipientAvatar ? (
@@ -113,6 +179,61 @@ export function ChatModal({
             </Avatar>
             <DialogTitle>{recipientName}</DialogTitle>
           </div>
+          
+          <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Search className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Buscar usuários</h3>
+                <Input
+                  placeholder="Digite um nome..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+                
+                <div className="max-h-48 overflow-y-auto mt-2">
+                  {isSearching ? (
+                    <div className="flex justify-center py-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <div className="space-y-1">
+                      {searchResults.map((user) => (
+                        <Button
+                          key={user.id}
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => handleSelectUser(user)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              {user.avatar_url ? (
+                                <AvatarImage src={user.avatar_url} />
+                              ) : (
+                                <AvatarFallback>
+                                  {user.username[0].toUpperCase()}
+                                </AvatarFallback>
+                              )}
+                            </Avatar>
+                            <span className="truncate">{user.username}</span>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  ) : searchQuery.trim().length > 0 ? (
+                    <p className="text-sm text-muted-foreground py-2 text-center">
+                      Nenhum usuário encontrado
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </DialogHeader>
         
         <ScrollArea className="flex-1 p-4">
