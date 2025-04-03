@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,25 +47,24 @@ export const usePostQueries = () => {
               .eq("post_id", post.id);
 
             // Get reaction details with proper type casting
-            // We need to cast the entire function call to 'any' to bypass TypeScript's type checking
+            // We need to explicitly cast the parameter object and the entire function call to 'any'
+            const params = { post_id: post.id } as any;
             const reactionCountsResult = await supabase
-              .rpc("get_reaction_counts_by_post", { 
-                post_id: post.id 
-              });
-            const { data: reactionCountsData } = reactionCountsResult as any;
+              .rpc("get_reaction_counts_by_post", params) as any;
+            const { data: reactionCountsData } = reactionCountsResult;
             
+            const reactionsCountParams = { post_id: post.id } as any;
             const reactionsCountResult = await supabase
-              .rpc("get_total_reactions_count", { 
-                post_id: post.id 
-              });
-            const { data: reactionsCountData } = reactionsCountResult as any;
+              .rpc("get_total_reactions_count", reactionsCountParams) as any;
+            const { data: reactionsCountData } = reactionsCountResult;
             
+            const userReactionParams = { 
+              post_id: post.id,
+              user_id: user.id 
+            } as any;
             const myReactionResult = await supabase
-              .rpc("get_user_reaction", { 
-                post_id: post.id,
-                user_id: user.id 
-              });
-            const { data: myReactionData } = myReactionResult as any;
+              .rpc("get_user_reaction", userReactionParams) as any;
+            const { data: myReactionData } = myReactionResult;
 
             // Set default reaction counts
             const reactions = {
