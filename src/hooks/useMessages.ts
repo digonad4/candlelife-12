@@ -36,7 +36,6 @@ export const useMessages = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // Configurar o canal de tempo real para atualização de mensagens
   useEffect(() => {
     if (!user) return;
 
@@ -53,7 +52,6 @@ export const useMessages = () => {
         (payload) => {
           console.log("Nova mensagem recebida:", payload);
           
-          // Nova mensagem recebida - atualiza todas as queries relacionadas
           queryClient.invalidateQueries({ queryKey: ['messages'] });
           queryClient.invalidateQueries({ queryKey: ['chatUsers'] });
           
@@ -61,7 +59,6 @@ export const useMessages = () => {
           if (newMessage.sender_id !== user.id) {
             queryClient.invalidateQueries({ queryKey: ['chat', newMessage.sender_id] });
             
-            // Buscar informações do remetente para o toast
             const fetchSenderInfo = async () => {
               const { data: senderProfile } = await supabase
                 .from("profiles")
@@ -70,7 +67,6 @@ export const useMessages = () => {
                 .single();
                 
               if (senderProfile) {
-                // Mostrar notificação de nova mensagem
                 toast({
                   title: `Nova mensagem de ${senderProfile.username}`,
                   description: newMessage.content.length > 60 
@@ -79,7 +75,6 @@ export const useMessages = () => {
                   duration: 5000,
                 });
                 
-                // Enviar notificação do navegador se permitido
                 if (Notification.permission === "granted") {
                   const notification = new Notification(`Nova mensagem de ${senderProfile.username}`, {
                     body: newMessage.content.length > 60 
@@ -107,7 +102,6 @@ export const useMessages = () => {
       )
       .subscribe();
 
-    // Solicitar permissão para notificações do navegador
     if (Notification.permission !== "granted" && Notification.permission !== "denied") {
       Notification.requestPermission();
     }
@@ -117,13 +111,11 @@ export const useMessages = () => {
     };
   }, [user, queryClient, toast]);
 
-  // Buscar todos os usuários com quem o usuário atual tem conversas
   const { data: chatUsers = [], isLoading: isLoadingChatUsers } = useQuery({
     queryKey: ["chatUsers"],
     queryFn: async () => {
       if (!user) return [];
 
-      // Função auxiliar para contar mensagens não lidas
       const countUnreadMessages = async (userId: string) => {
         const { count, error } = await supabase
           .from("messages")
@@ -141,7 +133,6 @@ export const useMessages = () => {
         return count || 0;
       };
 
-      // Buscar últimas mensagens enviadas e recebidas
       const { data: messages, error } = await supabase
         .from("messages")
         .select("*")
@@ -154,7 +145,6 @@ export const useMessages = () => {
         throw error;
       }
 
-      // Encontrar todos os usuários únicos com quem o usuário atual conversou
       const userIds = new Set<string>();
       const userMap = new Map<string, ChatUser>();
 
@@ -164,7 +154,6 @@ export const useMessages = () => {
         if (!userIds.has(otherUserId)) {
           userIds.add(otherUserId);
           
-          // Buscar perfil do outro usuário
           const { data: profileData } = await supabase
             .from("profiles")
             .select("username, avatar_url")
@@ -184,7 +173,6 @@ export const useMessages = () => {
         }
       }
 
-      // Adicionar contagem de mensagens não lidas para cada usuário
       const chatUsersWithUnread = await Promise.all(
         Array.from(userMap.values()).map(async (chatUser) => {
           const unreadCount = await countUnreadMessages(chatUser.id);
@@ -195,7 +183,6 @@ export const useMessages = () => {
         })
       );
 
-      // Ordenar por mensagens não lidas (decrescente) e depois por hora da última mensagem (decrescente)
       return chatUsersWithUnread.sort((a, b) => {
         if (a.unread_count !== b.unread_count) {
           return b.unread_count - a.unread_count;
@@ -209,30 +196,25 @@ export const useMessages = () => {
     enabled: !!user,
   });
 
-  // Contar total de mensagens não lidas
   const getTotalUnreadCount = (): number => {
     if (!chatUsers) return 0;
     return chatUsers.reduce((total, chatUser) => total + chatUser.unread_count, 0);
   };
 
-  // Buscar mensagens de uma conversa específica
   const getConversation = (userId: string) => {
     return useQuery({
       queryKey: ["chat", userId],
       queryFn: async () => {
         if (!user) return [];
 
-        // Marcar mensagens como lidas quando a conversa é aberta
         await supabase
           .from("messages")
           .update({ read: true })
           .eq("recipient_id", user.id)
           .eq("sender_id", userId);
 
-        // Invalidar a query de chat users para atualizar a contagem de não lidos
         queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
 
-        // Buscar todas as mensagens da conversa que não foram excluídas
         const { data: messagesData, error } = await supabase
           .from("messages")
           .select("*")
@@ -245,17 +227,14 @@ export const useMessages = () => {
           throw error;
         }
 
-        // Buscar perfis para cada mensagem
         const messagesWithProfiles = await Promise.all(
           (messagesData || []).map(async (message) => {
-            // Buscar perfil do remetente
             const { data: senderProfile } = await supabase
               .from("profiles")
               .select("username, avatar_url")
               .eq("id", message.sender_id)
               .single();
 
-            // Buscar perfil do destinatário
             const { data: recipientProfile } = await supabase
               .from("profiles")
               .select("username, avatar_url")
@@ -264,6 +243,7 @@ export const useMessages = () => {
 
             return {
               ...message,
+              deleted_by_recipient: message.deleted_by_recipient || false,
               sender_profile: senderProfile || { 
                 username: "Usuário desconhecido", 
                 avatar_url: null 
@@ -282,7 +262,6 @@ export const useMessages = () => {
     });
   };
 
-  // Enviar uma nova mensagem
   const sendMessage = useMutation({
     mutationFn: async ({ recipientId, content }: { recipientId: string; content: string }) => {
       if (!user) throw new Error("Usuário não autenticado");
@@ -308,9 +287,7 @@ export const useMessages = () => {
       return data;
     },
     onSuccess: (newMessage) => {
-      // Atualizar a lista de conversas
       queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
-      // Atualizar a conversa específica
       queryClient.invalidateQueries({ queryKey: ["chat", newMessage.recipient_id] });
     },
     onError: (error) => {
@@ -322,12 +299,10 @@ export const useMessages = () => {
     },
   });
 
-  // Limpar uma conversa
   const clearConversation = useMutation({
     mutationFn: async (otherUserId: string) => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Usar a função RPC para limpar a conversa
       const clearCall = supabase.rpc as any;
       const { error } = await clearCall("clear_conversation", {
         p_user_id: user.id,
@@ -342,9 +317,7 @@ export const useMessages = () => {
       return otherUserId;
     },
     onSuccess: (userId) => {
-      // Atualizar a lista de conversas
       queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
-      // Atualizar a conversa específica
       queryClient.invalidateQueries({ queryKey: ["chat", userId] });
 
       toast({
@@ -361,12 +334,10 @@ export const useMessages = () => {
     },
   });
 
-  // Excluir uma mensagem específica
   const deleteMessage = useMutation({
     mutationFn: async (messageId: string) => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Buscar a mensagem para obter informações do remetente/destinatário
       const { data: message, error: fetchError } = await supabase
         .from("messages")
         .select("*")
@@ -378,7 +349,6 @@ export const useMessages = () => {
         throw fetchError;
       }
 
-      // Se o usuário atual é o remetente, excluir a mensagem
       if (message.sender_id === user.id) {
         const { error } = await supabase
           .from("messages")
@@ -389,9 +359,7 @@ export const useMessages = () => {
           console.error("Erro ao excluir mensagem:", error);
           throw error;
         }
-      } 
-      // Se o usuário atual é o destinatário, marcar como excluída
-      else if (message.recipient_id === user.id) {
+      } else if (message.recipient_id === user.id) {
         const { error } = await supabase
           .from("messages")
           .update({ deleted_by_recipient: true })
@@ -411,9 +379,7 @@ export const useMessages = () => {
       };
     },
     onSuccess: ({ otherUserId }) => {
-      // Atualizar a lista de conversas
       queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
-      // Atualizar a conversa específica
       queryClient.invalidateQueries({ queryKey: ["chat", otherUserId] });
 
       toast({
