@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,15 +46,15 @@ export const usePostQueries = () => {
               .select("*", { count: "exact", head: true })
               .eq("post_id", post.id);
 
-            // Use RPC functions to get reaction details
-            const { data: reactionCounts } = await supabase
-              .rpc<ReactionCount[], ReactionCount[]>("get_reaction_counts_by_post", { post_id: post.id });
+            // Use RPC functions to get reaction details - using the correct method
+            const { data: reactionCounts, error: reactionCountsError } = await supabase
+              .rpc("get_reaction_counts_by_post", { post_id: post.id });
             
-            const { data: reactionsCountData } = await supabase
-              .rpc<{ count: number }, { count: number }>("get_total_reactions_count", { post_id: post.id });
+            const { data: reactionsCountData, error: reactionsCountError } = await supabase
+              .rpc("get_total_reactions_count", { post_id: post.id });
             
-            const { data: myReactionData } = await supabase
-              .rpc<UserReaction, UserReaction>("get_user_reaction", { 
+            const { data: myReactionData, error: myReactionError } = await supabase
+              .rpc("get_user_reaction", { 
                 post_id: post.id,
                 user_id: user.id 
               });
@@ -70,11 +69,18 @@ export const usePostQueries = () => {
             };
             
             // Update reaction counts from RPC result
-            if (reactionCounts && reactionCounts.length > 0) {
+            if (reactionCounts && Array.isArray(reactionCounts) && reactionCounts.length > 0) {
               reactionCounts.forEach((item) => {
                 if (item.type && reactions.hasOwnProperty(item.type)) {
                   reactions[item.type as keyof typeof reactions] = item.count;
                 }
+              });
+            }
+
+            // Log any errors that occurred during RPC calls
+            if (reactionCountsError || reactionsCountError || myReactionError) {
+              console.error("Error fetching reaction data:", { 
+                reactionCountsError, reactionsCountError, myReactionError 
               });
             }
 
