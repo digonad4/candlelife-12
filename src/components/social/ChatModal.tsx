@@ -1,41 +1,11 @@
 
-import { useState, useEffect, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { 
-  Send, 
-  Loader2, 
-  UserIcon, 
-  Search, 
-  Trash2, 
-  MoreVertical,
-  X
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
-} from "@/components/ui/popover";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -45,7 +15,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { Message } from "@/hooks/messages/types";
+
+// Import our refactored components
+import { ChatHeader } from "./chat/ChatHeader";
+import { UserSearch } from "./chat/UserSearch";
+import { ChatMessages } from "./chat/ChatMessages";
+import { ChatMessageInput } from "./chat/ChatMessageInput";
 
 type ChatModalProps = {
   isOpen: boolean;
@@ -84,7 +60,6 @@ export function ChatModal({
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const messageEndRef = useRef<HTMLDivElement>(null);
   
   // Buscar mensagens da conversa
   const { 
@@ -93,13 +68,6 @@ export function ChatModal({
     isError, 
     refetch 
   } = useMessages().getConversation(recipientId);
-  
-  // Sempre rolar para a mensagem mais recente
-  useEffect(() => {
-    if (isOpen && messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [isOpen, conversation]);
   
   // Refetch messages when modal opens
   useEffect(() => {
@@ -156,11 +124,6 @@ export function ChatModal({
         content: message.trim()
       });
       setMessage("");
-      
-      // Aguardar um momento e fazer scroll para a mensagem mais recente
-      setTimeout(() => {
-        messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
     } finally {
@@ -173,13 +136,6 @@ export function ChatModal({
       e.preventDefault();
       handleSendMessage();
     }
-  };
-  
-  const formatMessageTime = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), {
-      addSuffix: true,
-      locale: ptBR
-    });
   };
 
   const handleSelectUser = (selectedUser: UserSearchResult) => {
@@ -235,191 +191,42 @@ export function ChatModal({
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md h-[500px] flex flex-col p-0">
-          <DialogHeader className="p-4 border-b flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <Avatar>
-                {recipientAvatar ? (
-                  <AvatarImage src={recipientAvatar} />
-                ) : (
-                  <AvatarFallback>
-                    {recipientName && recipientName.length > 0 
-                      ? recipientName[0].toUpperCase() 
-                      : <UserIcon className="h-4 w-4" />}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <DialogTitle>{recipientName}</DialogTitle>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 p-2">
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium">Buscar usuários</h3>
-                    <Input
-                      placeholder="Digite um nome..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full"
-                    />
-                    
-                    <div className="max-h-48 overflow-y-auto mt-2">
-                      {isSearching ? (
-                        <div className="flex justify-center py-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        </div>
-                      ) : searchResults.length > 0 ? (
-                        <div className="space-y-1">
-                          {searchResults.map((user) => (
-                            <Button
-                              key={user.id}
-                              variant="ghost"
-                              className="w-full justify-start"
-                              onClick={() => handleSelectUser(user)}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  {user.avatar_url ? (
-                                    <AvatarImage src={user.avatar_url} />
-                                  ) : (
-                                    <AvatarFallback>
-                                      {user.username[0].toUpperCase()}
-                                    </AvatarFallback>
-                                  )}
-                                </Avatar>
-                                <span className="truncate">{user.username}</span>
-                              </div>
-                            </Button>
-                          ))}
-                        </div>
-                      ) : searchQuery.trim().length > 0 ? (
-                        <p className="text-sm text-muted-foreground py-2 text-center">
-                          Nenhum usuário encontrado
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem 
-                    onClick={() => setIsClearDialogOpen(true)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Limpar conversa
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </DialogHeader>
+          <ChatHeader 
+            recipientName={recipientName}
+            recipientAvatar={recipientAvatar}
+            onSearchClick={() => setIsSearchOpen(true)}
+            onClearChat={() => setIsClearDialogOpen(true)}
+          />
           
-          <ScrollArea className="flex-1 p-4">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : isError ? (
-              <div className="text-center py-8 text-destructive">
-                Não foi possível carregar as mensagens.
-              </div>
-            ) : conversation && conversation.length > 0 ? (
-              <>
-                {conversation.map((msg: Message) => {
-                  const isSentByMe = msg.sender_id === user?.id;
-                  
-                  return (
-                    <div 
-                      key={msg.id} 
-                      className={`mb-4 flex ${isSentByMe ? "justify-end" : "justify-start"}`}
-                    >
-                      <div className="flex items-start gap-2 max-w-[80%]">
-                        {!isSentByMe && (
-                          <Avatar className="h-8 w-8">
-                            {msg.sender_profile?.avatar_url ? (
-                              <AvatarImage src={msg.sender_profile.avatar_url} />
-                            ) : (
-                              <AvatarFallback>
-                                {msg.sender_profile?.username && msg.sender_profile.username.length > 0
-                                  ? msg.sender_profile.username[0].toUpperCase()
-                                  : <UserIcon className="h-4 w-4" />}
-                              </AvatarFallback>
-                            )}
-                          </Avatar>
-                        )}
-                        
-                        <div className="relative group">
-                          <div 
-                            className={`p-3 rounded-lg ${
-                              isSentByMe 
-                                ? "bg-primary text-primary-foreground" 
-                                : "bg-muted"
-                            }`}
-                          >
-                            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatMessageTime(msg.created_at)}
-                          </p>
-                          
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6 absolute top-0 -right-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => {
-                              setSelectedMessageId(msg.id);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div ref={messageEndRef} />
-              </>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhuma mensagem ainda. Diga olá!
-              </div>
-            )}
-          </ScrollArea>
+          <UserSearch 
+            isOpen={isSearchOpen}
+            onOpenChange={setIsSearchOpen}
+            searchQuery={searchQuery}
+            onSearchChange={(e) => setSearchQuery(e.target.value)}
+            isSearching={isSearching}
+            searchResults={searchResults}
+            onSelectUser={handleSelectUser}
+            trigger={<div />} // Empty div as we're controlling open state
+          />
           
-          <div className="p-4 border-t mt-auto">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Digite sua mensagem..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="flex-1"
-              />
-              <Button 
-                onClick={handleSendMessage} 
-                disabled={isSubmitting || !message.trim()}
-              >
-                {isSubmitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
+          <ChatMessages 
+            messages={conversation || []}
+            isLoading={isLoading}
+            isError={isError}
+            currentUserId={user?.id}
+            onDeleteMessage={(messageId) => {
+              setSelectedMessageId(messageId);
+              setIsDeleteDialogOpen(true);
+            }}
+          />
+          
+          <ChatMessageInput 
+            message={message}
+            onMessageChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyPress}
+            onSendMessage={handleSendMessage}
+            isSubmitting={isSubmitting}
+          />
         </DialogContent>
       </Dialog>
       
