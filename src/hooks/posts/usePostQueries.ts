@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Post, Comment, defaultQueryOptions, ReactionType, ReactionCount, UserReaction } from "./types";
+import { Post, Comment, defaultQueryOptions, ReactionType } from "./types";
 
 export const usePostQueries = () => {
   const { user } = useAuth();
@@ -18,7 +17,7 @@ export const usePostQueries = () => {
     refetch: refetchPosts 
   } = useQuery({
     queryKey: ["posts"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Post[]> => {
       try {
         if (!user) return [];
 
@@ -48,13 +47,13 @@ export const usePostQueries = () => {
               .eq("post_id", post.id);
 
             // Get reaction details
-            const { data: reactionCountsData, error: reactionCountsError } = await supabase
+            const { data: reactionCountsData } = await supabase
               .rpc("get_reaction_counts_by_post", { post_id: post.id });
             
-            const { data: reactionsCountData, error: reactionsCountError } = await supabase
+            const { data: reactionsCountData } = await supabase
               .rpc("get_total_reactions_count", { post_id: post.id });
             
-            const { data: myReactionData, error: myReactionError } = await supabase
+            const { data: myReactionData } = await supabase
               .rpc("get_user_reaction", { 
                 post_id: post.id,
                 user_id: user.id 
@@ -69,24 +68,17 @@ export const usePostQueries = () => {
               sad: 0
             };
             
-            // Process reaction counts data with safer type handling
-            const reactionCounts = reactionCountsData as Array<{type: string, count: number}> || [];
-            const reactionsCount = reactionsCountData as {count: number} || {count: 0};
-            const myReaction = myReactionData as {type: string} || null;
+            // Process reaction counts data safely
+            const reactionCounts = reactionCountsData as { type: string, count: number }[] || [];
+            const reactionsCount = reactionsCountData as { count: number } || { count: 0 };
+            const myReaction = myReactionData as { type: string } || null;
             
             // Update reaction counts from RPC result
             if (reactionCounts && Array.isArray(reactionCounts) && reactionCounts.length > 0) {
               reactionCounts.forEach((item) => {
-                if (item.type && typeof reactions[item.type as keyof typeof reactions] !== 'undefined') {
+                if (item && item.type && typeof reactions[item.type as keyof typeof reactions] !== 'undefined') {
                   reactions[item.type as keyof typeof reactions] = item.count;
                 }
-              });
-            }
-
-            // Log any errors that occurred during RPC calls
-            if (reactionCountsError || reactionsCountError || myReactionError) {
-              console.error("Error fetching reaction data:", { 
-                reactionCountsError, reactionsCountError, myReactionError 
               });
             }
 

@@ -14,11 +14,11 @@ export const useReactionMutations = () => {
     mutationFn: async ({ postId, reactionType }: { 
       postId: string; 
       reactionType: ReactionType 
-    }) => {
+    }): Promise<ReactionResult> => {
       if (!user) throw new Error("Usuário não autenticado");
 
       // Use a stored procedure to toggle the reaction
-      const { data: rawData, error } = await supabase
+      const { data, error } = await supabase
         .rpc("toggle_reaction", {
           p_post_id: postId,
           p_user_id: user.id,
@@ -31,24 +31,25 @@ export const useReactionMutations = () => {
       }
 
       // Check if we have data and create a type-safe result
+      const rawData = data as any;
       if (rawData) {
-        // Validate that returned data has the expected properties
-        const validatedData = {
+        // Create default result with required fields
+        const validatedResult: ReactionResult = {
           postId: postId,
           reactionType: reactionType,
           action: (rawData.action || 'updated') as 'added' | 'updated' | 'removed',
-          previousType: null as ReactionType | null
+          previousType: null
         };
 
-        // Safe type conversion for previousType if it exists
+        // Safely handle previousType if it exists
         if (rawData.previousType) {
           const validTypes: ReactionType[] = ['like', 'heart', 'laugh', 'wow', 'sad'];
           if (validTypes.includes(rawData.previousType as ReactionType)) {
-            validatedData.previousType = rawData.previousType as ReactionType;
+            validatedResult.previousType = rawData.previousType as ReactionType;
           }
         }
 
-        return validatedData;
+        return validatedResult;
       }
 
       // If no data was returned, provide a default result
