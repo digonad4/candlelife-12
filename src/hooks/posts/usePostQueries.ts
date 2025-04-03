@@ -50,16 +50,20 @@ export const usePostQueries = () => {
             // Get reaction details with proper type casting
             // We need to cast the parameters to any to avoid TypeScript errors with RPC calls
             const { data: reactionCountsData } = await supabase
-              .rpc("get_reaction_counts_by_post", { post_id: post.id as any });
+              .rpc("get_reaction_counts_by_post", { 
+                post_id: post.id 
+              } as any);
             
             const { data: reactionsCountData } = await supabase
-              .rpc("get_total_reactions_count", { post_id: post.id as any });
+              .rpc("get_total_reactions_count", { 
+                post_id: post.id 
+              } as any);
             
             const { data: myReactionData } = await supabase
               .rpc("get_user_reaction", { 
-                post_id: post.id as any,
-                user_id: user.id as any 
-              });
+                post_id: post.id,
+                user_id: user.id 
+              } as any);
 
             // Set default reaction counts
             const reactions = {
@@ -71,9 +75,9 @@ export const usePostQueries = () => {
             };
             
             // Process reaction counts data safely with proper type handling
-            const reactionCounts = reactionCountsData as { type: string, count: number }[] || [];
-            const reactionsCount = reactionsCountData as { count: number } || { count: 0 };
-            const myReaction = myReactionData as { type: string } || null;
+            const reactionCounts = reactionCountsData ? (reactionCountsData as Array<{ type: string, count: number }>) : [];
+            const reactionsCount = reactionsCountData ? (reactionsCountData as { count: number }) : { count: 0 };
+            const myReaction = myReactionData ? (myReactionData as { type: string }) : null;
             
             // Update reaction counts from RPC result
             if (reactionCounts && Array.isArray(reactionCounts) && reactionCounts.length > 0) {

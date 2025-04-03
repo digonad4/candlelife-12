@@ -20,10 +20,10 @@ export const useReactionMutations = () => {
       // Use a stored procedure to toggle the reaction, casting parameters to any to avoid TypeScript errors
       const { data, error } = await supabase
         .rpc("toggle_reaction", {
-          p_post_id: postId as any,
+          p_post_id: postId,
           p_user_id: user.id,
           p_reaction_type: reactionType
-        });
+        } as any);
 
       if (error) {
         console.error("Erro ao gerenciar reação:", error);
