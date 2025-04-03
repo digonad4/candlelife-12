@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
@@ -237,7 +236,7 @@ export const useMessages = () => {
         const { data: messagesData, error } = await supabase
           .from("messages")
           .select("*")
-          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${userId}),and(sender_id.eq.${userId},recipient_id.eq.${user.id})`)
+          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${userId}),and(sender_id.eq.${userId},recipient_id.eq.${userId})`)
           .or(`and(sender_id.eq.${user.id},deleted_by_recipient.eq.false),and(recipient_id.eq.${user.id},deleted_by_recipient.eq.false)`)
           .order("created_at", { ascending: true });
 

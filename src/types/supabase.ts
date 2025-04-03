@@ -199,6 +199,7 @@ export interface Database {
           content: string
           read: boolean
           created_at: string
+          deleted_by_recipient: boolean
         }
         Insert: {
           id?: string
@@ -207,6 +208,7 @@ export interface Database {
           content: string
           read?: boolean
           created_at?: string
+          deleted_by_recipient?: boolean
         }
         Update: {
           id?: string
@@ -215,6 +217,7 @@ export interface Database {
           content?: string
           read?: boolean
           created_at?: string
+          deleted_by_recipient?: boolean
         }
       }
       user_sessions: {
