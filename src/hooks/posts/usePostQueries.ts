@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,24 +47,25 @@ export const usePostQueries = () => {
               .select("*", { count: "exact", head: true })
               .eq("post_id", post.id);
 
-            // Get reaction details with proper type casting
-            // We need to explicitly cast the parameter object and the entire function call to 'any'
-            const params = { post_id: post.id } as any;
-            const reactionCountsResult = await supabase
-              .rpc("get_reaction_counts_by_post", params) as any;
+            // Get reaction details using type assertions for both function name and parameters
+            // First, cast the function call and parameter object to any type
+            const reactionCountsCall = supabase.rpc as any;
+            const reactionCountsResult = await reactionCountsCall("get_reaction_counts_by_post", { 
+              post_id: post.id 
+            });
             const { data: reactionCountsData } = reactionCountsResult;
             
-            const reactionsCountParams = { post_id: post.id } as any;
-            const reactionsCountResult = await supabase
-              .rpc("get_total_reactions_count", reactionsCountParams) as any;
+            const reactionsCountCall = supabase.rpc as any;
+            const reactionsCountResult = await reactionsCountCall("get_total_reactions_count", { 
+              post_id: post.id 
+            });
             const { data: reactionsCountData } = reactionsCountResult;
             
-            const userReactionParams = { 
+            const myReactionCall = supabase.rpc as any;
+            const myReactionResult = await myReactionCall("get_user_reaction", { 
               post_id: post.id,
               user_id: user.id 
-            } as any;
-            const myReactionResult = await supabase
-              .rpc("get_user_reaction", userReactionParams) as any;
+            });
             const { data: myReactionData } = myReactionResult;
 
             // Set default reaction counts
