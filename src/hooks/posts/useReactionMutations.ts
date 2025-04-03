@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Post } from "./types";
+import { Post, ReactionResult } from "./types";
 
 export const useReactionMutations = () => {
   const { user } = useAuth();
@@ -18,11 +18,12 @@ export const useReactionMutations = () => {
       if (!user) throw new Error("Usuário não autenticado");
 
       // Use a stored procedure to toggle the reaction
-      const { data, error } = await supabase.rpc('toggle_reaction', {
-        p_post_id: postId,
-        p_user_id: user.id,
-        p_reaction_type: reactionType
-      });
+      const { data, error } = await supabase
+        .rpc<ReactionResult>('toggle_reaction', {
+          p_post_id: postId,
+          p_user_id: user.id,
+          p_reaction_type: reactionType
+        });
 
       if (error) {
         console.error("Erro ao gerenciar reação:", error);
@@ -32,7 +33,7 @@ export const useReactionMutations = () => {
       return data || { 
         postId, 
         reactionType, 
-        action: 'updated',
+        action: 'updated' as const,
         previousType: null 
       };
     },

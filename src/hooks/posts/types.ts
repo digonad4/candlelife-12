@@ -48,7 +48,16 @@ export type ReactionResult = {
   postId: string;
   reactionType: 'like' | 'heart' | 'laugh' | 'wow' | 'sad';
   action: 'added' | 'updated' | 'removed';
-  previousType?: 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | null;
+  previousType: 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | null;
+};
+
+export type ReactionCount = {
+  type: 'like' | 'heart' | 'laugh' | 'wow' | 'sad';
+  count: number;
+};
+
+export type UserReaction = {
+  type: 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | null;
 };
 
 export type QueryOptions = {
