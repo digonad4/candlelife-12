@@ -337,7 +337,7 @@ export function ChatModal({
               </div>
             ) : conversation && conversation.length > 0 ? (
               <>
-                {conversation.map((msg) => {
+                {conversation.map((msg: Message) => {
                   const isSentByMe = msg.sender_id === user?.id;
                   
                   return (
