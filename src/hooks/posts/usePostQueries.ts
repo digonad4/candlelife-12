@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,18 +47,23 @@ export const usePostQueries = () => {
               .select("*", { count: "exact", head: true })
               .eq("post_id", post.id);
 
-            // Use RPC functions to get reaction details - using the correct method
-            const { data: reactionCounts, error: reactionCountsError } = await supabase
+            // Use RPC functions to get reaction details
+            const { data: reactionCountsRaw, error: reactionCountsError } = await supabase
               .rpc("get_reaction_counts_by_post", { post_id: post.id });
             
-            const { data: reactionsCountData, error: reactionsCountError } = await supabase
+            const { data: reactionsCountDataRaw, error: reactionsCountError } = await supabase
               .rpc("get_total_reactions_count", { post_id: post.id });
             
-            const { data: myReactionData, error: myReactionError } = await supabase
+            const { data: myReactionDataRaw, error: myReactionError } = await supabase
               .rpc("get_user_reaction", { 
                 post_id: post.id,
                 user_id: user.id 
               });
+
+            // Type assertions to help TypeScript understand our data structure
+            const reactionCounts = reactionCountsRaw as Array<{type: string, count: number}> || [];
+            const reactionsCountData = reactionsCountDataRaw as {count: number} || {count: 0};
+            const myReactionData = myReactionDataRaw as {type: string} || null;
 
             // Set default reaction counts
             const reactions = {
