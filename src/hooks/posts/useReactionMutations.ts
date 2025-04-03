@@ -17,13 +17,13 @@ export const useReactionMutations = () => {
     }): Promise<ReactionResult> => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Use a stored procedure to toggle the reaction, casting parameters to any to avoid TypeScript errors
-      const { data, error } = await supabase
+      // Use a stored procedure to toggle the reaction, casting the entire function call to any to avoid TypeScript errors
+      const { data, error } = await (supabase
         .rpc("toggle_reaction", {
           p_post_id: postId,
           p_user_id: user.id,
           p_reaction_type: reactionType
-        } as any);
+        }) as any);
 
       if (error) {
         console.error("Erro ao gerenciar reação:", error);
