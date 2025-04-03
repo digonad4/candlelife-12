@@ -49,13 +49,16 @@ export const usePostQueries = () => {
 
             // Use RPC functions to get reaction details
             const { data: reactionCounts } = await supabase
-              .rpc<ReactionCount[]>('get_reaction_counts_by_post', { post_id: post.id });
+              .from('get_reaction_counts_by_post')
+              .rpc<ReactionCount>({ post_id: post.id });
             
-            const { count: reactionsCount } = await supabase
-              .rpc<{count: number}>('get_total_reactions_count', { post_id: post.id });
+            const { data: reactionsCountData } = await supabase
+              .from('get_total_reactions_count')
+              .rpc<{ count: number }>({ post_id: post.id });
             
             const { data: myReactionData } = await supabase
-              .rpc<UserReaction>('get_user_reaction', { 
+              .from('get_user_reaction')
+              .rpc<UserReaction>({ 
                 post_id: post.id,
                 user_id: user.id 
               });
@@ -82,7 +85,7 @@ export const usePostQueries = () => {
               ...post, 
               profiles: profileData || { username: "Usuário desconhecido", avatar_url: null },
               comments_count: commentsCount || 0,
-              reactions_count: reactionsCount?.count || 0,
+              reactions_count: reactionsCountData?.count || 0,
               reactions,
               my_reaction: myReactionData?.type || null,
               image_url: post.image_url || null

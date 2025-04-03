@@ -19,7 +19,8 @@ export const useReactionMutations = () => {
 
       // Use a stored procedure to toggle the reaction
       const { data, error } = await supabase
-        .rpc<ReactionResult>('toggle_reaction', {
+        .from('toggle_reaction')
+        .rpc<ReactionResult>({
           p_post_id: postId,
           p_user_id: user.id,
           p_reaction_type: reactionType
