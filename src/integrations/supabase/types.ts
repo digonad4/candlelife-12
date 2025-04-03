@@ -75,6 +75,7 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          deleted_by_recipient: boolean | null
           id: string
           read: boolean
           recipient_id: string
@@ -83,6 +84,7 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
+          deleted_by_recipient?: boolean | null
           id?: string
           read?: boolean
           recipient_id: string
@@ -91,6 +93,7 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          deleted_by_recipient?: boolean | null
           id?: string
           read?: boolean
           recipient_id?: string
@@ -331,7 +334,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      clear_conversation: {
+        Args: {
+          p_user_id: string
+          p_other_user_id: string
+        }
+        Returns: undefined
+      }
+      get_reaction_counts_by_post: {
+        Args: {
+          post_id: string
+        }
+        Returns: {
+          type: string
+          count: number
+        }[]
+      }
+      get_total_reactions_count: {
+        Args: {
+          post_id: string
+        }
+        Returns: Json
+      }
+      get_user_reaction: {
+        Args: {
+          post_id: string
+          user_id: string
+        }
+        Returns: Json
+      }
+      toggle_reaction: {
+        Args: {
+          p_post_id: string
+          p_user_id: string
+          p_reaction_type: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

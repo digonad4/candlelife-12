@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
@@ -11,6 +12,7 @@ export type Message = {
   recipient_id: string;
   read: boolean;
   created_at: string;
+  deleted_by_recipient: boolean;
   sender_profile?: {
     username: string;
     avatar_url: string | null;
@@ -77,6 +79,26 @@ export const useMessages = () => {
                     : newMessage.content,
                   duration: 5000,
                 });
+                
+                // Enviar notificação do navegador se permitido
+                if (Notification.permission === "granted") {
+                  const notification = new Notification(`Nova mensagem de ${senderProfile.username}`, {
+                    body: newMessage.content.length > 60 
+                      ? newMessage.content.substring(0, 60) + '...' 
+                      : newMessage.content,
+                    icon: '/favicon.ico'
+                  });
+                  
+                  notification.onclick = () => {
+                    window.focus();
+                    window.dispatchEvent(new CustomEvent('open-chat', { 
+                      detail: { 
+                        userId: newMessage.sender_id, 
+                        userName: senderProfile.username
+                      } 
+                    }));
+                  };
+                }
               }
             };
             
@@ -85,6 +107,11 @@ export const useMessages = () => {
         }
       )
       .subscribe();
+
+    // Solicitar permissão para notificações do navegador
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission();
+    }
 
     return () => {
       supabase.removeChannel(channel);
@@ -104,7 +131,8 @@ export const useMessages = () => {
           .select("*", { count: "exact", head: true })
           .eq("recipient_id", user.id)
           .eq("sender_id", userId)
-          .eq("read", false);
+          .eq("read", false)
+          .eq("deleted_by_recipient", false);
 
         if (error) {
           console.error("Erro ao contar mensagens não lidas:", error);
@@ -119,6 +147,7 @@ export const useMessages = () => {
         .from("messages")
         .select("*")
         .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+        .eq("deleted_by_recipient", false)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -204,11 +233,12 @@ export const useMessages = () => {
         // Invalidar a query de chat users para atualizar a contagem de não lidos
         queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
 
-        // Buscar todas as mensagens da conversa
+        // Buscar todas as mensagens da conversa que não foram excluídas
         const { data: messagesData, error } = await supabase
           .from("messages")
           .select("*")
           .or(`and(sender_id.eq.${user.id},recipient_id.eq.${userId}),and(sender_id.eq.${userId},recipient_id.eq.${user.id})`)
+          .or(`and(sender_id.eq.${user.id},deleted_by_recipient.eq.false),and(recipient_id.eq.${user.id},deleted_by_recipient.eq.false)`)
           .order("created_at", { ascending: true });
 
         if (error) {
@@ -265,7 +295,8 @@ export const useMessages = () => {
           sender_id: user.id,
           recipient_id: recipientId,
           content,
-          read: false
+          read: false,
+          deleted_by_recipient: false
         })
         .select()
         .single();
@@ -292,11 +323,121 @@ export const useMessages = () => {
     },
   });
 
+  // Limpar uma conversa
+  const clearConversation = useMutation({
+    mutationFn: async (otherUserId: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Usar a função RPC para limpar a conversa
+      const clearCall = supabase.rpc as any;
+      const { error } = await clearCall("clear_conversation", {
+        p_user_id: user.id,
+        p_other_user_id: otherUserId
+      });
+
+      if (error) {
+        console.error("Erro ao limpar conversa:", error);
+        throw error;
+      }
+
+      return otherUserId;
+    },
+    onSuccess: (userId) => {
+      // Atualizar a lista de conversas
+      queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
+      // Atualizar a conversa específica
+      queryClient.invalidateQueries({ queryKey: ["chat", userId] });
+
+      toast({
+        title: "Conversa limpa",
+        description: "A conversa foi limpa com sucesso.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: `Não foi possível limpar a conversa: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Excluir uma mensagem específica
+  const deleteMessage = useMutation({
+    mutationFn: async (messageId: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Buscar a mensagem para obter informações do remetente/destinatário
+      const { data: message, error: fetchError } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("id", messageId)
+        .single();
+
+      if (fetchError) {
+        console.error("Erro ao buscar mensagem:", fetchError);
+        throw fetchError;
+      }
+
+      // Se o usuário atual é o remetente, excluir a mensagem
+      if (message.sender_id === user.id) {
+        const { error } = await supabase
+          .from("messages")
+          .delete()
+          .eq("id", messageId);
+
+        if (error) {
+          console.error("Erro ao excluir mensagem:", error);
+          throw error;
+        }
+      } 
+      // Se o usuário atual é o destinatário, marcar como excluída
+      else if (message.recipient_id === user.id) {
+        const { error } = await supabase
+          .from("messages")
+          .update({ deleted_by_recipient: true })
+          .eq("id", messageId);
+
+        if (error) {
+          console.error("Erro ao marcar mensagem como excluída:", error);
+          throw error;
+        }
+      } else {
+        throw new Error("Você não tem permissão para excluir esta mensagem");
+      }
+
+      return {
+        messageId,
+        otherUserId: message.sender_id === user.id ? message.recipient_id : message.sender_id
+      };
+    },
+    onSuccess: ({ otherUserId }) => {
+      // Atualizar a lista de conversas
+      queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
+      // Atualizar a conversa específica
+      queryClient.invalidateQueries({ queryKey: ["chat", otherUserId] });
+
+      toast({
+        title: "Mensagem excluída",
+        description: "A mensagem foi excluída com sucesso.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: `Não foi possível excluir a mensagem: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     chatUsers,
     isLoadingChatUsers,
     getTotalUnreadCount,
     getConversation,
-    sendMessage
+    sendMessage,
+    clearConversation,
+    deleteMessage
   };
 };
