@@ -1,9 +1,9 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Post, ReactionType, ReactionResult } from "./types";
+import { ReactionType } from "./types";
 
 export const useReactionMutations = () => {
   const { user } = useAuth();
@@ -11,118 +11,89 @@ export const useReactionMutations = () => {
   const queryClient = useQueryClient();
 
   const toggleReaction = useMutation({
-    mutationFn: async ({ postId, reactionType }: { 
-      postId: string; 
-      reactionType: ReactionType 
-    }): Promise<ReactionResult> => {
+    mutationFn: async ({ postId, reactionType }: { postId: string; reactionType: ReactionType }) => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Cast the rpc function itself to any type to avoid TypeScript errors
-      const toggleCall = supabase.rpc as any;
-      
-      // Then call it with the parameters
-      const reactionResult = await toggleCall("toggle_reaction", {
-        p_post_id: postId,
-        p_user_id: user.id,
-        p_reaction_type: reactionType
-      });
-      
-      const { data, error } = reactionResult;
+      // First, check if the user already has a reaction
+      const { data: existingReaction, error: fetchError } = await supabase
+        .from("reactions")
+        .select("type")
+        .eq("post_id", postId)
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      if (error) {
-        console.error("Erro ao gerenciar reação:", error);
-        throw error;
+      if (fetchError) {
+        console.error("Erro ao verificar reação existente:", fetchError);
+        throw fetchError;
       }
 
-      // Check if we have data and create a type-safe result
-      const rawData = data as any;
-      if (rawData) {
-        // Create default result with required fields
-        const validatedResult: ReactionResult = {
-          postId: postId,
-          reactionType: reactionType,
-          action: (rawData.action || 'updated') as 'added' | 'updated' | 'removed',
-          previousType: null
-        };
+      // Determine the action based on existing reaction
+      if (!existingReaction) {
+        // No existing reaction - add new reaction
+        const { error: insertError } = await supabase
+          .from("reactions")
+          .insert({
+            post_id: postId,
+            user_id: user.id,
+            type: reactionType
+          });
 
-        // Safely handle previousType if it exists
-        if (rawData.previousType) {
-          const validTypes: ReactionType[] = ['like', 'heart', 'laugh', 'wow', 'sad'];
-          if (validTypes.includes(rawData.previousType as ReactionType)) {
-            validatedResult.previousType = rawData.previousType as ReactionType;
-          }
+        if (insertError) {
+          console.error("Erro ao adicionar reação:", insertError);
+          throw insertError;
         }
 
-        return validatedResult;
-      }
+        return {
+          action: "added",
+          previousType: null,
+          postId
+        };
+      } else if (existingReaction.type === reactionType) {
+        // Same reaction - remove it
+        const { error: deleteError } = await supabase
+          .from("reactions")
+          .delete()
+          .eq("post_id", postId)
+          .eq("user_id", user.id);
 
-      // If no data was returned, provide a default result
-      return { 
-        postId, 
-        reactionType, 
-        action: 'updated' as const,
-        previousType: null 
-      };
+        if (deleteError) {
+          console.error("Erro ao remover reação:", deleteError);
+          throw deleteError;
+        }
+
+        return {
+          action: "removed",
+          previousType: existingReaction.type,
+          postId
+        };
+      } else {
+        // Different reaction - update it
+        const { error: updateError } = await supabase
+          .from("reactions")
+          .update({ type: reactionType })
+          .eq("post_id", postId)
+          .eq("user_id", user.id);
+
+        if (updateError) {
+          console.error("Erro ao atualizar reação:", updateError);
+          throw updateError;
+        }
+
+        return {
+          action: "updated",
+          previousType: existingReaction.type,
+          postId
+        };
+      }
     },
-    onSuccess: (result) => {
-      // Update the local cache to reflect the changes
-      queryClient.setQueryData(['posts'], (oldData: Post[] | undefined) => {
-        if (!oldData) return [];
-        
-        return oldData.map((post) => {
-          if (post.id === result.postId) {
-            // Create a copy of the reactions object
-            const reactions = { ...post.reactions };
-            
-            if (result.action === 'removed') {
-              // Decrement the count for the removed reaction type
-              reactions[result.reactionType] = Math.max(0, reactions[result.reactionType] - 1);
-              return { 
-                ...post, 
-                reactions, 
-                my_reaction: null,
-                reactions_count: Math.max(0, post.reactions_count - 1)
-              };
-            } 
-            else if (result.action === 'updated' && result.previousType) {
-              // Decrement the previous reaction type count
-              reactions[result.previousType] = Math.max(0, reactions[result.previousType] - 1);
-              
-              // Increment the new reaction type count
-              reactions[result.reactionType]++;
-              
-              return { 
-                ...post, 
-                reactions, 
-                my_reaction: result.reactionType 
-              };
-            }
-            else if (result.action === 'added') {
-              // Increment the count for the added reaction type
-              reactions[result.reactionType]++;
-              
-              return { 
-                ...post, 
-                reactions, 
-                my_reaction: result.reactionType,
-                reactions_count: post.reactions_count + 1
-              };
-            }
-          }
-          return post;
-        });
-      });
-      
-      toast({
-        title: "Reação atualizada",
-        description: "Sua reação foi registrada com sucesso."
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
     },
     onError: (error) => {
       toast({
         title: "Erro",
-        description: `Não foi possível registrar a reação: ${error.message}`,
-        variant: "destructive"
+        description: `Não foi possível registrar sua reação: ${error.message}`,
+        variant: "destructive",
       });
     }
   });

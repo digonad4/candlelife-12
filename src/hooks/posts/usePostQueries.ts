@@ -47,26 +47,26 @@ export const usePostQueries = () => {
               .select("*", { count: "exact", head: true })
               .eq("post_id", post.id);
 
-            // Get reaction details using type assertions for both function name and parameters
-            // First, cast the function call and parameter object to any type
-            const reactionCountsCall = supabase.rpc as any;
-            const reactionCountsResult = await reactionCountsCall("get_reaction_counts_by_post", { 
-              post_id: post.id 
-            });
-            const { data: reactionCountsData } = reactionCountsResult;
-            
-            const reactionsCountCall = supabase.rpc as any;
-            const reactionsCountResult = await reactionsCountCall("get_total_reactions_count", { 
-              post_id: post.id 
-            });
-            const { data: reactionsCountData } = reactionsCountResult;
-            
-            const myReactionCall = supabase.rpc as any;
-            const myReactionResult = await myReactionCall("get_user_reaction", { 
-              post_id: post.id,
-              user_id: user.id 
-            });
-            const { data: myReactionData } = myReactionResult;
+            // Get reaction counts directly using normal queries instead of RPC
+            const { data: reactionCounts } = await supabase
+              .from("reactions")
+              .select("type, count(*)")
+              .eq("post_id", post.id)
+              .group("type");
+
+            // Get total reactions count
+            const { count: reactionsCount } = await supabase
+              .from("reactions")
+              .select("*", { count: "exact", head: true })
+              .eq("post_id", post.id);
+
+            // Get user's reaction if logged in
+            const { data: myReactionData } = await supabase
+              .from("reactions")
+              .select("type")
+              .eq("post_id", post.id)
+              .eq("user_id", user.id)
+              .maybeSingle();
 
             // Set default reaction counts
             const reactions = {
@@ -77,26 +77,21 @@ export const usePostQueries = () => {
               sad: 0
             };
             
-            // Process reaction counts data safely with proper type handling
-            const reactionCounts = reactionCountsData ? (reactionCountsData as Array<{ type: string, count: number }>) : [];
-            const reactionsCount = reactionsCountData ? (reactionsCountData as { count: number }) : { count: 0 };
-            const myReaction = myReactionData ? (myReactionData as { type: string }) : null;
-            
-            // Update reaction counts from RPC result
+            // Process reaction counts data
             if (reactionCounts && Array.isArray(reactionCounts) && reactionCounts.length > 0) {
               reactionCounts.forEach((item) => {
                 if (item && item.type && typeof reactions[item.type as keyof typeof reactions] !== 'undefined') {
-                  reactions[item.type as keyof typeof reactions] = item.count;
+                  reactions[item.type as keyof typeof reactions] = parseInt(item.count);
                 }
               });
             }
 
             // Validate my_reaction to ensure it's one of the allowed types or null
             let typedMyReaction: ReactionType | null = null;
-            if (myReaction && myReaction.type) {
+            if (myReactionData && myReactionData.type) {
               const validTypes: ReactionType[] = ['like', 'heart', 'laugh', 'wow', 'sad'];
-              if (validTypes.includes(myReaction.type as ReactionType)) {
-                typedMyReaction = myReaction.type as ReactionType;
+              if (validTypes.includes(myReactionData.type as ReactionType)) {
+                typedMyReaction = myReactionData.type as ReactionType;
               }
             }
 
@@ -104,7 +99,7 @@ export const usePostQueries = () => {
               ...post, 
               profiles: profileData || { username: "Usuário desconhecido", avatar_url: null },
               comments_count: commentsCount || 0,
-              reactions_count: reactionsCount?.count || 0,
+              reactions_count: reactionsCount || 0,
               reactions,
               my_reaction: typedMyReaction,
               image_url: post.image_url || null

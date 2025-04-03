@@ -50,15 +50,29 @@ export const useMessageMutations = () => {
     mutationFn: async (otherUserId: string) => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      const clearCall = supabase.rpc as any;
-      const { error } = await clearCall("clear_conversation", {
-        p_user_id: user.id,
-        p_other_user_id: otherUserId
-      });
+      // Method 1: Use direct queries instead of RPC
+      // Delete messages where the current user is the sender
+      const { error: deleteError } = await supabase
+        .from("messages")
+        .delete()
+        .eq("sender_id", user.id)
+        .eq("recipient_id", otherUserId);
 
-      if (error) {
-        console.error("Erro ao limpar conversa:", error);
-        throw error;
+      if (deleteError) {
+        console.error("Erro ao excluir mensagens enviadas:", deleteError);
+        throw deleteError;
+      }
+
+      // Mark as deleted the messages where the current user is the recipient
+      const { error: updateError } = await supabase
+        .from("messages")
+        .update({ deleted_by_recipient: true })
+        .eq("recipient_id", user.id)
+        .eq("sender_id", otherUserId);
+
+      if (updateError) {
+        console.error("Erro ao marcar mensagens como excluídas:", updateError);
+        throw updateError;
       }
 
       return otherUserId;
