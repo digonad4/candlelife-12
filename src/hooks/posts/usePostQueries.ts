@@ -49,21 +49,24 @@ export const usePostQueries = () => {
 
             // Get reaction details with proper type casting
             // We need to cast the entire function call to 'any' to bypass TypeScript's type checking
-            const { data: reactionCountsData } = await (supabase
+            const reactionCountsResult = await supabase
               .rpc("get_reaction_counts_by_post", { 
                 post_id: post.id 
-              }) as any);
+              });
+            const { data: reactionCountsData } = reactionCountsResult as any;
             
-            const { data: reactionsCountData } = await (supabase
+            const reactionsCountResult = await supabase
               .rpc("get_total_reactions_count", { 
                 post_id: post.id 
-              }) as any);
+              });
+            const { data: reactionsCountData } = reactionsCountResult as any;
             
-            const { data: myReactionData } = await (supabase
+            const myReactionResult = await supabase
               .rpc("get_user_reaction", { 
                 post_id: post.id,
                 user_id: user.id 
-              }) as any);
+              });
+            const { data: myReactionData } = myReactionResult as any;
 
             // Set default reaction counts
             const reactions = {
