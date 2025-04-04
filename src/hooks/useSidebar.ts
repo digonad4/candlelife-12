@@ -36,7 +36,7 @@ export const useSidebar = () => {
   // Auto-collapse sidebar on mobile when navigating away
   useEffect(() => {
     if (isMobile && openMobile) {
-      // Adiciona um event listener para detectar cliques fora do sidebar
+      // Add event listener to detect clicks outside the sidebar
       const handleClickOutside = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
         if (target && !target.closest('[data-sidebar="sidebar"]') && !target.closest('button[aria-label="Toggle Sidebar"]')) {

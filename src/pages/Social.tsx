@@ -25,7 +25,7 @@ const Social = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRecipient, setChatRecipient] = useState({ id: "", name: "", avatar: "" });
   
-  // Mostrar erro se não estiver autenticado
+  // Show error if not authenticated
   useEffect(() => {
     if (!user) {
       toast({
@@ -37,7 +37,7 @@ const Social = () => {
     }
   }, [user, toast, navigate]);
   
-  // Efeito para tentar recarregar posts quando houver erro
+  // Effect to try reloading posts when there's an error
   useEffect(() => {
     if (postsError) {
       const timer = setTimeout(() => {
@@ -65,7 +65,7 @@ const Social = () => {
   }, []);
   
   const openChat = (userId: string, userName: string, userAvatar?: string) => {
-    // Não permitir chat com o próprio usuário
+    // Don't allow chat with the user themselves
     if (userId === user?.id) {
       toast({
         title: "Operação não permitida",
@@ -85,7 +85,7 @@ const Social = () => {
   
   const handleEditPost = (post: Post) => {
     setEditingPost(post);
-    // Scrollar para o editor
+    // Scroll to the editor
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   
@@ -101,7 +101,7 @@ const Social = () => {
     });
   };
 
-  // Se houver um erro, exibir mensagem de erro com botão para tentar novamente
+  // If there's an error, display error message with button to try again
   if (postsError && !isLoadingPosts) {
     return (
       <div className="w-full space-y-8">
@@ -126,7 +126,7 @@ const Social = () => {
           <TabsTrigger value="my-posts">Minhas Publicações</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="feed">
+        <TabsContent value="feed" className="w-full">
           <FeedContent 
             posts={posts}
             isLoadingPosts={isLoadingPosts}
@@ -137,7 +137,7 @@ const Social = () => {
           />
         </TabsContent>
         
-        <TabsContent value="my-posts">
+        <TabsContent value="my-posts" className="w-full">
           <FeedContent 
             posts={posts}
             isLoadingPosts={isLoadingPosts}
@@ -160,6 +160,6 @@ const Social = () => {
       />
     </div>
   );
-};
+}
 
 export default Social;

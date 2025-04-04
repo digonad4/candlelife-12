@@ -82,7 +82,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
     <>
       <aside
         className={`sidebar bg-sidebar fixed inset-y-0 left-0 z-30 transition-all duration-300 ease-in-out overflow-hidden shadow-md border-r border-sidebar-border flex flex-col ${
-          isSidebarOpen ? "w-64" : isMobile ? "w-64" : "w-16"
+          isSidebarOpen ? "w-64" : isMobile ? "w-0" : "w-16"
         } ${!isSidebarOpen && isMobile ? "-translate-x-full" : "translate-x-0"}`}
         data-sidebar="sidebar"
       >
@@ -100,7 +100,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
               <NotificationBadge openChat={openChat} />
             </div>
             
-            {/* Botão para fechar o sidebar em dispositivos móveis */}
+            {/* Button to close the sidebar on mobile devices */}
             {isMobile && (
               <Button 
                 variant="ghost" 

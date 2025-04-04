@@ -44,7 +44,7 @@ export default function Clients() {
       </div>
 
       <div className="grid gap-6">
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Seus Clientes</CardTitle>
           </CardHeader>

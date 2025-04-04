@@ -1,7 +1,6 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClientsList } from "@/components/clients/ClientsList";
-import { ClientForm } from "@/components/clients/ClientForm";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { DailyTransactionsList } from "@/components/transactions/DailyTransactionsList";

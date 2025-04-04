@@ -50,7 +50,7 @@ const Dashboard = () => {
   }, [queryClient, user]);
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="w-full space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-2xl md:text-4xl font-bold">Resumo Financeiro</h1>
       </div>
@@ -79,7 +79,7 @@ const Dashboard = () => {
       {/* Rounded button to add transaction */}
       <Button
         size="lg"
-        className="fixed bottom-7 right-12 rounded-full w-14 h-14 md:w-16 md:h-16 shadow-lg flex items-center justify-center"
+        className="fixed bottom-7 right-7 rounded-full w-14 h-14 md:w-16 md:h-16 shadow-lg flex items-center justify-center"
         onClick={() => setIsModalOpen(true)}
       >
         <Plus className="w-6 h-6" />
