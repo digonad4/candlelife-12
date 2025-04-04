@@ -18,25 +18,42 @@ export const useSidebar = () => {
   }
   
   // Extract and rename properties from context
-  const { state, toggleSidebar: originalToggle } = context;
+  const { state, toggleSidebar: originalToggle, setOpenMobile, openMobile } = context;
   
   // Map to more intuitive property name
   const isSidebarOpen = state === "expanded";
 
   // Enhanced toggle function with mobile awareness
   const toggleSidebar = () => {
-    if (!isMobile) {
+    if (isMobile) {
+      setOpenMobile(!openMobile);
+    } else {
       setWasPreviouslyOpen(!isSidebarOpen);
-    }
-    originalToggle();
-  };
-
-  // Auto-collapse sidebar on mobile
-  useEffect(() => {
-    if (isMobile && isSidebarOpen) {
       originalToggle();
     }
-  }, [isMobile, isSidebarOpen, originalToggle]);
+  };
+
+  // Auto-collapse sidebar on mobile when navigating away
+  useEffect(() => {
+    if (isMobile && openMobile) {
+      // Adiciona um event listener para detectar cliques fora do sidebar
+      const handleClickOutside = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target && !target.closest('[data-sidebar="sidebar"]') && !target.closest('button[aria-label="Toggle Sidebar"]')) {
+          setOpenMobile(false);
+        }
+      };
+
+      document.addEventListener('click', handleClickOutside);
+      return () => {
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [isMobile, openMobile, setOpenMobile]);
   
-  return { isSidebarOpen, toggleSidebar, isMobile };
+  return { 
+    isSidebarOpen: isMobile ? openMobile : isSidebarOpen, 
+    toggleSidebar, 
+    isMobile 
+  };
 };

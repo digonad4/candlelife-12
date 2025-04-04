@@ -5,9 +5,11 @@ import { useSidebar } from "@/hooks/useSidebar";
 import { Toaster } from "../ui/toaster";
 import { useState } from "react";
 import { ChatModal } from "../social/ChatModal";
+import { Menu } from "lucide-react";
+import { Button } from "../ui/button";
 
 const AppLayout = () => {
-  const { isSidebarOpen, isMobile } = useSidebar();
+  const { isSidebarOpen, toggleSidebar, isMobile } = useSidebar();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRecipient, setChatRecipient] = useState({ id: "", name: "", avatar: "" });
   
@@ -23,7 +25,7 @@ const AppLayout = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden">
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         <AppSidebar openChat={openChat} />
         
         <main
@@ -31,7 +33,20 @@ const AppLayout = () => {
             isMobile ? "w-full" : isSidebarOpen ? "ml-64" : "ml-16"
           }`}
         >
-          <div className="p-4 md:p-6 flex-1 overflow-auto">
+          {/* Botão de toggle sempre visível em dispositivos móveis */}
+          {isMobile && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="fixed top-4 left-4 z-40"
+              onClick={toggleSidebar}
+              aria-label="Toggle Sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+          
+          <div className="p-4 md:p-6 flex-1 overflow-auto pt-14 md:pt-6">
             <Outlet context={{ openChat }} />
           </div>
         </main>
