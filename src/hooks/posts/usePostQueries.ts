@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,31 +46,12 @@ export const usePostQueries = () => {
               .select("*", { count: "exact", head: true })
               .eq("post_id", post.id);
 
-            // Get individual reaction counts by doing a manual count
-            const { data: reactionsData, error: reactionsDataError } = await supabase
-              .from("reactions")
-              .select("type")
-              .eq("post_id", post.id);
-              
-            if (reactionsDataError) {
-              console.error("Erro ao buscar reações:", reactionsDataError);
-            }
-            
-            // Count reactions by type manually
-            const reactionCounts = {
-              like: 0,
-              heart: 0,
-              laugh: 0,
-              wow: 0,
-              sad: 0
-            };
-            
-            if (reactionsData && reactionsData.length > 0) {
-              reactionsData.forEach(reaction => {
-                if (reaction.type && reactionCounts.hasOwnProperty(reaction.type)) {
-                  reactionCounts[reaction.type as keyof typeof reactionCounts]++;
-                }
-              });
+            // Get individual reaction counts - using correct approach for Supabase
+            const { data: reactionCountsData, error: reactionCountsError } = await supabase
+              .rpc('get_reaction_counts_by_post', { post_id: post.id });
+
+            if (reactionCountsError) {
+              console.error("Erro ao buscar contagem de reações:", reactionCountsError);
             }
 
             // Get total reactions count
@@ -96,6 +76,24 @@ export const usePostQueries = () => {
               console.error("Erro ao buscar reação do usuário:", myReactionError);
             }
 
+            // Set default reaction counts
+            const reactions = {
+              like: 0,
+              heart: 0,
+              laugh: 0,
+              wow: 0,
+              sad: 0
+            };
+            
+            // Process reaction counts data
+            if (reactionCountsData && Array.isArray(reactionCountsData) && reactionCountsData.length > 0) {
+              reactionCountsData.forEach((item) => {
+                if (item && item.type && typeof reactions[item.type as keyof typeof reactions] !== 'undefined') {
+                  reactions[item.type as keyof typeof reactions] = parseInt(item.count as unknown as string);
+                }
+              });
+            }
+
             // Validate my_reaction to ensure it's one of the allowed types or null
             let typedMyReaction: ReactionType | null = null;
             if (myReactionData && myReactionData.type) {
@@ -110,7 +108,7 @@ export const usePostQueries = () => {
               profiles: profileData || { username: "Usuário desconhecido", avatar_url: null },
               comments_count: commentsCount || 0,
               reactions_count: reactionsCount || 0,
-              reactions: reactionCounts,
+              reactions,
               my_reaction: typedMyReaction,
               image_url: post.image_url || null
             } as Post;

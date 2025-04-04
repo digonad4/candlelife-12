@@ -17,7 +17,7 @@ export const useReactionMutations = () => {
       // First, check if the user already has a reaction
       const { data: existingReaction, error: fetchError } = await supabase
         .from("reactions")
-        .select("type, id")
+        .select("type")
         .eq("post_id", postId)
         .eq("user_id", user.id)
         .maybeSingle();
