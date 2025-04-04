@@ -24,12 +24,12 @@ const AppLayout = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden">
-      <div className="flex flex-1 overflow-hidden relative h-full">
+    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden w-full">
+      <div className="flex flex-1 overflow-hidden relative h-full w-full">
         <AppSidebar openChat={openChat} />
         
         <main
-          className={`flex-1 flex flex-col overflow-auto transition-all duration-300 ${
+          className={`flex-1 flex flex-col overflow-auto transition-all duration-300 w-full h-full ${
             isMobile ? "w-full" : isSidebarOpen ? "ml-64" : "ml-16"
           }`}
         >
