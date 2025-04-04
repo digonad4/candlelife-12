@@ -37,7 +37,7 @@ const AppLayout = () => {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="fixed top-8 left-8 z-40 md:hidden"
+            className="fixed top-5 left-8 z-40 md:hidden"
             onClick={toggleSidebar}
             aria-label="Toggle Sidebar"
           >

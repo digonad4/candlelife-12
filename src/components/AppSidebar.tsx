@@ -92,7 +92,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
               isSidebarOpen || isMobile ? "opacity-100" : "opacity-0"
             } transition-opacity duration-300`}
           >
-            Candle Life
+          
           </h1>
           <div className="flex items-center gap-2">
             {/* Show notification badge in the sidebar */}

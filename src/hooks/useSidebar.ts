@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { useSidebar as useShadcnSidebar } from "@/components/ui/sidebar";
+import { useShadcnSidebar } from "@/components/ui/sidebar"; // Ajuste o caminho
 import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
@@ -8,52 +7,48 @@ import { useIsMobile } from "@/hooks/use-mobile";
  * Wraps the shadcn sidebar hook with additional functionality
  */
 export const useSidebar = () => {
-  // Get the base sidebar context
   const context = useShadcnSidebar();
   const isMobile = useIsMobile();
   const [wasPreviouslyOpen, setWasPreviouslyOpen] = useState(false);
-  
+
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider");
   }
-  
-  // Extract and rename properties from context
-  const { state, toggleSidebar: originalToggle, setOpenMobile, openMobile } = context;
-  
-  // Map to more intuitive property name
-  const isSidebarOpen = state === "expanded";
 
-  // Enhanced toggle function with mobile awareness
+  const { state, toggleSidebar: originalToggle, setOpenMobile, openMobile } = context;
+  const isSidebarOpen = isMobile ? openMobile : state === "expanded";
+
   const toggleSidebar = () => {
     if (isMobile) {
       setOpenMobile(!openMobile);
     } else {
-      setWasPreviouslyOpen(!isSidebarOpen);
+      setWasPreviouslyOpen(isSidebarOpen);
       originalToggle();
     }
   };
 
-  // Auto-collapse sidebar on mobile when navigating away
   useEffect(() => {
     if (isMobile && openMobile) {
-      // Add event listener to detect clicks outside the sidebar
       const handleClickOutside = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
-        if (target && !target.closest('[data-sidebar="sidebar"]') && !target.closest('button[aria-label="Toggle Sidebar"]')) {
+        if (
+          target &&
+          !target.closest('[data-sidebar="sidebar"]') &&
+          !target.closest('button[aria-label="Toggle Sidebar"]')
+        ) {
           setOpenMobile(false);
         }
       };
 
-      document.addEventListener('click', handleClickOutside);
-      return () => {
-        document.removeEventListener('click', handleClickOutside);
-      };
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [isMobile, openMobile, setOpenMobile]);
-  
-  return { 
-    isSidebarOpen: isMobile ? openMobile : isSidebarOpen, 
-    toggleSidebar, 
-    isMobile 
+
+  return {
+    isSidebarOpen,
+    toggleSidebar,
+    isMobile,
+    wasPreviouslyOpen,
   };
 };
