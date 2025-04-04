@@ -104,7 +104,7 @@ const Social = () => {
   // Se houver um erro, exibir mensagem de erro com botão para tentar novamente
   if (postsError && !isLoadingPosts) {
     return (
-      <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-8">
+      <div className="w-full space-y-8">
         <SocialHeader openChat={openChat} />
         
         <ErrorMessage
@@ -117,7 +117,7 @@ const Social = () => {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-8">
+    <div className="w-full space-y-8">
       <SocialHeader openChat={openChat} />
 
       <Tabs defaultValue="feed" className="w-full">

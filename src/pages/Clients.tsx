@@ -34,7 +34,7 @@ export default function Clients() {
   };
 
   return (
-    <div className="container p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="w-full space-y-8">
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
         <h1 className="text-3xl font-bold mb-4 sm:mb-0">Gerenciamento de Clientes</h1>
         <Button onClick={() => handleOpenClientForm()}>
