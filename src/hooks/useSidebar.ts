@@ -1,26 +1,42 @@
 
-import { useContext } from "react";
+import { useState, useEffect } from "react";
 import { useSidebar as useShadcnSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-export interface SidebarContextType {
-  isSidebarOpen: boolean;
-  toggleSidebar: () => void;
-  isMobile?: boolean;
-}
-
+/**
+ * Custom hook for sidebar state management
+ * Wraps the shadcn sidebar hook with additional functionality
+ */
 export const useSidebar = () => {
-  // Usando useShadcnSidebar diretamente já que é um hook que retorna o contexto
+  // Get the base sidebar context
   const context = useShadcnSidebar();
+  const isMobile = useIsMobile();
+  const [wasPreviouslyOpen, setWasPreviouslyOpen] = useState(false);
   
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider");
   }
   
-  // Cast do contexto para o tipo esperado com as propriedades que precisamos
-  const { state, toggleSidebar, isMobile } = context;
+  // Extract and rename properties from context
+  const { state, toggleSidebar: originalToggle } = context;
   
-  // Mapear a propriedade state para isSidebarOpen para compatibilidade
+  // Map to more intuitive property name
   const isSidebarOpen = state === "expanded";
+
+  // Enhanced toggle function with mobile awareness
+  const toggleSidebar = () => {
+    if (!isMobile) {
+      setWasPreviouslyOpen(!isSidebarOpen);
+    }
+    originalToggle();
+  };
+
+  // Auto-collapse sidebar on mobile
+  useEffect(() => {
+    if (isMobile && isSidebarOpen) {
+      originalToggle();
+    }
+  }, [isMobile, isSidebarOpen, originalToggle]);
   
   return { isSidebarOpen, toggleSidebar, isMobile };
 };

@@ -27,7 +27,7 @@ export const MessageItem = ({ message, currentUserId, onDeleteMessage }: Message
     <div className={`mb-4 flex ${isSentByMe ? "justify-end" : "justify-start"}`}>
       <div className="flex items-start gap-2 max-w-[80%]">
         {!isSentByMe && (
-          <Avatar className="h-8 w-8">
+          <Avatar className="h-8 w-8 shrink-0">
             {message.sender_profile?.avatar_url ? (
               <AvatarImage src={message.sender_profile.avatar_url} />
             ) : (
@@ -42,13 +42,15 @@ export const MessageItem = ({ message, currentUserId, onDeleteMessage }: Message
         
         <div className="relative group">
           <div 
-            className={`p-3 rounded-lg ${
+            className={`p-3 rounded-lg overflow-hidden ${
               isSentByMe 
                 ? "bg-primary text-primary-foreground" 
                 : "bg-muted"
             }`}
           >
-            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+            <p className="text-sm whitespace-pre-wrap break-words max-w-full">
+              {message.content}
+            </p>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {formatMessageTime(message.created_at)}
@@ -66,4 +68,4 @@ export const MessageItem = ({ message, currentUserId, onDeleteMessage }: Message
       </div>
     </div>
   );
-};
+}

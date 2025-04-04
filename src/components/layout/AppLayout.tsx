@@ -7,7 +7,7 @@ import { useState } from "react";
 import { ChatModal } from "../social/ChatModal";
 
 const AppLayout = () => {
-  const { isSidebarOpen } = useSidebar();
+  const { isSidebarOpen, isMobile } = useSidebar();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRecipient, setChatRecipient] = useState({ id: "", name: "", avatar: "" });
   
@@ -22,16 +22,20 @@ const AppLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <AppSidebar openChat={openChat} />
-      
-      <main
-        className={`pt-6 ${
-          isSidebarOpen ? "ml-64" : "ml-16"
-        } pb-6 px-6 transition-all duration-300`}
-      >
-        <Outlet context={{ openChat }} />
-      </main>
+    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
+        <AppSidebar openChat={openChat} />
+        
+        <main
+          className={`flex-1 flex flex-col overflow-auto transition-all duration-300 ${
+            isMobile ? "w-full" : isSidebarOpen ? "ml-64" : "ml-16"
+          }`}
+        >
+          <div className="p-4 md:p-6 flex-1 overflow-auto">
+            <Outlet context={{ openChat }} />
+          </div>
+        </main>
+      </div>
       
       <Toaster />
       

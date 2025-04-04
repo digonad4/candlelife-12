@@ -3,21 +3,18 @@ import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { Transaction } from "@/types/transaction";
 import { DailyTransactionsList } from "@/components/transactions/DailyTransactionsList";
 import { TransactionSummary } from "@/components/transactions/TransactionSummary";
-import { EditTransactionDialog } from "@/components/transactions/EditTransactionDialog";
-import { DeleteTransactionDialog } from "@/components/transactions/DeleteTransactionDialog";
-import { ConfirmPaymentDialog } from "@/components/transactions/ConfirmPaymentDialog";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { useTransactions } from "@/components/transactions/useTransactions";
+import { useTransactionSelection } from "@/hooks/useTransactionSelection";
+import { TransactionActionBar } from "@/components/transactions/TransactionActionBar";
+import { TransactionDialogs } from "@/components/transactions/TransactionDialogs";
 
 const Transactions = () => {
   const { user } = useAuth();
   
-  const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -38,6 +35,13 @@ const Transactions = () => {
     totalExpenses,
     balance
   } = useTransactions(startDate, endDate);
+
+  const {
+    selectedTransactions,
+    toggleSelection,
+    selectAll,
+    deselectAll
+  } = useTransactionSelection(days);
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
@@ -87,30 +91,6 @@ const Transactions = () => {
       printWindow.document.close();
       printWindow.print();
     }
-  };
-
-  const toggleSelection = (id: string) => {
-    const newSelected = new Set(selectedTransactions);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedTransactions(newSelected);
-  };
-
-  const selectAll = () => {
-    const allIds = new Set(
-      days
-        .flatMap(([, transactions]) => transactions)
-        .filter((t) => t.payment_method !== "invoice" || t.payment_status === "confirmed")
-        .map((t) => t.id)
-    );
-    setSelectedTransactions(allIds);
-  };
-
-  const deselectAll = () => {
-    setSelectedTransactions(new Set());
   };
 
   const handleEdit = (transaction: Transaction) => {
@@ -165,6 +145,14 @@ const Transactions = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <TransactionActionBar
+                selectedTransactions={selectedTransactions}
+                onSelectAll={selectAll}
+                onDeselectAll={deselectAll}
+                onConfirmSelected={() => setIsConfirmPaymentDialogOpen(true)}
+                onDeleteSelected={() => setIsDeleteDialogOpen(true)}
+              />
+              
               {isLoading ? (
                 <p className="text-center text-muted-foreground">Carregando...</p>
               ) : days.length === 0 ? (
@@ -196,30 +184,18 @@ const Transactions = () => {
         </div>
       </main>
 
-      {/* Dialog components */}
-      <EditTransactionDialog
-        isOpen={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        transaction={selectedTransaction}
-        userId={user?.id}
-      />
-
-      <DeleteTransactionDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        transactionId={transactionToDelete}
+      <TransactionDialogs
+        isEditModalOpen={isEditModalOpen}
+        setIsEditModalOpen={setIsEditModalOpen}
+        selectedTransaction={selectedTransaction}
+        isDeleteDialogOpen={isDeleteDialogOpen}
+        setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+        transactionToDelete={transactionToDelete}
+        isConfirmPaymentDialogOpen={isConfirmPaymentDialogOpen}
+        setIsConfirmPaymentDialogOpen={setIsConfirmPaymentDialogOpen}
+        transactionToConfirm={transactionToConfirm}
         userId={user?.id}
         selectedTransactions={selectedTransactions}
-        isBulkDelete={!transactionToDelete}
-      />
-
-      <ConfirmPaymentDialog
-        open={isConfirmPaymentDialogOpen}
-        onOpenChange={setIsConfirmPaymentDialogOpen}
-        transaction={transactionToConfirm}
-        userId={user?.id}
-        selectedTransactions={selectedTransactions}
-        isBulkConfirm={!transactionToConfirm}
       />
     </div>
   );
