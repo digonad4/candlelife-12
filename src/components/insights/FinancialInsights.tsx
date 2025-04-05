@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +36,7 @@ export function FinancialInsights() {
   
   // Memoização para cálculos pesados
   const financialData = useMemo(() => {
-    if (!transactions.length) return null;
+    if (!transactions || transactions.length === 0) return null;
 
     // Agrupamento por mês
     const groupedByMonth: Record<string, Transaction[]> = {};
@@ -281,7 +282,7 @@ export function FinancialInsights() {
 
   // 7. Despesas recorrentes
   const recurringExpenses = currentMonthTxs
-    .filter(t => t.type === "expense" && t.recurring)
+    .filter(t => t.type === "expense" && t.recurring === true)
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   if (recurringExpenses > currentMonthExpenses * 0.4) {
     insights.push({

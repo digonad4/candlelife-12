@@ -41,20 +41,26 @@ export function useFinancialData() {
       
       // Convert database transactions to the application's Transaction type
       return (data as DatabaseTransaction[]).map(transaction => ({
-        ...transaction,
-        type: transaction.type as "expense" | "income",
-        payment_status: transaction.payment_status as "confirmed" | "pending" | "failed" | undefined,
-        // Map payment_method to the allowed values in the Transaction interface
-        payment_method: mapPaymentMethod(transaction.payment_method)
+        id: transaction.id,
+        date: transaction.date,
+        description: transaction.description,
+        type: transaction.type,
+        amount: transaction.amount,
+        payment_status: transaction.payment_status || "pending",
+        payment_method: mapPaymentMethod(transaction.payment_method),
+        client_id: transaction.client_id,
+        category: transaction.category,
+        recurring: transaction.recurring,
+        created_at: transaction.created_at
       }));
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutos de cache
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
 
 // Helper function to map payment method strings to the allowed values
-function mapPaymentMethod(method: string): "cash" | "credit_card" | "debit_card" | "pix" | "transfer" | "invoice" | undefined {
+function mapPaymentMethod(method: string): "cash" | "credit_card" | "debit_card" | "pix" | "transfer" | "invoice" {
   const methodMap: Record<string, "cash" | "credit_card" | "debit_card" | "pix" | "transfer" | "invoice"> = {
     'dinheiro': 'cash',
     'cash': 'cash',
