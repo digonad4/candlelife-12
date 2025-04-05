@@ -1,3 +1,4 @@
+
 import { Transaction } from "@/types/transaction";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,7 @@ export interface EditFormData {
   amount: string;
   type: "expense" | "income";
   payment_method: string;
-  payment_status: "pending" | "confirmed";
+  payment_status: "pending" | "confirmed" | "failed";
   client_id?: string; // Adicionado como opcional para transações faturadas
 }
 
@@ -145,7 +146,7 @@ export function EditTransactionForm({ transaction, onSubmit }: EditTransactionFo
         <Label htmlFor="payment_status">Status do Pagamento</Label>
         <Select
           value={formData.payment_status}
-          onValueChange={(value) => handleChange("payment_status", value as "pending" | "confirmed")}
+          onValueChange={(value) => handleChange("payment_status", value as "pending" | "confirmed" | "failed")}
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecione o status" />
@@ -153,6 +154,7 @@ export function EditTransactionForm({ transaction, onSubmit }: EditTransactionFo
           <SelectContent>
             <SelectItem value="pending">Pendente</SelectItem>
             <SelectItem value="confirmed">Confirmado</SelectItem>
+            <SelectItem value="failed">Falhou</SelectItem>
           </SelectContent>
         </Select>
       </div>
