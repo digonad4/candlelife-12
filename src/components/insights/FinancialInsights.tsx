@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -8,20 +7,10 @@ import { subMonths, format, differenceInDays, startOfMonth, endOfMonth, parseISO
 import { ptBR } from "date-fns/locale";
 import { Button } from "../ui/button";
 import { useState, useMemo } from "react";
+import { useFinancialData } from "@/hooks/useFinancialData";
+import { Transaction } from "@/types/transaction";
 
 // Tipagem explícita
-type Transaction = {
-  id: string;
-  user_id: string;
-  type: "expense" | "income";
-  amount: number;
-  date: string;
-  description: string;
-  category?: string;
-  payment_status?: "confirmed" | "pending" | "failed";
-  recurring?: boolean;
-};
-
 type InsightType = "expense" | "income" | "budget" | "savings" | "trend" | "opportunity";
 interface InsightItem {
   type: InsightType;
@@ -40,30 +29,10 @@ export function FinancialInsights() {
   const [expanded, setExpanded] = useState(false);
   const currentDate = useMemo(() => new Date(), []);
   const startOfLastMonth = subMonths(currentDate, 1);
-
-  // Fetch de transações com cache
-  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
-    queryKey: ["financial-insights", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const threeMonthsAgo = subMonths(currentDate, 3);
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("date", threeMonthsAgo.toISOString())
-        .order("date", { ascending: false });
-      if (error) throw error;
-      return data.map((transaction) => ({
-        ...transaction,
-        type: transaction.type as "expense" | "income",
-        payment_status: transaction.payment_status as "confirmed" | "pending" | "failed" | undefined,
-      }));
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutos de cache
-  });
-
+  
+  // Use our custom hook to fetch financial data
+  const { data: transactions = [], isLoading } = useFinancialData();
+  
   // Memoização para cálculos pesados
   const financialData = useMemo(() => {
     if (!transactions.length) return null;
