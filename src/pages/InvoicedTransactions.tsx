@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { DateFilter } from "@/components/dashboard/DateFilter";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay, format } from "date-fns";
+import { useUrlParams } from "@/hooks/useUrlParams";
 
 type Transaction = {
   id: string;
@@ -28,9 +30,43 @@ type Transaction = {
 
 const InvoicedTransactions = () => {
   const { user } = useAuth();
-  const [dateRange, setDateRange] = useState<string>("today");
-  const [startDate, setStartDate] = useState<Date>(() => startOfDay(new Date()));
-  const [endDate, setEndDate] = useState<Date>(() => endOfDay(new Date()));
+  const { 
+    getDateRangeFromUrl, 
+    getDatesFromUrl, 
+    updateDateRangeInUrl, 
+    updateDatesInUrl 
+  } = useUrlParams();
+  
+  // Inicializar estados a partir da URL
+  const [dateRange, setDateRangeState] = useState(getDateRangeFromUrl());
+  const { startDate: initialStartDate, endDate: initialEndDate } = getDatesFromUrl();
+  const [startDate, setStartDateState] = useState<Date>(
+    initialStartDate || startOfDay(new Date())
+  );
+  const [endDate, setEndDateState] = useState<Date>(
+    initialEndDate || endOfDay(new Date())
+  );
+  
+  // Wrappers para atualizar estados e URL
+  const setDateRange = (range: string) => {
+    setDateRangeState(range);
+    updateDateRangeInUrl(range);
+  };
+
+  const setStartDate = (date?: Date) => {
+    if (date) {
+      setStartDateState(date);
+      updateDatesInUrl(date, endDate);
+    }
+  };
+
+  const setEndDate = (date?: Date) => {
+    if (date) {
+      setEndDateState(date);
+      updateDatesInUrl(startDate, date);
+    }
+  };
+  
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
   const [descriptionFilter, setDescriptionFilter] = useState<string>("");
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
@@ -42,7 +78,7 @@ const InvoicedTransactions = () => {
     startDate,
     endDate,
     paymentStatusFilter,
-    descriptionFilter // Passado o filtro de descrição
+    descriptionFilter
   );
 
   useEffect(() => {
@@ -124,8 +160,8 @@ const InvoicedTransactions = () => {
             startDate={startDate}
             endDate={endDate}
             onDateRangeChange={setDateRange}
-            onStartDateChange={(date) => date && setStartDate(date)}
-            onEndDateChange={(date) => date && setEndDate(date)}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
           />
           <span className="text-sm font-medium text-muted-foreground px-3 py-1 rounded-md">
             {formattedDateRange}

@@ -1,9 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Transaction } from "@/types/transaction";
 import { useTransactions } from "@/components/transactions/useTransactions";
 import { useTransactionSelection } from "@/hooks/useTransactionSelection";
 import { useAuth } from "@/context/AuthContext";
+import { useUrlParams } from "@/hooks/useUrlParams";
 
 export function useTransactionsPage() {
   const { user } = useAuth();
@@ -13,9 +14,36 @@ export function useTransactionsPage() {
   const [isConfirmPaymentDialogOpen, setIsConfirmPaymentDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [transactionToConfirm, setTransactionToConfirm] = useState<Transaction | null>(null);
-  const [dateRange, setDateRange] = useState("today");
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  
+  // URL params
+  const { 
+    getDateRangeFromUrl, 
+    getDatesFromUrl, 
+    updateDateRangeInUrl, 
+    updateDatesInUrl 
+  } = useUrlParams();
+  
+  // Inicializar estados a partir da URL
+  const [dateRange, setDateRangeState] = useState(getDateRangeFromUrl());
+  const { startDate: initialStartDate, endDate: initialEndDate } = getDatesFromUrl();
+  const [startDate, setStartDateState] = useState<Date | undefined>(initialStartDate);
+  const [endDate, setEndDateState] = useState<Date | undefined>(initialEndDate);
+
+  // Wrappers para atualizar estados e URL
+  const setDateRange = (range: string) => {
+    setDateRangeState(range);
+    updateDateRangeInUrl(range);
+  };
+
+  const setStartDate = (date?: Date) => {
+    setStartDateState(date);
+    updateDatesInUrl(date, endDate);
+  };
+
+  const setEndDate = (date?: Date) => {
+    setEndDateState(date);
+    updateDatesInUrl(startDate, date);
+  };
 
   const {
     days,

@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -28,7 +29,7 @@ export function useExpenses(
   const queryClient = useQueryClient();
 
   const { data: transactions, isLoading } = useQuery<Transaction[]>({
-    queryKey: ["expenses", userId, startDate, endDate, paymentStatusFilter, descriptionFilter], // Adicionei descriptionFilter na queryKey
+    queryKey: ["expenses", userId, startDate?.toISOString(), endDate?.toISOString(), paymentStatusFilter, descriptionFilter],
     queryFn: async () => {
       if (!userId) return [];
 
@@ -49,7 +50,7 @@ export function useExpenses(
         query = query.eq("payment_status", paymentStatusFilter);
       }
       if (descriptionFilter) {
-        query = query.ilike("description", `%${descriptionFilter}%`); // Adicionei filtro de descrição
+        query = query.ilike("description", `%${descriptionFilter}%`);
       }
 
       const { data, error } = await query;
