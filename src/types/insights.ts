@@ -9,6 +9,7 @@ export type Transaction = {
   date: string;
   description: string;
   category?: string;
+  payment_method?: "cash" | "credit_card" | "debit_card" | "pix" | "transfer" | "invoice";
   payment_status?: "confirmed" | "pending" | "failed";
   recurring?: boolean;
 };
