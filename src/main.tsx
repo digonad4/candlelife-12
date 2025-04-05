@@ -18,6 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>
+            {/* Alterando o defaultOpen para false em todos os dispositivos */}
             <SidebarProvider defaultOpen={false}>
               <div className="min-h-screen flex w-full">
                 <App />

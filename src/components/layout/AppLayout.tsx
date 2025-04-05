@@ -9,7 +9,7 @@ import { Menu } from "lucide-react";
 import { Button } from "../ui/button";
 
 const AppLayout = () => {
-  const { isSidebarOpen, toggleSidebar, isMobile } = useSidebar();
+  const { isSidebarOpen, toggleSidebar } = useSidebar();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRecipient, setChatRecipient] = useState({ id: "", name: "", avatar: "" });
   
@@ -28,16 +28,12 @@ const AppLayout = () => {
       <div className="flex flex-1 overflow-hidden relative h-full w-full">
         <AppSidebar openChat={openChat} />
         
-        <main
-          className={`flex-1 flex flex-col overflow-auto transition-all duration-300 w-full h-full ${
-            isMobile ? "w-full" : isSidebarOpen ? "ml-64" : "ml-16"
-          }`}
-        >
-          {/* Mobile sidebar toggle button */}
+        <main className="flex-1 flex flex-col overflow-auto transition-all duration-300 w-full h-full">
+          {/* Botão de toggle do sidebar visível em todos os dispositivos */}
           <Button 
             variant="ghost" 
             size="icon" 
-            className="fixed top-5 left-8 z-40 md:hidden"
+            className="fixed top-5 left-8 z-40"
             onClick={toggleSidebar}
             aria-label="Toggle Sidebar"
           >
