@@ -1,13 +1,25 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { TrendingDown, TrendingUp, AlertCircle, Lightbulb, PiggyBank, Target, DollarSign, BarChart2 } from "lucide-react";
+import { 
+  TrendingDown, 
+  TrendingUp, 
+  AlertCircle, 
+  Lightbulb, 
+  PiggyBank, 
+  Target, 
+  DollarSign, 
+  BarChart2,
+  ArrowRightCircle
+} from "lucide-react";
 import { subMonths, format, differenceInDays, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "../ui/button";
 import { useState, useMemo } from "react";
+import { Skeleton } from "../ui/skeleton";
 
 // Tipagem explícita
 type Transaction = {
@@ -64,7 +76,7 @@ export function FinancialInsights() {
     staleTime: 5 * 60 * 1000, // 5 minutos de cache
   });
 
-  // Memoização para cálculos pesados
+  // Memoização para cálculos financeiros
   const financialData = useMemo(() => {
     if (!transactions.length) return null;
 
@@ -167,20 +179,30 @@ export function FinancialInsights() {
     };
   }, [transactions, currentDate, startOfLastMonth]);
 
+  // Componente de skeleton para loading state
+  const InsightSkeleton = () => (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Skeleton className="h-5 w-5 rounded-full" />
+          <Skeleton className="h-6 w-48" />
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-4 w-3/4 mb-4" />
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (isLoading || !financialData) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-yellow-500" />
-            Insights Financeiros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Analisando seus dados financeiros...</p>
-        </CardContent>
-      </Card>
-    );
+    return <InsightSkeleton />;
   }
 
   const {
@@ -206,8 +228,8 @@ export function FinancialInsights() {
     insights.push({
       type: "budget",
       title: "Alerta de Orçamento",
-      description: `Sua projeção de gastos é ${formatCurrency(projectedMonthlyExpense)}, excedendo sua renda em ${formatCurrency(projectedMonthlyExpense - currentMonthIncome)}.`,
-      action: `Reduza ${formatCurrency((projectedMonthlyExpense - currentMonthIncome) / remainingDays)} por dia nos próximos ${remainingDays} dias.`,
+      description: `Sua projeção de gastos para este mês é de ${formatCurrency(projectedMonthlyExpense)}, excedendo sua renda atual em ${formatCurrency(projectedMonthlyExpense - currentMonthIncome)}.`,
+      action: `Reduza ${formatCurrency((projectedMonthlyExpense - currentMonthIncome) / remainingDays)} por dia nos próximos ${remainingDays} dias para manter o equilíbrio.`,
       impact: "high",
       icon: <Target className="h-5 w-5 text-red-500" />,
     });
@@ -219,9 +241,9 @@ export function FinancialInsights() {
       const percentIncrease = Math.round((currentMonthExpenses / lastMonthExpenses - 1) * 100);
       insights.push({
         type: "expense",
-        title: "Aumento de Despesas",
-        description: `Seus gastos subiram ${percentIncrease}% (${formatCurrency(currentMonthExpenses)} vs ${formatCurrency(lastMonthExpenses)}).`,
-        action: "Revise suas despesas para encontrar áreas de economia.",
+        title: "Aumento Significativo nas Despesas",
+        description: `Seus gastos aumentaram ${percentIncrease}% comparado ao mês anterior (${formatCurrency(currentMonthExpenses)} vs ${formatCurrency(lastMonthExpenses)}).`,
+        action: "Identifique categorias com maiores aumentos e estabeleça limites para o próximo mês.",
         impact: "high",
         icon: <TrendingUp className="h-5 w-5 text-red-500" />,
       });
@@ -229,8 +251,9 @@ export function FinancialInsights() {
       const percentDecrease = Math.round((1 - currentMonthExpenses / lastMonthExpenses) * 100);
       insights.push({
         type: "expense",
-        title: "Redução de Despesas",
-        description: `Seus gastos caíram ${percentDecrease}% (${formatCurrency(currentMonthExpenses)} vs ${formatCurrency(lastMonthExpenses)}).`,
+        title: "Redução Expressiva de Despesas",
+        description: `Seus gastos diminuíram ${percentDecrease}% em relação ao mês anterior (${formatCurrency(currentMonthExpenses)} vs ${formatCurrency(lastMonthExpenses)}).`,
+        action: "Continue com esta estratégia e considere direcionar a economia para investimentos.",
         impact: "low",
         icon: <TrendingDown className="h-5 w-5 text-green-500" />,
       });
@@ -244,8 +267,8 @@ export function FinancialInsights() {
       insights.push({
         type: "income",
         title: "Queda na Receita",
-        description: `Sua renda caiu ${percentDrop}% (${formatCurrency(currentMonthIncome)} vs ${formatCurrency(lastMonthIncome)}).`,
-        action: "Considere ajustar seu orçamento ou buscar novas fontes de renda.",
+        description: `Sua renda teve uma queda de ${percentDrop}% comparado ao mês anterior (${formatCurrency(currentMonthIncome)} vs ${formatCurrency(lastMonthIncome)}).`,
+        action: "Revise seu orçamento mensal e priorize despesas essenciais até a estabilização da receita.",
         impact: "high",
         icon: <TrendingDown className="h-5 w-5 text-yellow-500" />,
       });
@@ -253,9 +276,9 @@ export function FinancialInsights() {
       const percentRise = Math.round((currentMonthIncome / lastMonthIncome - 1) * 100);
       insights.push({
         type: "income",
-        title: "Aumento na Receita",
-        description: `Sua renda subiu ${percentRise}% (${formatCurrency(currentMonthIncome)} vs ${formatCurrency(lastMonthIncome)}).`,
-        action: "Aproveite para aumentar sua poupança ou investimentos.",
+        title: "Crescimento da Receita",
+        description: `Sua renda aumentou ${percentRise}% em relação ao mês anterior (${formatCurrency(currentMonthIncome)} vs ${formatCurrency(lastMonthIncome)}).`,
+        action: "Considere direcionar 40-60% deste aumento para poupança ou investimentos de longo prazo.",
         impact: "low",
         icon: <TrendingUp className="h-5 w-5 text-green-500" />,
       });
@@ -267,9 +290,9 @@ export function FinancialInsights() {
     const topTrend = categoryTrends[0];
     insights.push({
       type: "trend",
-      title: `${topTrend.trend > 0 ? "Aumento" : "Redução"} em ${topTrend.category}`,
-      description: `Gastos em ${topTrend.category} ${topTrend.trend > 0 ? "subiram" : "caíram"} ${Math.abs(Math.round(topTrend.percentChange))}% (${formatCurrency(topTrend.currentAmount)} vs ${formatCurrency(topTrend.previousAmount)}).`,
-      action: topTrend.trend > 0 ? `Analise se os gastos em ${topTrend.category} podem ser reduzidos.` : undefined,
+      title: `${topTrend.trend > 0 ? "Aumento" : "Redução"} na Categoria ${topTrend.category}`,
+      description: `Gastos em "${topTrend.category}" ${topTrend.trend > 0 ? "subiram" : "caíram"} ${Math.abs(Math.round(topTrend.percentChange))}% (${formatCurrency(topTrend.currentAmount)} vs ${formatCurrency(topTrend.previousAmount)}).`,
+      action: topTrend.trend > 0 ? `Analise os gastos em "${topTrend.category}" e estabeleça um teto mensal de ${formatCurrency(topTrend.previousAmount * 1.1)}.` : `Continue otimizando seus gastos em "${topTrend.category}" para manter esta tendência positiva.`,
       impact: topTrend.trend > 0 ? "medium" : "low",
       icon: <BarChart2 className={`h-5 w-5 ${topTrend.trend > 0 ? "text-yellow-500" : "text-green-500"}`} />,
     });
@@ -280,9 +303,9 @@ export function FinancialInsights() {
     const [category, amount] = topCategories[0];
     insights.push({
       type: "expense",
-      title: `Alto Gasto em ${category}`,
-      description: `${formatCurrency(amount)} em ${category} (${Math.round((amount / currentMonthExpenses) * 100)}% das despesas).`,
-      action: `Defina um limite mensal para ${category}.`,
+      title: `Concentração de Gastos em ${category}`,
+      description: `${formatCurrency(amount)} em "${category}" representa ${Math.round((amount / currentMonthExpenses) * 100)}% do total de suas despesas mensais.`,
+      action: `Defina um limite mensal para "${category}" de no máximo ${formatCurrency(amount * 0.85)} para melhor equilíbrio orçamentário.`,
       impact: "medium",
       icon: <DollarSign className="h-5 w-5 text-yellow-500" />,
     });
@@ -293,18 +316,18 @@ export function FinancialInsights() {
   if (savingsRatio < 0.2 && currentMonthIncome > 0) {
     insights.push({
       type: "savings",
-      title: "Oportunidade de Poupança",
-      description: `Você economiza ${Math.round(savingsRatio * 100)}% da renda (ideal: 20-30%).`,
-      action: `Tente economizar mais ${formatCurrency(currentMonthIncome * 0.2 - (currentMonthIncome - currentMonthExpenses))}.`,
+      title: "Potencial de Economia Subaproveitado",
+      description: `Atualmente você economiza ${Math.round(savingsRatio * 100)}% da sua renda mensal (recomendado: 20-30%).`,
+      action: `Aumente sua poupança em ${formatCurrency(currentMonthIncome * 0.2 - (currentMonthIncome - currentMonthExpenses))} identificando despesas não essenciais.`,
       impact: "medium",
       icon: <PiggyBank className="h-5 w-5 text-blue-500" />,
     });
   } else if (savingsRatio >= 0.3) {
     insights.push({
       type: "savings",
-      title: "Excelente Poupança",
-      description: `Taxa de ${Math.round(savingsRatio * 100)}% (${formatCurrency(currentMonthIncome - currentMonthExpenses)}).`,
-      action: "Considere investir esse excedente.",
+      title: "Excelente Taxa de Poupança",
+      description: `Você está economizando ${Math.round(savingsRatio * 100)}% da sua renda (${formatCurrency(currentMonthIncome - currentMonthExpenses)}).`,
+      action: "Considere diversificar seus investimentos para maximizar o retorno deste capital economizado.",
       impact: "low",
       icon: <PiggyBank className="h-5 w-5 text-green-500" />,
     });
@@ -317,9 +340,9 @@ export function FinancialInsights() {
   if (recurringExpenses > currentMonthExpenses * 0.4) {
     insights.push({
       type: "opportunity",
-      title: "Otimizar Recorrências",
-      description: `${Math.round((recurringExpenses / currentMonthExpenses) * 100)}% das despesas são recorrentes (${formatCurrency(recurringExpenses)}).`,
-      action: "Revise assinaturas e contratos para economizar.",
+      title: "Otimização de Despesas Recorrentes",
+      description: `${Math.round((recurringExpenses / currentMonthExpenses) * 100)}% dos seus gastos são recorrentes (${formatCurrency(recurringExpenses)}).`,
+      action: "Renegocie contratos e avalie alternativas mais econômicas para serviços assinados.",
       impact: "medium",
       icon: <AlertCircle className="h-5 w-5 text-blue-500" />,
     });
@@ -329,8 +352,9 @@ export function FinancialInsights() {
   if (insights.filter(i => i.impact === "high").length === 0) {
     insights.push({
       type: "savings",
-      title: "Finanças Saudáveis",
-      description: "Seus indicadores estão equilibrados. Continue assim!",
+      title: "Saúde Financeira Estável",
+      description: "Seus indicadores financeiros estão equilibrados e dentro dos parâmetros recomendados.",
+      action: "Continue monitorando seus gastos e considere aumentar seus investimentos para crescimento patrimonial.",
       impact: "low",
       icon: <Lightbulb className="h-5 w-5 text-green-500" />,
     });
@@ -343,45 +367,59 @@ export function FinancialInsights() {
   });
   const displayedInsights = expanded ? sortedInsights : sortedInsights.slice(0, 3);
 
+  // Renderização dos insights com design aprimorado
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Lightbulb className="h-5 w-5 text-yellow-500" />
+    <Card className="w-full bg-card border-border shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+          <Lightbulb className="h-5 w-5 text-primary" />
           Insights Financeiros Inteligentes
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground mb-4">
-          Análise de {format(startOfLastMonth, "MMMM", { locale: ptBR })} a {format(currentDate, "MMMM", { locale: ptBR })}.
+        <p className="text-sm text-muted-foreground">
+          Análise personalizada de {format(startOfLastMonth, "MMMM", { locale: ptBR })} a {format(currentDate, "MMMM", { locale: ptBR })}.
         </p>
+        
         <div className="space-y-4">
           {displayedInsights.map((insight, idx) => (
             <Alert
               key={idx}
-              className={
+              className={`transition-all hover:shadow-md ${
                 insight.impact === "high"
-                  ? "border-l-4 border-l-red-500"
+                  ? "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/10"
                   : insight.impact === "medium"
-                  ? "border-l-4 border-l-yellow-500"
-                  : "border-l-4 border-l-green-500"
-              }
+                  ? "border-l-4 border-l-yellow-500 bg-yellow-50 dark:bg-yellow-950/10"
+                  : "border-l-4 border-l-green-500 bg-green-50 dark:bg-green-950/10"
+              }`}
             >
               <div className="flex items-start gap-3">
-                {insight.icon || <AlertCircle className="h-5 w-5 text-blue-500" />}
+                <div className="mt-0.5">
+                  {insight.icon || <AlertCircle className="h-5 w-5 text-blue-500" />}
+                </div>
                 <div className="flex-1">
-                  <AlertTitle className="font-semibold">{insight.title}</AlertTitle>
-                  <AlertDescription className="mt-1">
+                  <AlertTitle className="font-semibold mb-1">{insight.title}</AlertTitle>
+                  <AlertDescription className="text-sm text-muted-foreground">
                     {insight.description}
-                    {insight.action && <p className="mt-2 font-medium text-primary">{insight.action}</p>}
+                    {insight.action && (
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <ArrowRightCircle className="h-4 w-4 text-primary" />
+                        <span className="font-medium text-foreground">{insight.action}</span>
+                      </div>
+                    )}
                   </AlertDescription>
                 </div>
               </div>
             </Alert>
           ))}
         </div>
+        
         {insights.length > 3 && (
-          <Button variant="outline" className="w-full mt-2" onClick={() => setExpanded(!expanded)}>
+          <Button 
+            variant="outline" 
+            className="w-full mt-4 border-dashed" 
+            onClick={() => setExpanded(!expanded)}
+          >
             {expanded ? "Ver menos" : `Ver mais ${insights.length - 3} insights`}
           </Button>
         )}
