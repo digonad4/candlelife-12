@@ -28,10 +28,16 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
     navigate("/login");
   };
 
+  // Function to check if a route is active, ignoring query parameters
+  const isRouteActive = (path: string) => {
+    // For exact matching, use pathname === path
+    // For prefix matching (like /transactions/123), use pathname.startsWith(path)
+    return location.pathname === path;
+  };
+
   const renderNavItem = (icon: React.ElementType, label: string, to: string, notificationCount?: number) => {
     const Icon = icon;
-    // Check if the current path matches the base route, ignoring query params
-    const isActive = location.pathname === to;
+    const isActive = isRouteActive(to);
 
     return (
       <li>
@@ -39,7 +45,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
           <Tooltip>
             <NavLink
               to={to}
-              className={`flex items-center p-3 rounded-md transition-colors relative
+              className={({ isActive }) => `flex items-center p-3 rounded-md transition-colors relative
                 ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
                 ${!isSidebarOpen ? "justify-center" : ""}`}
               onClick={() => {

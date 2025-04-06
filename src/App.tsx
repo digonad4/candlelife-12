@@ -18,7 +18,6 @@ import Index from "./pages/Index";
 import { supabase } from "./integrations/supabase/client";
 import { Toaster } from "./components/ui/toaster";
 import AppLayout from "./components/layout/AppLayout";
-import { SidebarProvider } from "./components/ui/sidebar";
 
 function App() {
   const { user } = useAuth();
@@ -80,30 +79,28 @@ function App() {
   };
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <div className="min-h-screen flex w-full bg-background">
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-          <Route path="/change-password" element={<ChangePassword />} />
-          
-          {/* Authenticated routes using the new AppLayout */}
-          <Route element={<AuthenticatedRoute><AppLayout /></AuthenticatedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/invoiced" element={<InvoicedTransactions />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/social" element={<Social />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+    <div className="min-h-screen flex w-full bg-background">
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route path="/change-password" element={<ChangePassword />} />
         
-        {!user && <Toaster />}
-      </div>
-    </SidebarProvider>
+        {/* Authenticated routes using the new AppLayout */}
+        <Route element={<AuthenticatedRoute><AppLayout /></AuthenticatedRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/clients" element={<Clients />} />
+          <Route path="/invoiced" element={<InvoicedTransactions />} />
+          <Route path="/expenses" element={<Expenses />} />
+          <Route path="/social" element={<Social />} />
+          <Route path="/settings" element={<Settings />} />
+        </Route>
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      
+      {!user && <Toaster />}
+    </div>
   );
 }
 

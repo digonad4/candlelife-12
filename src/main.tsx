@@ -18,8 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>
-            {/* Setting defaultOpen to false for all devices */}
-            <SidebarProvider defaultOpen={false}>
+            <SidebarProvider defaultOpen={!window.matchMedia("(max-width: 768px)").matches}>
               <div className="min-h-screen flex w-full">
                 <App />
                 <Toaster />

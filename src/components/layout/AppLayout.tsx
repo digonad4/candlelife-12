@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import { AppSidebar } from "../AppSidebar";
 import { useSidebar } from "@/hooks/useSidebar";
 import { Toaster } from "../ui/toaster";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChatModal } from "../social/ChatModal";
 import { Menu } from "lucide-react";
 import { Button } from "../ui/button";
@@ -22,6 +22,20 @@ const AppLayout = () => {
     });
     setIsChatOpen(true);
   };
+
+  // Listen for custom event to open chat
+  useEffect(() => {
+    const handleOpenChatEvent = (event: CustomEvent) => {
+      const { userId, userName, userAvatar } = event.detail;
+      openChat(userId, userName, userAvatar);
+    };
+
+    window.addEventListener("open-chat" as any, handleOpenChatEvent as EventListener);
+
+    return () => {
+      window.removeEventListener("open-chat" as any, handleOpenChatEvent as EventListener);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden w-full">

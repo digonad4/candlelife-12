@@ -57,8 +57,8 @@ export const useSidebar = () => {
     }
   }, [isMobile, openMobile, setOpenMobile, state, originalToggle]);
 
-  // Preserve sidebar state across URL parameter changes
-  // but reset mobile sidebar on full page navigation
+  // Only reset mobile sidebar on full page navigation
+  // but preserve sidebar state across URL parameter changes
   useEffect(() => {
     if (isMobile) {
       setOpenMobile(false);
