@@ -40,7 +40,7 @@ const AppLayout = () => {
             <Menu className="h-5 w-5" />
           </Button>
           
-          <div className="p-4 md:p-6 flex-1 overflow-auto pt-14 md:pt-6 w-full h-full">
+          <div className="p-4 md:p-6 flex-1 overflow-auto pt-14 md:pt-16 w-full h-full">
             <Outlet context={{ openChat }} />
           </div>
         </main>

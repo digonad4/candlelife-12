@@ -31,7 +31,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
   const renderNavItem = (icon: React.ElementType, label: string, to: string, notificationCount?: number) => {
     const Icon = icon;
     // Check if the current path matches the base route, ignoring query params
-    const isActive = location.pathname.startsWith(to);
+    const isActive = location.pathname === to;
 
     return (
       <li>
@@ -39,12 +39,10 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
           <Tooltip>
             <NavLink
               to={to}
-              className={({ isActive: navActive }) =>
-                `flex items-center p-3 rounded-md transition-colors relative
+              className={`flex items-center p-3 rounded-md transition-colors relative
                 ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
-                ${!isSidebarOpen ? "justify-center" : ""}`
-              }
-              onClick={(e) => {
+                ${!isSidebarOpen ? "justify-center" : ""}`}
+              onClick={() => {
                 if (isMobile) {
                   toggleSidebar();
                 }
