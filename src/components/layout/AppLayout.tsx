@@ -29,7 +29,7 @@ const AppLayout = () => {
         <AppSidebar openChat={openChat} />
         
         <main className="flex-1 flex flex-col overflow-auto transition-all duration-300 w-full h-full">
-          {/* Botão de toggle do sidebar visível em todos os dispositivos */}
+          {/* Sidebar toggle button visible on all devices */}
           <Button 
             variant="ghost" 
             size="icon" 

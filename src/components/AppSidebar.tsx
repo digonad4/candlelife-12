@@ -16,7 +16,7 @@ interface AppSidebarProps {
 }
 
 export const AppSidebar = ({ openChat }: AppSidebarProps) => {
-  const { isSidebarOpen, toggleSidebar } = useSidebar();
+  const { isSidebarOpen, toggleSidebar, isMobile } = useSidebar();
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const { getTotalUnreadCount } = useMessages();
@@ -41,7 +41,11 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
                 ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
                 ${!isSidebarOpen ? "justify-center" : ""}`
               }
-              onClick={() => isSidebarOpen && toggleSidebar()}
+              onClick={(e) => {
+                if (isMobile) {
+                  toggleSidebar();
+                }
+              }}
             >
               <TooltipTrigger asChild>
                 <span className={`flex items-center ${isSidebarOpen ? "w-full" : ""}`}>
