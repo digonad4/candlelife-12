@@ -1,5 +1,5 @@
 
-import { NavLink, useOutletContext } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare } from "lucide-react";
 import { useSidebar } from "../hooks/useSidebar";
 import { useAuth } from "../context/AuthContext";
@@ -21,6 +21,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
   const navigate = useNavigate();
   const { getTotalUnreadCount } = useMessages();
   const totalUnreadMessages = getTotalUnreadCount();
+  const location = useLocation();
   
   const handleLogout = async () => {
     await signOut();
@@ -29,6 +30,8 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
 
   const renderNavItem = (icon: React.ElementType, label: string, to: string, notificationCount?: number) => {
     const Icon = icon;
+    // Check if the current path matches the base route, ignoring query params
+    const isActive = location.pathname.startsWith(to);
 
     return (
       <li>
@@ -36,7 +39,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
           <Tooltip>
             <NavLink
               to={to}
-              className={({ isActive }) =>
+              className={({ isActive: navActive }) =>
                 `flex items-center p-3 rounded-md transition-colors relative
                 ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
                 ${!isSidebarOpen ? "justify-center" : ""}`

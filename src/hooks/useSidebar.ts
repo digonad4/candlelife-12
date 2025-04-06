@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useShadcnSidebar } from "@/components/ui/sidebar"; 
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLocation } from "react-router-dom";
 
 /**
  * Custom hook for sidebar state management
@@ -11,6 +12,7 @@ export const useSidebar = () => {
   const context = useShadcnSidebar();
   const isMobile = useIsMobile();
   const [wasPreviouslyOpen, setWasPreviouslyOpen] = useState(false);
+  const location = useLocation();
 
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider");
@@ -54,6 +56,14 @@ export const useSidebar = () => {
       return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [isMobile, openMobile, setOpenMobile, state, originalToggle]);
+
+  // Preserve sidebar state across URL parameter changes
+  // but reset mobile sidebar on full page navigation
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [location.pathname, isMobile, setOpenMobile]);
 
   return {
     isSidebarOpen,
