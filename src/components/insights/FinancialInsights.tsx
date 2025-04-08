@@ -61,7 +61,9 @@ export function FinancialInsights() {
       groupedByMonth[monthKey].push(t);
     });
 
-    const months = Object.keys(groupedByMonth).sort().reverse();
+    // Important! Define months variable here so it's available for the whole function
+    const monthsArray = Object.keys(groupedByMonth).sort().reverse();
+    
     const currentMonthKey = `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}`;
     const lastMonthKey = `${lastMonth.getFullYear()}-${lastMonth.getMonth() + 1}`;
     
@@ -75,7 +77,7 @@ export function FinancialInsights() {
     });
 
     // Monthly metrics calculation
-    const monthlyMetrics = months.map(month => {
+    const monthlyMetrics = monthsArray.map(month => {
       const txs = groupedByMonth[month];
       const confirmedExpenses = txs.filter(t => t.type === "expense" && t.payment_status === "confirmed");
       const confirmedIncome = txs.filter(t => t.type === "income" && t.payment_status === "confirmed");
@@ -137,14 +139,14 @@ export function FinancialInsights() {
 
     // Category-based analysis
     const expensesByCategory: Record<string, number[]> = {};
-    months.forEach((month, idx) => {
+    monthsArray.forEach((month, idx) => {
       const monthTransactions = groupedByMonth[month] || [];
       monthTransactions
         .filter(t => t.type === "expense" && t.payment_status === "confirmed")
         .forEach(t => {
           const category = t.category || "Outros";
           if (!expensesByCategory[category]) {
-            expensesByCategory[category] = Array(months.length).fill(0);
+            expensesByCategory[category] = Array(monthsArray.length).fill(0);
           }
           expensesByCategory[category][idx] += Math.abs(t.amount);
         });
@@ -261,7 +263,9 @@ export function FinancialInsights() {
       recurringExpenses,
       recurringExpensesRatio,
       dailySpendingRate,
-      elapsedBusinessDays
+      elapsedBusinessDays,
+      // Make sure we return monthsArray for use in the component
+      months: monthsArray
     };
   }, [transactions, currentDate, lastMonth]);
 
@@ -297,7 +301,9 @@ export function FinancialInsights() {
     recurringExpenses,
     recurringExpensesRatio,
     dailySpendingRate,
-    elapsedBusinessDays
+    elapsedBusinessDays,
+    // Important! Extract months from financialData
+    months
   } = financialData;
 
   // Map day of week number to name
