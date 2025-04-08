@@ -302,7 +302,7 @@ export function FinancialInsights() {
     recurringExpensesRatio,
     dailySpendingRate,
     elapsedBusinessDays,
-    // Important! Extract months from financialData
+    // Important! Make sure to destructure the months property from financialData
     months
   } = financialData;
 
