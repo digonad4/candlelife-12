@@ -35,12 +35,17 @@ export const useSidebar = () => {
   // Função de navegação simplificada e direta
   const navigateTo = (path: string) => {
     console.log("Navegando para:", path);
+    
     // Fecha o sidebar móvel se estiver aberto
     if (isMobile && openMobile) {
       setOpenMobile(false);
     }
-    // Navega diretamente para a rota
-    navigate(path);
+    
+    // Pequeno atraso para garantir que a navegação ocorra após qualquer animação
+    setTimeout(() => {
+      // Use o navigate diretamente do react-router para navegar
+      navigate(path);
+    }, 10);
   };
 
   // Adiciona click fora para fechar sidebar

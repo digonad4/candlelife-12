@@ -44,14 +44,15 @@ const AppLayout = () => {
         <AppSidebar openChat={openChat} />
         
         <main className="flex-1 flex flex-col overflow-auto transition-all duration-300 w-full h-full">
-          {/* Botão de toggle do sidebar sempre visível */}
+          {/* Botão de toggle do sidebar sempre visível com z-index alto */}
           <Button 
             variant="ghost" 
             size="icon" 
-            className="fixed top-5 left-8 z-40"
+            className="fixed top-5 left-8 z-50"
             onClick={(e) => {
               e.stopPropagation(); // Previne propagação de eventos
               toggleSidebar();
+              console.log("Toggle sidebar button clicked");
             }}
             aria-label="Toggle Sidebar"
           >
