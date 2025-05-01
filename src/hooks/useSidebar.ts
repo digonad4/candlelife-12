@@ -32,16 +32,19 @@ export const useSidebar = () => {
     }
   };
 
+  // Função de navegação simplificada e direta
   const navigateTo = (path: string) => {
-    console.log("Navigating to:", path);
+    console.log("Navegando para:", path);
+    // Fecha o sidebar móvel se estiver aberto
     if (isMobile && openMobile) {
       setOpenMobile(false);
     }
+    // Navega diretamente para a rota
     navigate(path);
   };
 
+  // Adiciona click fora para fechar sidebar
   useEffect(() => {
-    // Apply behavior for clicks outside the sidebar for all devices
     if (openMobile || state === "expanded") {
       const handleClickOutside = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
@@ -52,11 +55,8 @@ export const useSidebar = () => {
         ) {
           if (isMobile) {
             setOpenMobile(false);
-          } else {
-            // For desktop, only close if sidebar is expanded
-            if (state === "expanded") {
-              originalToggle();
-            }
+          } else if (state === "expanded") {
+            originalToggle();
           }
         }
       };
@@ -66,8 +66,7 @@ export const useSidebar = () => {
     }
   }, [isMobile, openMobile, setOpenMobile, state, originalToggle]);
 
-  // Only reset mobile sidebar on full page navigation
-  // but preserve sidebar state across URL parameter changes
+  // Redefine o estado do sidebar móvel em navegações completas de página
   useEffect(() => {
     if (isMobile) {
       setOpenMobile(false);

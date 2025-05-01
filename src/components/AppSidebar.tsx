@@ -1,15 +1,13 @@
 
-import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare } from "lucide-react";
+import { LogOut, LayoutDashboard, Receipt, Users, FileText, Settings, Wallet, MessageSquare, X } from "lucide-react";
 import { useSidebar } from "../hooks/useSidebar";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserProfile } from "./UserProfile";
 import { useMessages } from "@/hooks/useMessages";
 import { NotificationBadge } from "./ui/notification-badge";
 import { Button } from "./ui/button";
-import { X } from "lucide-react";
 
 interface AppSidebarProps {
   openChat: (userId: string, userName: string, userAvatar?: string) => void;
@@ -18,23 +16,22 @@ interface AppSidebarProps {
 export const AppSidebar = ({ openChat }: AppSidebarProps) => {
   const { isSidebarOpen, toggleSidebar, isMobile, navigateTo } = useSidebar();
   const { signOut } = useAuth();
-  const navigate = useNavigate();
   const { getTotalUnreadCount } = useMessages();
   const totalUnreadMessages = getTotalUnreadCount();
   const location = useLocation();
   
+  // Função para lidar com o logout
   const handleLogout = async () => {
     await signOut();
-    navigate("/login");
+    navigateTo("/login");
   };
 
-  // Function to check if a route is active, ignoring query parameters
+  // Função para verificar se uma rota está ativa
   const isRouteActive = (path: string) => {
-    // For exact matching, use pathname === path
-    // For prefix matching (like /transactions/123), use pathname.startsWith(path)
     return location.pathname === path;
   };
 
+  // Renderiza um item de navegação com ícone e tooltip
   const renderNavItem = (icon: React.ElementType, label: string, to: string, notificationCount?: number) => {
     const Icon = icon;
     const isActive = isRouteActive(to);
@@ -47,7 +44,13 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
               className={`flex items-center p-3 rounded-md transition-colors relative cursor-pointer
                 ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
                 ${!isSidebarOpen ? "justify-center" : ""}`}
-              onClick={() => navigateTo(to)}
+              onClick={() => {
+                console.log(`Clicou em ${label}, navegando para ${to}`);
+                navigateTo(to);
+              }}
+              role="button"
+              tabIndex={0}
+              aria-current={isActive ? "page" : undefined}
             >
               <TooltipTrigger asChild>
                 <span className={`flex items-center ${isSidebarOpen ? "w-full" : ""}`}>
@@ -75,6 +78,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
     );
   };
 
+  // Define os itens do sidebar
   const sidebarItems = [
     renderNavItem(LayoutDashboard, "Dashboard", "/dashboard"),
     renderNavItem(Receipt, "Transações", "/transactions"),

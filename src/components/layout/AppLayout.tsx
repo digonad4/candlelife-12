@@ -14,7 +14,7 @@ const AppLayout = () => {
   const [chatRecipient, setChatRecipient] = useState({ id: "", name: "", avatar: "" });
   const navigate = useNavigate();
   
-  // Function to open chat from anywhere in the app
+  // Função para abrir chat de qualquer lugar do app
   const openChat = (userId: string, userName: string, userAvatar?: string) => {
     setChatRecipient({
       id: userId,
@@ -24,7 +24,7 @@ const AppLayout = () => {
     setIsChatOpen(true);
   };
 
-  // Listen for custom event to open chat
+  // Escuta por evento customizado para abrir chat
   useEffect(() => {
     const handleOpenChatEvent = (event: CustomEvent) => {
       const { userId, userName, userAvatar } = event.detail;
@@ -44,12 +44,15 @@ const AppLayout = () => {
         <AppSidebar openChat={openChat} />
         
         <main className="flex-1 flex flex-col overflow-auto transition-all duration-300 w-full h-full">
-          {/* Sidebar toggle button visible on all devices */}
+          {/* Botão de toggle do sidebar sempre visível */}
           <Button 
             variant="ghost" 
             size="icon" 
             className="fixed top-5 left-8 z-40"
-            onClick={toggleSidebar}
+            onClick={(e) => {
+              e.stopPropagation(); // Previne propagação de eventos
+              toggleSidebar();
+            }}
             aria-label="Toggle Sidebar"
           >
             <Menu className="h-5 w-5" />
