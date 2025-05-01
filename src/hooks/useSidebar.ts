@@ -33,6 +33,7 @@ export const useSidebar = () => {
   };
 
   const navigateTo = (path: string) => {
+    console.log("Navigating to:", path);
     if (isMobile && openMobile) {
       setOpenMobile(false);
     }

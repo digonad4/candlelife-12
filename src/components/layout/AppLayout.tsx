@@ -1,5 +1,5 @@
 
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "../AppSidebar";
 import { useSidebar } from "@/hooks/useSidebar";
 import { Toaster } from "../ui/toaster";
@@ -12,6 +12,7 @@ const AppLayout = () => {
   const { isSidebarOpen, toggleSidebar } = useSidebar();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRecipient, setChatRecipient] = useState({ id: "", name: "", avatar: "" });
+  const navigate = useNavigate();
   
   // Function to open chat from anywhere in the app
   const openChat = (userId: string, userName: string, userAvatar?: string) => {

@@ -16,7 +16,7 @@ interface AppSidebarProps {
 }
 
 export const AppSidebar = ({ openChat }: AppSidebarProps) => {
-  const { isSidebarOpen, toggleSidebar, isMobile } = useSidebar();
+  const { isSidebarOpen, toggleSidebar, isMobile, navigateTo } = useSidebar();
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const { getTotalUnreadCount } = useMessages();
@@ -43,16 +43,11 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
       <li>
         <TooltipProvider delayDuration={300}>
           <Tooltip>
-            <NavLink
-              to={to}
-              className={({ isActive }) => `flex items-center p-3 rounded-md transition-colors relative
+            <div 
+              className={`flex items-center p-3 rounded-md transition-colors relative cursor-pointer
                 ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
                 ${!isSidebarOpen ? "justify-center" : ""}`}
-              onClick={() => {
-                if (isMobile) {
-                  toggleSidebar();
-                }
-              }}
+              onClick={() => navigateTo(to)}
             >
               <TooltipTrigger asChild>
                 <span className={`flex items-center ${isSidebarOpen ? "w-full" : ""}`}>
@@ -73,7 +68,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
                   )}
                 </TooltipContent>
               )}
-            </NavLink>
+            </div>
           </Tooltip>
         </TooltipProvider>
       </li>
