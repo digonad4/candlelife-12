@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useShadcnSidebar } from "@/components/ui/sidebar"; 
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 /**
  * Custom hook for sidebar state management
@@ -13,6 +13,7 @@ export const useSidebar = () => {
   const isMobile = useIsMobile();
   const [wasPreviouslyOpen, setWasPreviouslyOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider");
@@ -29,6 +30,13 @@ export const useSidebar = () => {
       setWasPreviouslyOpen(isSidebarOpen);
       originalToggle();
     }
+  };
+
+  const navigateTo = (path: string) => {
+    if (isMobile && openMobile) {
+      setOpenMobile(false);
+    }
+    navigate(path);
   };
 
   useEffect(() => {
@@ -70,5 +78,6 @@ export const useSidebar = () => {
     toggleSidebar,
     isMobile,
     wasPreviouslyOpen,
+    navigateTo,
   };
 };
