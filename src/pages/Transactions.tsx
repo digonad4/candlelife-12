@@ -25,7 +25,7 @@ const Transactions = () => {
   } = useTransactionsPage();
 
   useEffect(() => {
-    // Optional: Scroll to top when component mounts
+    // Scroll to top when component mounts
     window.scrollTo(0, 0);
   }, []);
 
@@ -43,6 +43,9 @@ const Transactions = () => {
         onStartDateChange={setStartDate}
         onEndDateChange={setEndDate}
         onPrintExtract={handlePrint}
+        selectedTransactions={selectedTransactions}
+        onSelectAll={selectAll}
+        onDeselectAll={deselectAll}
       />
 
       <TransactionsContent
