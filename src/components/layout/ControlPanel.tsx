@@ -36,91 +36,105 @@ export const ControlPanel = ({ openChat }: ControlPanelProps) => {
   };
 
   return (
-    <div className="w-full bg-background border-b border-border p-4">
-      <div className="container mx-auto">
-        <div className="flex flex-wrap gap-2 justify-center">
-          <Button 
-            variant="outline" 
-            onClick={() => handleNavigation("/dashboard")}
-            className="flex items-center gap-2"
-          >
-            <LayoutDashboard size={18} />
-            <span className="hidden md:inline">Dashboard</span>
-          </Button>
+    <header className="sticky top-0 z-50 w-full bg-background border-b border-border shadow-sm">
+      <div className="container mx-auto py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-xl font-bold text-primary hidden md:block">Candle Life</h1>
+          </div>
 
-          <Button 
-            variant="outline" 
-            onClick={() => handleNavigation("/transactions")}
-            className="flex items-center gap-2"
-          >
-            <Receipt size={18} />
-            <span className="hidden md:inline">Transações</span>
-          </Button>
+          <nav className="flex flex-wrap gap-2 justify-center">
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/dashboard")}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <LayoutDashboard size={18} />
+              <span className="hidden md:inline">Dashboard</span>
+            </Button>
 
-          <Button 
-            variant="outline" 
-            onClick={() => handleNavigation("/clients")}
-            className="flex items-center gap-2"
-          >
-            <Users size={18} />
-            <span className="hidden md:inline">Clientes</span>
-          </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/transactions")}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <Receipt size={18} />
+              <span className="hidden md:inline">Transações</span>
+            </Button>
 
-          <Button 
-            variant="outline" 
-            onClick={() => handleNavigation("/invoiced")}
-            className="flex items-center gap-2"
-          >
-            <FileText size={18} />
-            <span className="hidden md:inline">Faturados</span>
-          </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/clients")}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <Users size={18} />
+              <span className="hidden md:inline">Clientes</span>
+            </Button>
 
-          <Button 
-            variant="outline" 
-            onClick={() => handleNavigation("/expenses")}
-            className="flex items-center gap-2"
-          >
-            <Wallet size={18} />
-            <span className="hidden md:inline">Despesas</span>
-          </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/invoiced")}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <FileText size={18} />
+              <span className="hidden md:inline">Faturados</span>
+            </Button>
 
-          <Button 
-            variant="outline" 
-            onClick={() => handleNavigation("/social")}
-            className="flex items-center gap-2 relative"
-          >
-            <MessageSquare size={18} />
-            <span className="hidden md:inline">Comunidade</span>
-            {totalUnreadMessages > 0 && (
-              <span className="absolute -top-1 -right-1 flex items-center justify-center bg-destructive text-destructive-foreground rounded-full text-xs font-bold h-5 w-5">
-                {totalUnreadMessages > 9 ? "9+" : totalUnreadMessages}
-              </span>
-            )}
-          </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/expenses")}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <Wallet size={18} />
+              <span className="hidden md:inline">Despesas</span>
+            </Button>
 
-          <Button 
-            variant="outline" 
-            onClick={() => handleNavigation("/settings")}
-            className="flex items-center gap-2"
-          >
-            <Settings size={18} />
-            <span className="hidden md:inline">Configurações</span>
-          </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/social")}
+              className="flex items-center gap-2 relative"
+              size="sm"
+            >
+              <MessageSquare size={18} />
+              <span className="hidden md:inline">Comunidade</span>
+              {totalUnreadMessages > 0 && (
+                <span className="absolute -top-1 -right-1 flex items-center justify-center bg-destructive text-destructive-foreground rounded-full text-xs font-bold h-5 w-5">
+                  {totalUnreadMessages > 9 ? "9+" : totalUnreadMessages}
+                </span>
+              )}
+            </Button>
 
-          <Button 
-            variant="outline" 
-            onClick={handleLogout}
-            className="flex items-center gap-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30"
-          >
-            <LogOut size={18} />
-            <span className="hidden md:inline">Sair</span>
-          </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/settings")}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <Settings size={18} />
+              <span className="hidden md:inline">Configurações</span>
+            </Button>
+          </nav>
 
-          <div className="ml-2">
+          <div className="flex items-center space-x-2">
             <NotificationBadge openChat={openChat} />
+            
+            <Button 
+              variant="ghost" 
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <LogOut size={18} />
+              <span className="hidden md:inline">Sair</span>
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </header>
   );
 };

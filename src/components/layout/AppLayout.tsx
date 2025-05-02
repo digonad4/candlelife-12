@@ -38,7 +38,7 @@ const AppLayout = () => {
       <ControlPanel openChat={openChat} />
       
       <main className="flex-1 flex flex-col overflow-auto w-full">
-        <div className="p-4 md:p-6 flex-1 overflow-auto w-full">
+        <div className="container mx-auto p-4 md:p-6 flex-1 overflow-auto w-full">
           <Outlet context={{ openChat }} />
         </div>
       </main>
