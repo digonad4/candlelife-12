@@ -11,9 +11,9 @@ import {
   MessageSquare, 
   Settings,
   LogOut,
-  Menu
+  Menu,
+  X
 } from "lucide-react";
-import { NotificationBadge } from "../ui/notification-badge";
 import { useMessages } from "@/hooks/useMessages";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -90,47 +90,50 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
       <div className="fixed top-0 left-0 right-0 z-50 p-4 bg-background flex items-center justify-between border-b">
         <h1 className="text-xl font-bold text-primary">Candle Life</h1>
         
-        <div className="flex gap-2">
-          <NotificationBadge openChat={openChat} />
-          
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu size={24} />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0">
-              <div className="flex flex-col h-full bg-sidebar">
-                <div className="p-4 border-b">
-                  <h2 className="text-xl font-bold">Menu</h2>
-                </div>
-                
-                <div className="flex-1 overflow-auto p-4">
-                  <nav className="space-y-1">
-                    <NavItem icon={LayoutDashboard} label="Dashboard" path="/dashboard" />
-                    <NavItem icon={Receipt} label="Transações" path="/transactions" />
-                    <NavItem icon={Users} label="Clientes" path="/clients" />
-                    <NavItem icon={FileText} label="Faturados" path="/invoiced" />
-                    <NavItem icon={Wallet} label="Despesas" path="/expenses" />
-                    <NavItem icon={MessageSquare} label="Comunidade" path="/social" badge={totalUnreadMessages} />
-                    <NavItem icon={Settings} label="Configurações" path="/settings" />
-                  </nav>
-                </div>
-                
-                <div className="p-4 border-t mt-auto">
-                  <Button 
-                    variant="ghost" 
-                    onClick={handleLogout}
-                    className="w-full justify-start"
-                  >
-                    <LogOut size={18} className="mr-2" />
-                    <span>Sair</span>
-                  </Button>
-                </div>
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu size={24} />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0">
+            <div className="flex flex-col h-full bg-sidebar">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h2 className="text-xl font-bold">Menu</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setIsOpen(false)}
+                >
+                  <X size={18} />
+                </Button>
               </div>
-            </SheetContent>
-          </Sheet>
-        </div>
+              
+              <div className="flex-1 overflow-auto p-4">
+                <nav className="space-y-1">
+                  <NavItem icon={LayoutDashboard} label="Dashboard" path="/dashboard" />
+                  <NavItem icon={Receipt} label="Transações" path="/transactions" />
+                  <NavItem icon={Users} label="Clientes" path="/clients" />
+                  <NavItem icon={FileText} label="Faturados" path="/invoiced" />
+                  <NavItem icon={Wallet} label="Despesas" path="/expenses" />
+                  <NavItem icon={MessageSquare} label="Comunidade" path="/social" badge={totalUnreadMessages} />
+                  <NavItem icon={Settings} label="Configurações" path="/settings" />
+                </nav>
+              </div>
+              
+              <div className="p-4 border-t mt-auto">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleLogout}
+                  className="w-full justify-start"
+                >
+                  <LogOut size={18} className="mr-2" />
+                  <span>Sair</span>
+                </Button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     );
   }
@@ -138,7 +141,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
   // Desktop sidebar
   return (
     <div className="w-64 h-screen fixed left-0 top-0 bg-sidebar border-r border-sidebar-border flex flex-col">
-      <div className="p-4 border-b border-sidebar-border">
+      <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         <h1 className="text-xl font-bold text-primary">Candle Life</h1>
       </div>
       
@@ -155,9 +158,6 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
       </div>
       
       <div className="p-4 border-t border-sidebar-border mt-auto">
-        <div className="flex items-center justify-between mb-4">
-          <NotificationBadge openChat={openChat} />
-        </div>
         <Button 
           variant="ghost" 
           onClick={handleLogout}
