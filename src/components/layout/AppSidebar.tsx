@@ -143,6 +143,15 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
     <div className="w-64 h-screen fixed left-0 top-0 bg-sidebar border-r border-sidebar-border flex flex-col">
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         <h1 className="text-xl font-bold text-primary">Candle Life</h1>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label="Toggle Sidebar"
+          className="md:hidden"
+        >
+          {isOpen ? <X size={18} /> : <Menu size={18} />}
+        </Button>
       </div>
       
       <div className="flex-1 overflow-auto p-4">
