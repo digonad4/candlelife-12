@@ -19,7 +19,7 @@ const Social = () => {
     createPost,
     updatePost,
     deletePost,
-    createComment,
+    addComment,
     deleteComment,
     toggleReaction
   } = usePosts();

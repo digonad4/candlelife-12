@@ -16,7 +16,7 @@ import {
 import { NotificationBadge } from "../ui/notification-badge";
 import { useMessages } from "@/hooks/useMessages";
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/drawer";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface AppSidebarProps {
   openChat: (userId: string, userName: string, userAvatar?: string) => void;
