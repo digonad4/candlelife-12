@@ -5,6 +5,7 @@ import { ClientsList } from "@/components/clients/ClientsList";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { BackButton } from "@/components/navigation/BackButton";
 
 export default function Clients() {
   const [isClientFormOpen, setIsClientFormOpen] = useState(false);
@@ -35,6 +36,8 @@ export default function Clients() {
 
   return (
     <div className="w-full space-y-8">
+      <BackButton />
+      
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
         <h1 className="text-3xl font-bold mb-4 sm:mb-0">Gerenciamento de Clientes</h1>
         <Button onClick={() => handleOpenClientForm()}>

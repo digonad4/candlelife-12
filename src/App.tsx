@@ -85,7 +85,7 @@ function App() {
         <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
         <Route path="/change-password" element={<ChangePassword />} />
         
-        {/* Authenticated routes using the new AppLayout */}
+        {/* Authenticated routes using AppLayout */}
         <Route element={<AuthenticatedRoute><AppLayout /></AuthenticatedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/transactions" element={<Transactions />} />

@@ -7,7 +7,6 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -18,12 +17,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>
-            <SidebarProvider defaultOpen={!window.matchMedia("(max-width: 768px)").matches}>
-              <div className="min-h-screen flex w-full">
-                <App />
-                <Toaster />
-              </div>
-            </SidebarProvider>
+            <div className="min-h-screen flex w-full">
+              <App />
+              <Toaster />
+            </div>
           </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>

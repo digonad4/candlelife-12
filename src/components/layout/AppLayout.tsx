@@ -1,20 +1,15 @@
 
-import { Outlet, useNavigate } from "react-router-dom";
-import { AppSidebar } from "../AppSidebar";
-import { useSidebar } from "@/hooks/useSidebar";
+import { Outlet } from "react-router-dom";
 import { Toaster } from "../ui/toaster";
 import { useState, useEffect } from "react";
 import { ChatModal } from "../social/ChatModal";
-import { Menu } from "lucide-react";
-import { Button } from "../ui/button";
+import { ControlPanel } from "./ControlPanel";
 
 const AppLayout = () => {
-  const { isSidebarOpen, toggleSidebar } = useSidebar();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRecipient, setChatRecipient] = useState({ id: "", name: "", avatar: "" });
-  const navigate = useNavigate();
   
-  // Função para abrir chat de qualquer lugar do app
+  // Function to open chat from anywhere in the app
   const openChat = (userId: string, userName: string, userAvatar?: string) => {
     setChatRecipient({
       id: userId,
@@ -24,7 +19,7 @@ const AppLayout = () => {
     setIsChatOpen(true);
   };
 
-  // Escuta por evento customizado para abrir chat
+  // Listen for custom event to open chat
   useEffect(() => {
     const handleOpenChatEvent = (event: CustomEvent) => {
       const { userId, userName, userAvatar } = event.detail;
@@ -39,31 +34,14 @@ const AppLayout = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden w-full">
-      <div className="flex flex-1 overflow-hidden relative h-full w-full">
-        <AppSidebar openChat={openChat} />
-        
-        <main className="flex-1 flex flex-col overflow-auto transition-all duration-300 w-full h-full">
-          {/* Botão de toggle do sidebar sempre visível com z-index alto */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="fixed top-5 left-8 z-50"
-            onClick={(e) => {
-              e.stopPropagation(); // Previne propagação de eventos
-              toggleSidebar();
-              console.log("Toggle sidebar button clicked");
-            }}
-            aria-label="Toggle Sidebar"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          
-          <div className="p-4 md:p-6 flex-1 overflow-auto pt-14 md:pt-16 w-full h-full">
-            <Outlet context={{ openChat }} />
-          </div>
-        </main>
-      </div>
+    <div className="min-h-screen flex flex-col bg-background text-foreground w-full">
+      <ControlPanel openChat={openChat} />
+      
+      <main className="flex-1 flex flex-col overflow-auto w-full">
+        <div className="p-4 md:p-6 flex-1 overflow-auto w-full">
+          <Outlet context={{ openChat }} />
+        </div>
+      </main>
       
       <Toaster />
       

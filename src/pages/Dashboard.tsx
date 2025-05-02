@@ -23,7 +23,7 @@ const Dashboard = () => {
     updateDatesInUrl 
   } = useUrlParams();
   
-  // Inicializar estados a partir da URL
+  // Initialize states from URL
   const [dateRange, setDateRange] = useState(getDateRangeFromUrl());
   const { startDate: urlStartDate, endDate: urlEndDate } = getDatesFromUrl();
   const [startDate, setStartDate] = useState<Date | undefined>(
@@ -35,13 +35,13 @@ const Dashboard = () => {
   
   const queryClient = useQueryClient();
 
-  // Handler para alteração de período
+  // Handler for period change
   const handleDateRangeChange = (range: string) => {
     setDateRange(range);
     updateDateRangeInUrl(range);
   };
 
-  // Handlers para alteração de datas
+  // Handlers for date changes
   const handleStartDateChange = (date?: Date) => {
     setStartDate(date);
     updateDatesInUrl(date, endDate);

@@ -1,98 +1,43 @@
 
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Palette, User, Lock, Image, ArrowLeft } from "lucide-react";
-import { ThemeSettings } from "@/components/settings/ThemeSettings";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
-import { AvatarSettings } from "@/components/settings/AvatarSettings";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
-import { Button } from "@/components/ui/button";
-import { useNavigate, useLocation } from "react-router-dom";
+import { ThemeSettings } from "@/components/settings/ThemeSettings";
+import { SessionsManager } from "@/components/settings/SessionsManager";
+import { BackButton } from "@/components/navigation/BackButton";
 
 const Settings = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Get active tab from URL hash or localStorage, or default to "profile"
-  const getInitialTab = () => {
-    const hashTab = location.hash?.replace('#', '');
-    if (hashTab && ['profile', 'theme', 'avatar', 'security'].includes(hashTab)) {
-      return hashTab;
-    }
-    
-    const savedTab = localStorage.getItem('settings-tab');
-    if (savedTab && ['profile', 'theme', 'avatar', 'security'].includes(savedTab)) {
-      return savedTab;
-    }
-    
-    return 'profile';
-  };
-  
-  const [activeTab, setActiveTab] = useState(getInitialTab);
-  
-  // Update URL hash and localStorage when tab changes
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    localStorage.setItem('settings-tab', value);
-    
-    // Update URL hash without causing navigation/reload
-    window.history.replaceState(null, '', `#${value}`);
-  };
+  const [activeTab, setActiveTab] = useState("profile");
 
   return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => navigate(-1)}
-          className="rounded-full"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground">Configurações</h1>
-      </div>
+    <div className="w-full max-w-4xl mx-auto space-y-6">
+      <BackButton />
+      <h1 className="text-3xl font-bold">Configurações da Conta</h1>
       
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-8">
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="w-4 h-4" />
-            <span>Perfil</span>
-          </TabsTrigger>
-          <TabsTrigger value="theme" className="flex items-center gap-2">
-            <Palette className="w-4 h-4" />
-            <span>Tema</span>
-          </TabsTrigger>
-          <TabsTrigger value="avatar" className="flex items-center gap-2">
-            <Image className="w-4 h-4" />
-            <span>Avatar</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Lock className="w-4 h-4" />
-            <span>Segurança</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <Card className="p-6 border-border rounded-xl shadow-sm">
-          <TabsContent value="profile" className="mt-0">
+      <Card className="p-6">
+        <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="profile">Perfil</TabsTrigger>
+            <TabsTrigger value="security">Segurança</TabsTrigger>
+            <TabsTrigger value="appearance">Aparência</TabsTrigger>
+            <TabsTrigger value="sessions">Sessões</TabsTrigger>
+          </TabsList>
+          <TabsContent value="profile" className="space-y-4 mt-6">
             <ProfileSettings />
           </TabsContent>
-          
-          <TabsContent value="theme" className="mt-0">
-            <ThemeSettings />
-          </TabsContent>
-          
-          <TabsContent value="avatar" className="mt-0">
-            <AvatarSettings />
-          </TabsContent>
-          
-          <TabsContent value="security" className="mt-0">
+          <TabsContent value="security" className="space-y-4 mt-6">
             <SecuritySettings />
           </TabsContent>
-        </Card>
-      </Tabs>
+          <TabsContent value="appearance" className="space-y-4 mt-6">
+            <ThemeSettings />
+          </TabsContent>
+          <TabsContent value="sessions" className="space-y-4 mt-6">
+            <SessionsManager />
+          </TabsContent>
+        </Tabs>
+      </Card>
     </div>
   );
 };
