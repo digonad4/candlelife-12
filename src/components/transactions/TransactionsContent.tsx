@@ -8,36 +8,24 @@ interface TransactionsContentProps {
   days: [string, Transaction[]][];
   isLoading: boolean;
   selectedTransactions: Set<string>;
-  searchTerm: string;
   onToggleSelection: (id: string) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
-  onEdit: (transaction: Transaction) => void;
-  onDelete: (id: string) => void;
-  onConfirmPayment: (transaction: Transaction) => void;
-  onConfirmSelected: () => void;
-  onDeleteSelected: () => void;
 }
 
 export function TransactionsContent({
   days,
   isLoading,
   selectedTransactions,
-  searchTerm,
   onToggleSelection,
   onSelectAll,
-  onDeselectAll,
-  onEdit,
-  onDelete,
-  onConfirmPayment,
-  onConfirmSelected,
-  onDeleteSelected
+  onDeselectAll
 }: TransactionsContentProps) {
   return (
     <Card className="rounded-xl border-border bg-card w-full">
       <CardHeader>
         <CardTitle className="text-card-foreground">
-          {searchTerm ? "Resultados da Pesquisa" : "Histórico de Transações"}
+          Histórico de Transações
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -45,8 +33,8 @@ export function TransactionsContent({
           selectedTransactions={selectedTransactions}
           onSelectAll={onSelectAll}
           onDeselectAll={onDeselectAll}
-          onConfirmSelected={onConfirmSelected}
-          onDeleteSelected={onDeleteSelected}
+          onConfirmSelected={() => {}}
+          onDeleteSelected={() => {}}
         />
         
         {isLoading ? (
@@ -61,11 +49,11 @@ export function TransactionsContent({
             onSelectTransaction={onToggleSelection}
             onSelectAll={onSelectAll}
             onDeselectAll={onDeselectAll}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onConfirmPayment={onConfirmPayment}
-            onConfirmSelected={onConfirmSelected}
-            onDeleteSelected={onDeleteSelected}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            onConfirmPayment={() => {}}
+            onConfirmSelected={() => {}}
+            onDeleteSelected={() => {}}
           />
         )}
       </CardContent>

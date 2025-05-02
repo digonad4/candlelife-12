@@ -20,7 +20,8 @@ const Transactions = () => {
     setSearchTerm,
     toggleSelection,
     selectAll,
-    deselectAll
+    deselectAll,
+    handlePrint
   } = useTransactionsPage();
 
   useEffect(() => {
@@ -41,20 +42,16 @@ const Transactions = () => {
         endDate={endDate}
         onStartDateChange={setStartDate}
         onEndDateChange={setEndDate}
-        selectedTransactions={selectedTransactions}
-        onClearSelection={deselectAll}
-        onSelectAll={selectAll}
+        onPrintExtract={handlePrint}
       />
 
       <TransactionsContent
-        dateRange={dateRange}
-        startDate={startDate}
-        endDate={endDate}
-        searchTerm={searchTerm}
         days={days}
-        selectedTransactions={selectedTransactions}
         isLoading={isLoading}
-        onSelectionChange={toggleSelection}
+        selectedTransactions={selectedTransactions}
+        onToggleSelection={toggleSelection}
+        onSelectAll={selectAll}
+        onDeselectAll={deselectAll}
       />
     </div>
   );

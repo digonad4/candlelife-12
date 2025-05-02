@@ -10,7 +10,7 @@ import { useState } from "react";
 const Social = () => {
   const { openChat } = useOutletContext<{ openChat: (userId: string, userName: string, userAvatar?: string) => void }>();
   const [editingPost, setEditingPost] = useState(null);
-  const { data: posts = [], isLoading: isLoadingPosts } = usePosts();
+  const { posts, isLoadingPosts } = usePosts();
 
   const handleEdit = (post: any) => {
     setEditingPost(post);
