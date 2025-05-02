@@ -1,5 +1,5 @@
 
-import { InvoicedSummary } from "@/components/invoiced/InvoicedSummary";
+import InvoicedSummary from "@/components/invoiced/InvoicedSummary";
 import { BackButton } from "@/components/navigation/BackButton";
 
 const InvoicedTransactions = () => {

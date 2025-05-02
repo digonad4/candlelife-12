@@ -7,21 +7,20 @@ import { BackButton } from "@/components/navigation/BackButton";
 
 const Transactions = () => {
   const {
-    selectedIds,
     dateRange,
-    searchQuery,
-    onlyPending,
     startDate,
     endDate,
-    isBulkActionMenuOpen,
-    handleDateRangeChange,
-    handleSearchChange,
-    handlePendingFilterChange,
-    handleStartDateChange,
-    handleEndDateChange,
-    handleBulkActionMenuToggle,
-    handleSelection,
-    handleClearSelection,
+    searchTerm,
+    days,
+    selectedTransactions,
+    isLoading,
+    setDateRange,
+    setStartDate,
+    setEndDate,
+    setSearchTerm,
+    toggleSelection,
+    selectAll,
+    deselectAll
   } = useTransactionsPage();
 
   useEffect(() => {
@@ -34,31 +33,28 @@ const Transactions = () => {
       <BackButton />
       
       <TransactionsHeader
-        selectedIds={selectedIds}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
         dateRange={dateRange}
-        onDateRangeChange={handleDateRangeChange}
-        onlyPending={onlyPending}
-        onPendingFilterChange={handlePendingFilterChange}
+        onDateRangeChange={setDateRange}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
         startDate={startDate}
         endDate={endDate}
-        onStartDateChange={handleStartDateChange}
-        onEndDateChange={handleEndDateChange}
-        isBulkActionMenuOpen={isBulkActionMenuOpen}
-        onBulkActionMenuToggle={handleBulkActionMenuToggle}
-        onClearSelection={handleClearSelection}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
+        selectedTransactions={selectedTransactions}
+        onClearSelection={deselectAll}
+        onSelectAll={selectAll}
       />
 
       <TransactionsContent
-        selectedIds={selectedIds}
-        onSelectionChange={handleSelection}
-        searchQuery={searchQuery}
         dateRange={dateRange}
-        onlyPending={onlyPending}
         startDate={startDate}
         endDate={endDate}
-        isBulkActionMenuOpen={isBulkActionMenuOpen}
+        searchTerm={searchTerm}
+        days={days}
+        selectedTransactions={selectedTransactions}
+        isLoading={isLoading}
+        onSelectionChange={toggleSelection}
       />
     </div>
   );

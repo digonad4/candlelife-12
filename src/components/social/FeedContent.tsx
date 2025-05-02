@@ -5,8 +5,9 @@ import { PostItem } from "./PostItem";
 import { PostEditor } from "./PostEditor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
+import { useOutletContext } from "react-router-dom";
 
-type FeedContentProps = {
+export interface FeedContentProps {
   posts: Post[];
   isLoadingPosts: boolean;
   editingPost: Post | null;
@@ -15,7 +16,7 @@ type FeedContentProps = {
   showMyPostsOnly?: boolean;
   currentUserId?: string;
   openChat: (userId: string, userName: string, userAvatar?: string) => void;
-};
+}
 
 export function FeedContent({
   posts,
