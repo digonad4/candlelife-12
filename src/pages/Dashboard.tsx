@@ -11,46 +11,14 @@ import { Plus } from "lucide-react";
 import { subDays } from "date-fns";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { FinancialInsights } from "@/components/insights/FinancialInsights";
-import { useUrlParams } from "@/hooks/useUrlParams";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { 
-    getDateRangeFromUrl, 
-    getDatesFromUrl, 
-    updateDateRangeInUrl, 
-    updateDatesInUrl 
-  } = useUrlParams();
-  
-  // Initialize states from URL
-  const [dateRange, setDateRange] = useState(getDateRangeFromUrl());
-  const { startDate: urlStartDate, endDate: urlEndDate } = getDatesFromUrl();
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    urlStartDate || subDays(new Date(), 7)
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(
-    urlEndDate || new Date()
-  );
-  
+  const [dateRange, setDateRange] = useState("today");
+  const [startDate, setStartDate] = useState<Date | undefined>(subDays(new Date(), 7));
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
-
-  // Handler for period change
-  const handleDateRangeChange = (range: string) => {
-    setDateRange(range);
-    updateDateRangeInUrl(range);
-  };
-
-  // Handlers for date changes
-  const handleStartDateChange = (date?: Date) => {
-    setStartDate(date);
-    updateDatesInUrl(date, endDate);
-  };
-
-  const handleEndDateChange = (date?: Date) => {
-    setEndDate(date);
-    updateDatesInUrl(startDate, date);
-  };
 
   // Set up Supabase real-time subscription for transaction changes
   useEffect(() => {
@@ -92,9 +60,9 @@ const Dashboard = () => {
         dateRange={dateRange}
         startDate={startDate}
         endDate={endDate}
-        onDateRangeChange={handleDateRangeChange}
-        onStartDateChange={handleStartDateChange}
-        onEndDateChange={handleEndDateChange}
+        onDateRangeChange={setDateRange}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
       />
 
       {/* Financial Insights */}

@@ -1,14 +1,17 @@
 
 import { Outlet } from "react-router-dom";
+import { AppSidebar } from "../AppSidebar";
+import { useSidebar } from "@/hooks/useSidebar";
 import { Toaster } from "../ui/toaster";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ChatModal } from "../social/ChatModal";
-import { AppSidebar } from "./AppSidebar";
+import { Menu } from "lucide-react";
+import { Button } from "../ui/button";
 
 const AppLayout = () => {
+  const { isSidebarOpen, toggleSidebar } = useSidebar();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRecipient, setChatRecipient] = useState({ id: "", name: "", avatar: "" });
-  const [isMobile, setIsMobile] = useState(false);
   
   // Function to open chat from anywhere in the app
   const openChat = (userId: string, userName: string, userAvatar?: string) => {
@@ -20,43 +23,28 @@ const AppLayout = () => {
     setIsChatOpen(true);
   };
 
-  // Check if we're on mobile
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkIfMobile();
-    window.addEventListener("resize", checkIfMobile);
-
-    return () => {
-      window.removeEventListener("resize", checkIfMobile);
-    };
-  }, []);
-
-  // Listen for custom event to open chat
-  useEffect(() => {
-    const handleOpenChatEvent = (event: CustomEvent) => {
-      const { userId, userName, userAvatar } = event.detail;
-      openChat(userId, userName, userAvatar);
-    };
-
-    window.addEventListener("open-chat" as any, handleOpenChatEvent as EventListener);
-
-    return () => {
-      window.removeEventListener("open-chat" as any, handleOpenChatEvent as EventListener);
-    };
-  }, []);
-
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground w-full">
-      <AppSidebar openChat={openChat} />
-      
-      <main className={`flex-1 flex flex-col overflow-auto w-full ${isMobile ? 'pt-16' : 'ml-64'}`}>
-        <div className="container mx-auto p-4 md:p-6 flex-1 overflow-auto w-full">
-          <Outlet context={{ openChat }} />
-        </div>
-      </main>
+    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden w-full">
+      <div className="flex flex-1 overflow-hidden relative h-full w-full">
+        <AppSidebar openChat={openChat} />
+        
+        <main className="flex-1 flex flex-col overflow-auto transition-all duration-300 w-full h-full">
+          {/* Botão de toggle do sidebar visível em todos os dispositivos */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="fixed top-5 left-8 z-40"
+            onClick={toggleSidebar}
+            aria-label="Toggle Sidebar"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          
+          <div className="p-4 md:p-6 flex-1 overflow-auto pt-14 md:pt-6 w-full h-full">
+            <Outlet context={{ openChat }} />
+          </div>
+        </main>
+      </div>
       
       <Toaster />
       

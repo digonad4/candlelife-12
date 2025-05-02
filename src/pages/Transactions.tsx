@@ -1,60 +1,108 @@
 
-import { useEffect } from "react";
-import { TransactionsContent } from "@/components/transactions/TransactionsContent";
-import { TransactionsHeader } from "@/components/transactions/TransactionsHeader";
+import { useAuth } from "@/context/AuthContext";
 import { useTransactionsPage } from "@/hooks/useTransactionsPage";
-import { BackButton } from "@/components/navigation/BackButton";
+import { TransactionsHeader } from "@/components/transactions/TransactionsHeader";
+import { TransactionsContent } from "@/components/transactions/TransactionsContent";
+import { TransactionSummary } from "@/components/transactions/TransactionSummary";
+import { TransactionDialogs } from "@/components/transactions/TransactionDialogs";
 
 const Transactions = () => {
+  const { user } = useAuth();
   const {
+    // State
     dateRange,
     startDate,
     endDate,
     searchTerm,
+    isEditModalOpen,
+    isDeleteDialogOpen,
+    isConfirmPaymentDialogOpen,
+    selectedTransaction,
+    transactionToDelete,
+    transactionToConfirm,
+    
+    // Data
     days,
-    selectedTransactions,
     isLoading,
+    totalTransactions,
+    totalIncome,
+    totalExpenses,
+    balance,
+    selectedTransactions,
+    
+    // Methods
     setDateRange,
     setStartDate,
     setEndDate,
     setSearchTerm,
+    setIsEditModalOpen,
+    setIsDeleteDialogOpen,
+    setIsConfirmPaymentDialogOpen,
+    handleEdit,
+    handleDeleteTransaction,
+    handleConfirmTransaction,
+    handlePrint,
     toggleSelection,
     selectAll,
-    deselectAll,
-    handlePrint
+    deselectAll
   } = useTransactionsPage();
 
-  useEffect(() => {
-    // Scroll to top when component mounts
-    window.scrollTo(0, 0);
-  }, []);
+  const openChat = (userId: string, userName: string, userAvatar?: string) => {
+    window.dispatchEvent(
+      new CustomEvent("open-chat", {
+        detail: { userId, userName, userAvatar }
+      })
+    );
+  };
 
   return (
-    <div className="w-full flex flex-col gap-6">
-      <BackButton />
-      
+    <div className="w-full space-y-8">
       <TransactionsHeader
         dateRange={dateRange}
-        onDateRangeChange={setDateRange}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
         startDate={startDate}
         endDate={endDate}
+        searchTerm={searchTerm}
+        onDateRangeChange={setDateRange}
         onStartDateChange={setStartDate}
         onEndDateChange={setEndDate}
+        onSearchChange={setSearchTerm}
         onPrintExtract={handlePrint}
-        selectedTransactions={selectedTransactions}
-        onSelectAll={selectAll}
-        onDeselectAll={deselectAll}
       />
-
+      
       <TransactionsContent
         days={days}
         isLoading={isLoading}
         selectedTransactions={selectedTransactions}
+        searchTerm={searchTerm}
         onToggleSelection={toggleSelection}
         onSelectAll={selectAll}
         onDeselectAll={deselectAll}
+        onEdit={handleEdit}
+        onDelete={handleDeleteTransaction}
+        onConfirmPayment={handleConfirmTransaction}
+        onConfirmSelected={() => setIsConfirmPaymentDialogOpen(true)}
+        onDeleteSelected={() => setIsDeleteDialogOpen(true)}
+      />
+      
+      <TransactionSummary
+        totalTransactions={totalTransactions}
+        totalIncome={totalIncome}
+        totalExpenses={totalExpenses}
+        balance={balance}
+      />
+
+      <TransactionDialogs
+        isEditModalOpen={isEditModalOpen}
+        setIsEditModalOpen={setIsEditModalOpen}
+        selectedTransaction={selectedTransaction}
+        isDeleteDialogOpen={isDeleteDialogOpen}
+        setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+        transactionToDelete={transactionToDelete}
+        isConfirmPaymentDialogOpen={isConfirmPaymentDialogOpen}
+        setIsConfirmPaymentDialogOpen={setIsConfirmPaymentDialogOpen}
+        transactionToConfirm={transactionToConfirm}
+        userId={user?.id}
+        selectedTransactions={selectedTransactions}
       />
     </div>
   );

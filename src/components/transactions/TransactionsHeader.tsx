@@ -6,14 +6,11 @@ interface TransactionsHeaderProps {
   startDate: Date | undefined;
   endDate: Date | undefined;
   searchTerm: string;
-  selectedTransactions: Set<string>;
   onDateRangeChange: (range: string) => void;
   onStartDateChange: (date: Date | undefined) => void;
   onEndDateChange: (date: Date | undefined) => void;
   onSearchChange: (term: string) => void;
   onPrintExtract: () => void;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
 }
 
 export function TransactionsHeader({
@@ -21,14 +18,11 @@ export function TransactionsHeader({
   startDate,
   endDate,
   searchTerm,
-  selectedTransactions,
   onDateRangeChange,
   onStartDateChange,
   onEndDateChange,
   onSearchChange,
-  onPrintExtract,
-  onSelectAll,
-  onDeselectAll
+  onPrintExtract
 }: TransactionsHeaderProps) {
   return (
     <div className="w-full space-y-4">

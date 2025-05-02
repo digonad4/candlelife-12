@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { subMonths, startOfDay } from "date-fns";
+import { subMonths } from "date-fns";
 import { Transaction } from "@/types/transaction";
 
 // Helper type for database transactions
@@ -21,28 +21,23 @@ type DatabaseTransaction = {
   created_at: string;
 };
 
-export function useFinancialData(months: number = 3) {
+export function useFinancialData() {
   const { user } = useAuth();
   const currentDate = new Date();
 
   return useQuery<Transaction[]>({
-    queryKey: ["financial-insights", user?.id, months],
+    queryKey: ["financial-insights", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      
-      const startDate = subMonths(startOfDay(currentDate), months);
-      
+      const threeMonthsAgo = subMonths(currentDate, 3);
       const { data, error } = await supabase
         .from("transactions")
         .select("*")
         .eq("user_id", user.id)
-        .gte("date", startDate.toISOString())
+        .gte("date", threeMonthsAgo.toISOString())
         .order("date", { ascending: false });
       
-      if (error) {
-        console.error("Error fetching financial data:", error);
-        throw error;
-      }
+      if (error) throw error;
       
       // Convert database transactions to the application's Transaction type
       return (data as DatabaseTransaction[]).map(transaction => ({
@@ -54,7 +49,7 @@ export function useFinancialData(months: number = 3) {
         payment_status: transaction.payment_status || "pending",
         payment_method: mapPaymentMethod(transaction.payment_method),
         client_id: transaction.client_id,
-        category: transaction.category || getCategoryFromDescription(transaction.description),
+        category: transaction.category,
         recurring: transaction.recurring,
         created_at: transaction.created_at
       }));
@@ -85,28 +80,4 @@ function mapPaymentMethod(method: string): "cash" | "credit_card" | "debit_card"
 
   const normalizedMethod = method.toLowerCase();
   return methodMap[normalizedMethod] || 'cash'; // Default to cash if unknown
-}
-
-// Utility function to extract a category from the description if none is provided
-function getCategoryFromDescription(description: string): string {
-  const commonCategories: Record<string, string[]> = {
-    'Alimentação': ['restaurante', 'comida', 'almoço', 'jantar', 'lanche', 'mercado', 'supermercado', 'feira'],
-    'Transporte': ['gasolina', 'combustível', 'estacionamento', 'uber', '99', 'taxi', 'táxi', 'ônibus', 'metrô', 'trem'],
-    'Moradia': ['aluguel', 'condomínio', 'iptu', 'água', 'luz', 'energia', 'gás', 'internet', 'wifi'],
-    'Saúde': ['farmácia', 'remédio', 'consulta', 'médico', 'dentista', 'plano de saúde', 'academia'],
-    'Educação': ['escola', 'faculdade', 'curso', 'livro', 'material'],
-    'Lazer': ['cinema', 'teatro', 'show', 'viagem', 'passeio', 'festa'],
-    'Compras': ['roupa', 'calçado', 'acessório', 'presente', 'eletrônico'],
-    'Serviços': ['assinatura', 'streaming', 'serviço', 'manutenção', 'conserto']
-  };
-
-  const lowerDescription = description.toLowerCase();
-  
-  for (const [category, keywords] of Object.entries(commonCategories)) {
-    if (keywords.some(keyword => lowerDescription.includes(keyword.toLowerCase()))) {
-      return category;
-    }
-  }
-
-  return "Outros";
 }

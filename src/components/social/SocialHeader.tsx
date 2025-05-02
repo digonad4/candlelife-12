@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -13,7 +14,7 @@ import { SearchInput } from "./header/SearchInput";
 import { SearchResults } from "./header/SearchResults";
 import { ChatUsersList } from "./header/ChatUsersList";
 
-export interface SocialHeaderProps {
+interface SocialHeaderProps {
   openChat: (userId: string, userName: string, userAvatar?: string) => void;
 }
 
