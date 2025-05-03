@@ -18,10 +18,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Import our refactored components
-import { ChatHeader } from "./chat/ChatHeader";
-import { ChatMessages } from "./chat/ChatMessages";
-import { ChatMessageInput } from "./chat/ChatMessageInput";
+// Import our refactored components with corrected paths
+import { ChatHeader } from "./ChatHeader";
+import { ChatMessages } from "./ChatMessages";
+import { ChatMessageInput } from "./ChatMessageInput";
 
 interface ChatModalProps {
   isOpen: boolean;
