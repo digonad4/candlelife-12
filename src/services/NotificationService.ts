@@ -10,16 +10,37 @@ class NotificationService {
     if (this.initialized) return;
     
     if (Capacitor.isNativePlatform()) {
-      // Inicializa as notificações locais para Android e iOS
-      await LocalNotifications.requestPermissions();
-      
-      // Inicializa as notificações push (para iOS)
-      await PushNotifications.requestPermissions();
-      await PushNotifications.register();
-      
-      this.initialized = true;
+      try {
+        // Initialize local notifications for Android and iOS
+        await LocalNotifications.requestPermissions();
+        
+        // Initialize push notifications
+        await PushNotifications.requestPermissions();
+        await PushNotifications.register();
+        
+        // Set up push notification listeners
+        PushNotifications.addListener('registration', (token) => {
+          console.log('Push registration success, token: ' + token.value);
+        });
+        
+        PushNotifications.addListener('registrationError', (error) => {
+          console.error('Error on registration: ' + JSON.stringify(error));
+        });
+        
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('Push notification received: ' + JSON.stringify(notification));
+        });
+        
+        PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+          console.log('Push notification action performed', notification.actionId, notification.inputValue);
+        });
+        
+        this.initialized = true;
+      } catch (error) {
+        console.error('Error initializing notifications:', error);
+      }
     } else {
-      // Permissão para notificações web
+      // Web notification permission
       if (typeof Notification !== 'undefined' && Notification.permission !== "granted") {
         await Notification.requestPermission();
       }
@@ -32,7 +53,7 @@ class NotificationService {
       await this.initialize();
       
       if (Capacitor.isNativePlatform()) {
-        // Usa notificações locais no dispositivo móvel
+        // Use local notifications on mobile device
         await LocalNotifications.schedule({
           notifications: [
             {
@@ -41,12 +62,12 @@ class NotificationService {
               id: Date.now(),
               extra: data,
               sound: 'default',
-              smallIcon: 'ic_launcher_foreground', // Nome do ícone no Android
+              smallIcon: 'ic_launcher_foreground', // Android icon name
             }
           ]
         });
       } else if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-        // Usa Web Notifications no navegador
+        // Use Web Notifications in browser
         const notification = new Notification(title, {
           body: body,
           icon: '/favicon.ico',
@@ -60,7 +81,8 @@ class NotificationService {
             window.dispatchEvent(new CustomEvent('open-chat', { 
               detail: { 
                 userId: data.senderId, 
-                userName: data.senderName
+                userName: data.senderName,
+                userAvatar: data.senderAvatar
               } 
             }));
           }

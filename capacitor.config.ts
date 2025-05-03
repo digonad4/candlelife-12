@@ -17,7 +17,8 @@ const config: CapacitorConfig = {
   },
   server: {
     url: "https://4928341b-6e69-4088-a6ef-178527030fde.lovableproject.com?forceHideBadge=true",
-    cleartext: true
+    cleartext: true,
+    androidScheme: "https"
   }
 };
 
