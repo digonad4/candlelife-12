@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "../use-toast";
 import { useMessagesContext } from "./types";
 import { Message } from "./types";
+import { notificationService } from "@/services/NotificationService";
 
 export const useMessageRealtime = () => {
   const { user } = useMessagesContext();
@@ -14,11 +15,9 @@ export const useMessageRealtime = () => {
   useEffect(() => {
     if (!user) return;
     
-    // Request notification permission
-    if (typeof Notification !== 'undefined' && Notification.permission !== "granted" && Notification.permission !== "denied") {
-      Notification.requestPermission();
-    }
-
+    // Inicializa o serviço de notificação
+    notificationService.initialize().catch(console.error);
+    
     const channel = supabase
       .channel('messages-changes')
       .on(
@@ -42,7 +41,7 @@ export const useMessageRealtime = () => {
             const fetchSenderInfo = async () => {
               const { data: senderProfile } = await supabase
                 .from("profiles")
-                .select("username")
+                .select("username, avatar_url")
                 .eq("id", newMessage.sender_id)
                 .single();
                 
@@ -56,38 +55,26 @@ export const useMessageRealtime = () => {
                   duration: 5000,
                 });
                 
-                // Show browser notification
-                if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-                  try {
-                    const notification = new Notification(`Nova mensagem de ${senderProfile.username}`, {
-                      body: newMessage.content.length > 60 
-                        ? newMessage.content.substring(0, 60) + '...' 
-                        : newMessage.content,
-                      icon: '/favicon.ico',
-                      tag: 'new-message', // Prevents duplicate notifications
-                      requireInteraction: true // Notification persists until user interacts with it
-                    });
-                    
-                    notification.onclick = () => {
-                      window.focus();
-                      window.dispatchEvent(new CustomEvent('open-chat', { 
-                        detail: { 
-                          userId: newMessage.sender_id, 
-                          userName: senderProfile.username
-                        } 
-                      }));
-                    };
-                  } catch (error) {
-                    console.error("Error showing notification:", error);
+                // Mostrar notificação usando o serviço de notificações
+                notificationService.showMessageNotification(
+                  `Nova mensagem de ${senderProfile.username}`,
+                  newMessage.content.length > 60 
+                    ? newMessage.content.substring(0, 60) + '...' 
+                    : newMessage.content,
+                  { 
+                    senderId: newMessage.sender_id, 
+                    senderName: senderProfile.username,
+                    senderAvatar: senderProfile.avatar_url
                   }
-                }
+                );
 
                 // Emit a custom event that can be caught by any component in the app
                 window.dispatchEvent(new CustomEvent('new-message', { 
                   detail: { 
                     senderId: newMessage.sender_id,
                     senderName: senderProfile.username,
-                    messageContent: newMessage.content
+                    messageContent: newMessage.content,
+                    senderAvatar: senderProfile.avatar_url
                   } 
                 }));
               }
