@@ -56,14 +56,16 @@ export const MessageItem = ({ message, currentUserId, onDeleteMessage }: Message
             {formatMessageTime(message.created_at)}
           </p>
           
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6 absolute top-0 -right-7 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => onDeleteMessage(message.id)}
-          >
-            <X className="h-3 w-3" />
-          </Button>
+          {isSentByMe && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 absolute top-0 -right-7 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => onDeleteMessage(message.id)}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

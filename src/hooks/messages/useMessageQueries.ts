@@ -99,8 +99,9 @@ export const useMessageQueries = () => {
     return useQuery({
       queryKey: ["chat", userId],
       queryFn: async () => {
-        if (!user) return [];
+        if (!user || !userId) return [];
 
+        // Mark messages as read
         await supabase
           .from("messages")
           .update({ read: true })
@@ -109,11 +110,14 @@ export const useMessageQueries = () => {
 
         queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
 
+        // Fix the query to properly filter messages between the two users
         const { data: messagesData, error } = await supabase
           .from("messages")
           .select("*")
-          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${userId}),and(sender_id.eq.${userId},recipient_id.eq.${userId})`)
-          .or(`and(sender_id.eq.${user.id},deleted_by_recipient.eq.false),and(recipient_id.eq.${user.id},deleted_by_recipient.eq.false)`)
+          .or(
+            `and(sender_id.eq.${user.id},recipient_id.eq.${userId}),` + 
+            `and(sender_id.eq.${userId},recipient_id.eq.${user.id})`
+          )
           .order("created_at", { ascending: true });
 
         if (error) {
@@ -121,8 +125,16 @@ export const useMessageQueries = () => {
           throw error;
         }
 
+        // Filter out messages deleted by recipient
+        const filteredMessages = messagesData?.filter(msg => {
+          if (msg.recipient_id === user.id) {
+            return !msg.deleted_by_recipient;
+          }
+          return true;
+        }) || [];
+
         const messagesWithProfiles = await Promise.all(
-          (messagesData || []).map(async (message) => {
+          filteredMessages.map(async (message) => {
             const { data: senderProfile } = await supabase
               .from("profiles")
               .select("username, avatar_url")
@@ -150,7 +162,8 @@ export const useMessageQueries = () => {
           })
         );
 
-        return messagesWithProfiles || [];
+        console.log("Messages loaded:", messagesWithProfiles.length);
+        return messagesWithProfiles;
       },
       enabled: !!user && !!userId,
     });
