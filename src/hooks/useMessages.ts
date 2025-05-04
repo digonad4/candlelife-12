@@ -9,7 +9,7 @@ export type { Message, ChatUser };
 export const useMessages = () => {
   // Initialize all the hooks
   const { getChatUsers, getConversation, getTotalUnreadCount } = useMessageQueries();
-  const { sendMessage, clearConversation, deleteMessage } = useMessageMutations();
+  const { sendMessage, clearConversation, deleteMessage, editMessage } = useMessageMutations();
   useMessageRealtime();
 
   // Get data from queries
@@ -22,6 +22,7 @@ export const useMessages = () => {
     getConversation,
     sendMessage,
     clearConversation,
-    deleteMessage
+    deleteMessage,
+    editMessage
   };
 };

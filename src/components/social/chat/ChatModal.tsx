@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Send, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
-import { useMessages, Message } from "@/hooks/useMessages";
+import { useMessages } from "@/hooks/useMessages";
 import { useToast } from "@/hooks/use-toast";
 import { 
   AlertDialog,
@@ -42,7 +42,7 @@ export const ChatModal = ({
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { getConversation, sendMessage, clearConversation, deleteMessage } = useMessages();
+  const { getConversation, sendMessage, clearConversation, deleteMessage, editMessage } = useMessages();
   
   const { data: messages = [], isLoading, isError, refetch } = getConversation(recipientId);
 
@@ -113,6 +113,17 @@ export const ChatModal = ({
     });
   };
 
+  const handleEditMessage = (messageId: string, newContent: string) => {
+    editMessage.mutate(
+      { messageId, content: newContent },
+      {
+        onSuccess: () => {
+          refetch();
+        }
+      }
+    );
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -130,6 +141,7 @@ export const ChatModal = ({
             isError={isError}
             currentUserId={user?.id}
             onDeleteMessage={handleDeleteMessage}
+            onEditMessage={handleEditMessage}
           />
           
           <ChatMessageInput
