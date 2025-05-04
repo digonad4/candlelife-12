@@ -1,13 +1,13 @@
 
 import React from "react";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
 
 interface ChatMessageInputProps {
   message: string;
-  onMessageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onMessageChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onSendMessage: () => void;
   isSubmitting: boolean;
 }
@@ -21,17 +21,18 @@ export const ChatMessageInput = ({
 }: ChatMessageInputProps) => {
   return (
     <div className="p-4 border-t mt-auto">
-      <div className="flex gap-2">
-        <Input
+      <div className="flex items-end gap-2">
+        <Textarea
           placeholder="Digite sua mensagem..."
           value={message}
           onChange={onMessageChange}
           onKeyDown={onKeyDown}
-          className="flex-1"
+          className="min-h-[60px] resize-none"
         />
         <Button 
           onClick={onSendMessage} 
           disabled={isSubmitting || !message.trim()}
+          size="icon"
         >
           {isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
