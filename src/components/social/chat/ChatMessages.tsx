@@ -2,10 +2,10 @@
 import React, { useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import { MessageItem } from "./MessageItem";
 import { Message } from "@/hooks/messages/types";
 import { ChatPagination } from "./ChatPagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MessageGroup } from "./MessageGroup";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -37,42 +37,19 @@ export const ChatMessages = ({
   const [shouldScrollToBottom, setShouldScrollToBottom] = React.useState(true);
 
   useEffect(() => {
-    // Only auto-scroll if we're not loading more (pagination)
+    // Apenas rola automaticamente se não estamos carregando mais mensagens (paginação)
     if (shouldScrollToBottom && !isLoadingMore) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       setShouldScrollToBottom(false);
     }
   }, [messages, isLoadingMore, shouldScrollToBottom]);
 
-  // Reset scroll flag when new messages come in that aren't from pagination
+  // Reseta a flag de rolagem quando novas mensagens entram que não são da paginação
   useEffect(() => {
     if (!isLoadingMore) {
       setShouldScrollToBottom(true);
     }
   }, [messages.length, isLoadingMore]);
-
-  // Função para agrupar mensagens consecutivas do mesmo remetente
-  const groupMessages = (messages: Message[]): {
-    message: Message;
-    isFirstInGroup: boolean;
-    isLastInGroup: boolean;
-  }[] => {
-    return messages.map((message, index) => {
-      const prevMessage = index > 0 ? messages[index - 1] : null;
-      const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
-      
-      const isFirstInGroup = !prevMessage || prevMessage.sender_id !== message.sender_id;
-      const isLastInGroup = !nextMessage || nextMessage.sender_id !== message.sender_id;
-      
-      return {
-        message,
-        isFirstInGroup,
-        isLastInGroup
-      };
-    });
-  };
-
-  const groupedMessages = groupMessages(messages);
 
   const renderLoadingSkeletons = () => {
     return Array(3).fill(0).map((_, index) => (
@@ -117,17 +94,13 @@ export const ChatMessages = ({
             </div>
           )}
           
-          {groupedMessages.map(({ message, isFirstInGroup, isLastInGroup }) => (
-            <MessageItem
-              key={message.id}
-              message={message}
-              currentUserId={currentUserId}
-              onDeleteMessage={onDeleteMessage}
-              onEditMessage={onEditMessage}
-              isFirstInGroup={isFirstInGroup}
-              isLastInGroup={isLastInGroup}
-            />
-          ))}
+          <MessageGroup
+            messages={messages}
+            currentUserId={currentUserId}
+            onDeleteMessage={onDeleteMessage}
+            onEditMessage={onEditMessage}
+          />
+
           <div ref={messagesEndRef} />
         </>
       ) : (

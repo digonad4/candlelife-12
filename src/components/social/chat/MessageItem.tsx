@@ -58,7 +58,7 @@ export const MessageItem = ({
         {!isSentByMe && isFirstInGroup && (
           <Avatar className="h-8 w-8 shrink-0 mt-1">
             {message.sender_profile?.avatar_url ? (
-              <AvatarImage src={message.sender_profile.avatar_url} />
+              <AvatarImage src={message.sender_profile.avatar_url} alt={message.sender_profile.username} />
             ) : (
               <AvatarFallback>
                 {message.sender_profile?.username && message.sender_profile.username.length > 0
@@ -89,6 +89,7 @@ export const MessageItem = ({
                   onChange={(e) => setEditedContent(e.target.value)}
                   className="min-h-[60px] text-sm p-2 border-muted-foreground/20"
                   placeholder="Digite sua mensagem..."
+                  autoFocus
                 />
                 <div className="flex justify-end gap-2">
                   <Button
@@ -148,4 +149,4 @@ export const MessageItem = ({
       </div>
     </div>
   );
-}
+};

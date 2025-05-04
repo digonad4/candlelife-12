@@ -43,9 +43,11 @@ export const ChatModal = ({
     refetch 
   } = getConversation(recipientId, currentPage, pageSize);
   
-  const { messages, totalCount, hasMore } = conversationData;
+  // Extrair as mensagens dos dados da conversa
+  const messages = conversationData.messages || [];
+  const { totalCount, hasMore } = conversationData;
 
-  // Initialize chat and refetch messages when opened
+  // Inicializar chat e buscar mensagens quando aberto
   useEffect(() => {
     if (isOpen) {
       setCurrentPage(1);

@@ -19,7 +19,7 @@ export const useSendMessage = () => {
         .insert({
           sender_id: user.id,
           recipient_id: recipientId,
-          content,
+          content: content.trim(),
           read: false,
           deleted_by_recipient: false
         })
