@@ -45,7 +45,10 @@ export const ChatModal = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { getConversation, sendMessage, clearConversation, deleteMessage } = useMessages();
   
-  const { data: messages = [], isLoading, refetch } = getConversation(recipientId);
+  const { data: conversationData = { messages: [], totalCount: 0, hasMore: false }, isLoading, refetch } = getConversation(recipientId);
+
+  // Extract messages from the conversationData
+  const messages = conversationData.messages || [];
 
   useEffect(() => {
     scrollToBottom();
