@@ -95,11 +95,11 @@ export const useMessageQueries = () => {
     });
   };
 
-  const getConversation = (userId: string) => {
+  const getConversation = (userId: string, page = 1, pageSize = 20) => {
     return useQuery({
-      queryKey: ["chat", userId],
+      queryKey: ["chat", userId, page, pageSize],
       queryFn: async () => {
-        if (!user || !userId) return [];
+        if (!user || !userId) return { messages: [], totalCount: 0, hasMore: false };
 
         // Mark messages as read
         await supabase
@@ -110,7 +110,26 @@ export const useMessageQueries = () => {
 
         queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
 
-        // Fix the query to properly filter messages between the two users
+        // Get total count first
+        const { count: totalCount, error: countError } = await supabase
+          .from("messages")
+          .select("*", { count: "exact", head: true })
+          .or(
+            `and(sender_id.eq.${user.id},recipient_id.eq.${userId}),` + 
+            `and(sender_id.eq.${userId},recipient_id.eq.${user.id})`
+          )
+          .eq("deleted_by_recipient", false);
+
+        if (countError) {
+          console.error("Error counting messages:", countError);
+          throw countError;
+        }
+
+        // Calculate offset based on page and pageSize
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+
+        // Fetch paginated messages
         const { data: messagesData, error } = await supabase
           .from("messages")
           .select("*")
@@ -118,20 +137,25 @@ export const useMessageQueries = () => {
             `and(sender_id.eq.${user.id},recipient_id.eq.${userId}),` + 
             `and(sender_id.eq.${userId},recipient_id.eq.${user.id})`
           )
-          .order("created_at", { ascending: true });
+          .eq("deleted_by_recipient", false)
+          .order("created_at", { ascending: false })
+          .range(from, to);
 
         if (error) {
           console.error("Erro ao buscar mensagens da conversa:", error);
           throw error;
         }
 
-        // Filter out messages deleted by recipient
+        // Filter out messages deleted by recipient and sort chronologically for display
         const filteredMessages = messagesData?.filter(msg => {
           if (msg.recipient_id === user.id) {
             return !msg.deleted_by_recipient;
           }
           return true;
         }) || [];
+
+        // We fetch in descending order for pagination but display in ascending
+        filteredMessages.reverse();
 
         const messagesWithProfiles = await Promise.all(
           filteredMessages.map(async (message) => {
@@ -162,8 +186,14 @@ export const useMessageQueries = () => {
           })
         );
 
-        console.log("Messages loaded:", messagesWithProfiles.length);
-        return messagesWithProfiles;
+        const hasMore = from + messagesWithProfiles.length < (totalCount || 0);
+
+        console.log(`Messages loaded: ${messagesWithProfiles.length}, Page: ${page}, Total: ${totalCount}`);
+        return { 
+          messages: messagesWithProfiles,
+          totalCount: totalCount || 0,
+          hasMore
+        };
       },
       enabled: !!user && !!userId,
     });

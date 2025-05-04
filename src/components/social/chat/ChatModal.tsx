@@ -30,13 +30,25 @@ export const ChatModal = ({
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const pageSize = 20;
+  
   const { getConversation, sendMessage, clearConversation, deleteMessage, editMessage } = useMessages();
   
-  const { data: messages = [], isLoading, isError, refetch } = getConversation(recipientId);
+  const { 
+    data: conversationData = { messages: [], totalCount: 0, hasMore: false }, 
+    isLoading, 
+    isError, 
+    refetch 
+  } = getConversation(recipientId, currentPage, pageSize);
+  
+  const { messages, totalCount, hasMore } = conversationData;
 
   // Initialize chat and refetch messages when opened
   useEffect(() => {
     if (isOpen) {
+      setCurrentPage(1);
       refetch();
     }
   }, [isOpen, refetch]);
@@ -73,6 +85,7 @@ export const ChatModal = ({
     clearConversation.mutate(recipientId, {
       onSuccess: () => {
         setIsDeleteDialogOpen(false);
+        setCurrentPage(1);
         refetch();
         toast({
           title: "Conversa limpa",
@@ -112,6 +125,15 @@ export const ChatModal = ({
     );
   };
 
+  const handleLoadMoreMessages = async () => {
+    if (hasMore && !isFetchingMore) {
+      setIsFetchingMore(true);
+      setCurrentPage(prev => prev + 1);
+      await refetch();
+      setIsFetchingMore(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -126,10 +148,14 @@ export const ChatModal = ({
           <ChatMessages
             messages={messages}
             isLoading={isLoading}
+            isLoadingMore={isFetchingMore}
             isError={isError}
             currentUserId={user?.id}
             onDeleteMessage={handleDeleteMessage}
             onEditMessage={handleEditMessage}
+            onLoadMore={handleLoadMoreMessages}
+            hasMore={hasMore}
+            totalCount={totalCount}
           />
           
           <ChatMessageInput

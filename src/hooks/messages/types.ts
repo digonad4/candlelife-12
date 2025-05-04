@@ -28,6 +28,12 @@ export type ChatUser = {
   last_message_time?: string;
 };
 
+export type PaginatedMessages = {
+  messages: Message[];
+  totalCount: number;
+  hasMore: boolean;
+};
+
 export const useMessagesContext = () => {
   const { user } = useAuth();
   return { user };

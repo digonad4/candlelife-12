@@ -2,9 +2,9 @@
 import { useMessageQueries } from "./messages/useMessageQueries";
 import { useMessageMutations } from "./messages/useMessageMutations";
 import { useMessageRealtime } from "./messages/useMessageRealtime";
-import { ChatUser, Message } from "./messages/types";
+import { ChatUser, Message, PaginatedMessages } from "./messages/types";
 
-export type { Message, ChatUser };
+export type { Message, ChatUser, PaginatedMessages };
 
 export const useMessages = () => {
   // Initialize all the hooks
