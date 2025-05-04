@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePosts, Post } from "@/hooks/usePosts";
-import { ChatModal } from "@/components/social/ChatModal";
+import { ChatModal } from "@/components/social/chat/ChatModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SocialHeader } from "@/components/social/SocialHeader";
 import { FeedContent } from "@/components/social/FeedContent";

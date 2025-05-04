@@ -4,7 +4,7 @@ import { AppSidebar } from "../AppSidebar";
 import { useSidebar } from "@/hooks/useSidebar";
 import { Toaster } from "../ui/toaster";
 import { useState } from "react";
-import { ChatModal } from "../social/ChatModal";
+import { ChatModal } from "../social/chat/ChatModal";
 import { Menu } from "lucide-react";
 import { Button } from "../ui/button";
 
