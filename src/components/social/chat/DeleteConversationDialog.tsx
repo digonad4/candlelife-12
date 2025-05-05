@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Loader2 } from "lucide-react";
 
 interface DeleteConversationDialogProps {
   isOpen: boolean;
@@ -37,7 +38,9 @@ export const DeleteConversationDialog = ({
           <AlertDialogAction 
             onClick={onConfirm}
             disabled={isPending}
+            className="gap-2"
           >
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             {isPending ? "Limpando..." : "Limpar conversa"}
           </AlertDialogAction>
         </AlertDialogFooter>
