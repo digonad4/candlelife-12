@@ -1,18 +1,18 @@
 
-import React, { useState, useRef } from "react";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useRef, useEffect } from "react";
+import { Send, Paperclip, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2, Paperclip, X, Image } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ChatMessageInputProps {
   message: string;
   onMessageChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
   onSendMessage: () => void;
-  onAttachmentChange: (file: File | null) => void;
-  attachment: File | null;
   isSubmitting: boolean;
   onTypingStatusChange?: (isTyping: boolean) => void;
+  onAttachmentChange?: (file: File | null) => void;
+  attachment?: File | null;
 }
 
 export const ChatMessageInput = ({
@@ -20,70 +20,88 @@ export const ChatMessageInput = ({
   onMessageChange,
   onKeyDown,
   onSendMessage,
-  onAttachmentChange,
-  attachment,
   isSubmitting,
-  onTypingStatusChange
+  onTypingStatusChange,
+  onAttachmentChange,
+  attachment
 }: ChatMessageInputProps) => {
+  const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [typingTimeout, setTypingTimeout] = useState<number | null>(null);
   
-  const handleTyping = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onMessageChange(e);
+  // Handle typing indicator logic
+  useEffect(() => {
+    if (!onTypingStatusChange) return;
     
-    // Handle typing indicator
-    if (onTypingStatusChange) {
+    // Only trigger typing status when there's text
+    if (message.trim().length > 0) {
       onTypingStatusChange(true);
       
-      // Clear previous timeout
-      if (typingTimeout) {
-        window.clearTimeout(typingTimeout);
+      // Clear existing timer if any
+      if (typingTimer) {
+        clearTimeout(typingTimer);
       }
       
-      // Set new timeout to turn off typing indicator after 2 seconds of inactivity
-      const timeoutId = window.setTimeout(() => {
+      // Set new timer to stop typing indicator after 2 seconds of inactivity
+      const timer = setTimeout(() => {
         onTypingStatusChange(false);
       }, 2000);
       
-      setTypingTimeout(Number(timeoutId));
+      setTypingTimer(timer);
+    } else if (typingTimer) {
+      clearTimeout(typingTimer);
+      onTypingStatusChange(false);
     }
-  };
-  
-  const handleAttachmentClick = () => {
-    fileInputRef.current?.click();
-  };
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    onAttachmentChange(file);
     
-    // Reset the input so the same file can be selected again
-    if (e.target.value) {
-      e.target.value = '';
+    return () => {
+      if (typingTimer) {
+        clearTimeout(typingTimer);
+      }
+    };
+  }, [message, onTypingStatusChange, typingTimer]);
+  
+  // Handle file upload
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    
+    if (onAttachmentChange && file) {
+      // Check file size (limit to 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert("Arquivo muito grande. O tamanho máximo é 10MB.");
+        // Reset the input
+        e.target.value = "";
+        return;
+      }
+      
+      onAttachmentChange(file);
     }
   };
   
-  const clearAttachment = () => {
-    onAttachmentChange(null);
+  const handleRemoveAttachment = () => {
+    if (onAttachmentChange) {
+      onAttachmentChange(null);
+    }
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
   
   return (
-    <div className="p-4 border-t mt-auto">
+    <div className="p-2 border-t">
       {attachment && (
-        <div className="mb-2 p-2 border rounded-md flex items-center justify-between bg-accent/30">
-          <div className="flex items-center gap-2 truncate">
-            {attachment.type.startsWith('image/') ? (
-              <Image className="h-4 w-4" />
-            ) : (
-              <Paperclip className="h-4 w-4" />
-            )}
+        <div className="mb-2 p-2 border rounded-md bg-muted/50 flex items-center justify-between">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <Paperclip className="h-4 w-4 flex-shrink-0" />
             <span className="text-sm truncate">{attachment.name}</span>
+            <span className="text-xs text-muted-foreground">
+              ({(attachment.size / 1024).toFixed(1)} KB)
+            </span>
           </div>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-6 w-6" 
-            onClick={clearAttachment}
+            className="h-6 w-6"
+            onClick={handleRemoveAttachment}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -91,42 +109,40 @@ export const ChatMessageInput = ({
       )}
       
       <div className="flex items-end gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-9 w-9 flex-shrink-0"
+          onClick={() => fileInputRef.current?.click()}
           type="button"
-          onClick={handleAttachmentClick}
-          className="flex-shrink-0"
         >
           <Paperclip className="h-5 w-5" />
           <input
             type="file"
             ref={fileInputRef}
-            onChange={handleFileChange}
             className="hidden"
-            accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+            onChange={handleFileSelect}
+            accept="image/*,video/*,application/pdf,text/plain,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
           />
         </Button>
-
+        
         <Textarea
-          placeholder="Digite sua mensagem..."
           value={message}
-          onChange={handleTyping}
+          onChange={onMessageChange}
           onKeyDown={onKeyDown}
+          placeholder="Digite sua mensagem..."
           className="min-h-[60px] resize-none"
+          disabled={isSubmitting}
         />
         
         <Button 
-          onClick={onSendMessage} 
+          size="icon" 
+          type="button" 
+          onClick={onSendMessage}
           disabled={isSubmitting || (!message.trim() && !attachment)}
-          size="icon"
           className="flex-shrink-0"
         >
-          {isSubmitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+          <Send className="h-5 w-5" />
         </Button>
       </div>
     </div>

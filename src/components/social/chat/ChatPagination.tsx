@@ -1,8 +1,6 @@
 
-import React from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronUp } from "lucide-react";
-import { Spinner } from "@/components/ui/spinner";
+import { Loader2 } from "lucide-react";
 
 interface ChatPaginationProps {
   hasMore: boolean;
@@ -22,24 +20,24 @@ export const ChatPagination = ({
   if (!hasMore) return null;
   
   return (
-    <div className="flex justify-center my-2">
-      <Button 
-        variant="outline" 
+    <div className="flex justify-center mb-4">
+      <Button
+        variant="ghost"
         size="sm"
         onClick={onLoadMore}
-        disabled={isLoading}
-        className="flex items-center gap-1 text-xs"
+        disabled={isLoading || !hasMore}
+        className="text-xs"
       >
         {isLoading ? (
-          <Spinner className="h-3 w-3 mr-1" />
+          <>
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            Carregando...
+          </>
         ) : (
-          <ChevronUp className="h-3 w-3 mr-1" />
-        )}
-        Carregar mensagens anteriores 
-        {totalCount > 0 && (
-          <span className="text-muted-foreground ml-1">
-            ({visibleCount} de {totalCount})
-          </span>
+          <>
+            Carregar mensagens anteriores 
+            {totalCount > 0 ? ` (${visibleCount}/${totalCount})` : ""}
+          </>
         )}
       </Button>
     </div>

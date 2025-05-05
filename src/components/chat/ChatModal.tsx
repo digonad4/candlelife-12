@@ -1,28 +1,17 @@
 
-import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Send, Trash2, MoreVertical } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
-import { useMessages, Message } from "@/hooks/useMessages";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useMessages } from "@/hooks/useMessages";
+import { useToast } from "@/hooks/use-toast";
+
+// Import our components
+import { ChatHeader } from "@/components/social/chat/ChatHeader";
+import { ChatMessages } from "@/components/social/chat/ChatMessages";
+import { ChatMessageInput } from "@/components/social/chat/ChatMessageInput";
+import { DeleteConversationDialog } from "@/components/social/chat/DeleteConversationDialog";
+import { TypingIndicator } from "@/components/social/chat/TypingIndicator";
+import { useTypingIndicator } from "@/hooks/messages/useTypingIndicator";
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -40,39 +29,73 @@ export const ChatModal = ({
   recipientAvatar,
 }: ChatModalProps) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { getConversation, sendMessage, clearConversation, deleteMessage } = useMessages();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   
-  const { data: conversationData = { messages: [], totalCount: 0, hasMore: false }, isLoading, refetch } = getConversation(recipientId);
-
-  // Extract messages from the conversationData
+  const pageSize = 20;
+  
+  const { getConversation, sendMessage, clearConversation, deleteMessage, editMessage } = useMessages();
+  const { sendTypingStatus, isUserTyping } = useTypingIndicator();
+  
+  const { 
+    data: conversationData = { messages: [], totalCount: 0, hasMore: false }, 
+    isLoading, 
+    isError, 
+    refetch 
+  } = getConversation(recipientId, currentPage, pageSize, searchQuery);
+  
+  // Extrair as mensagens dos dados da conversa
   const messages = conversationData.messages || [];
+  const { totalCount, hasMore } = conversationData;
+  
+  // Check if recipient is typing
+  const recipientIsTyping = isUserTyping(recipientId);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
+  // Initialize chat and fetch messages when opened
   useEffect(() => {
     if (isOpen) {
+      setCurrentPage(1);
+      setSearchQuery("");
       refetch();
     }
   }, [isOpen, refetch]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Handle search
+  const handleSearch = (query: string) => {
+    setIsSearching(true);
+    setSearchQuery(query);
+    setCurrentPage(1);
+    
+    // Reset search state after results load
+    setTimeout(() => {
+      setIsSearching(false);
+    }, 500);
   };
 
   const handleSendMessage = () => {
-    if (!newMessage.trim() || !user) return;
+    if ((!newMessage.trim() && !attachment) || !user) return;
 
     sendMessage.mutate(
-      { recipientId, content: newMessage },
+      { recipientId, content: newMessage.trim() || " ", attachment },
       {
         onSuccess: () => {
           setNewMessage("");
+          setAttachment(null);
+          sendTypingStatus(recipientId, false);
           refetch();
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro",
+            description: `Não foi possível enviar a mensagem: ${error.message}`,
+            variant: "destructive",
+          });
         }
       }
     );
@@ -89,7 +112,12 @@ export const ChatModal = ({
     clearConversation.mutate(recipientId, {
       onSuccess: () => {
         setIsDeleteDialogOpen(false);
+        setCurrentPage(1);
         refetch();
+        toast({
+          title: "Conversa limpa",
+          description: "Todas as mensagens foram removidas."
+        });
       }
     });
   };
@@ -98,131 +126,103 @@ export const ChatModal = ({
     deleteMessage.mutate(messageId, {
       onSuccess: () => {
         refetch();
+        toast({
+          title: "Mensagem excluída",
+          description: "A mensagem foi excluída com sucesso."
+        });
       }
     });
+  };
+
+  const handleEditMessage = (messageId: string, newContent: string) => {
+    editMessage.mutate(
+      { messageId, content: newContent },
+      {
+        onSuccess: () => {
+          refetch();
+        }
+      }
+    );
+  };
+
+  const handleLoadMoreMessages = async () => {
+    if (hasMore && !isFetchingMore) {
+      setIsFetchingMore(true);
+      setCurrentPage(prev => prev + 1);
+      await refetch();
+      setIsFetchingMore(false);
+    }
+  };
+  
+  const handleTypingStatusChange = (isTyping: boolean) => {
+    sendTypingStatus(recipientId, isTyping);
+  };
+  
+  const handleAttachmentChange = (file: File | null) => {
+    setAttachment(file);
+    
+    if (file) {
+      // Show a toast with the selected file
+      toast({
+        title: "Arquivo anexado",
+        description: `${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+      });
+    }
   };
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md md:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  {recipientAvatar ? (
-                    <AvatarImage src={recipientAvatar} alt={recipientName} />
-                  ) : (
-                    <AvatarFallback>{recipientName.charAt(0).toUpperCase()}</AvatarFallback>
-                  )}
-                </Avatar>
-                <span>{recipientName}</span>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Limpar conversa
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col h-[400px]">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {isLoading ? (
-                <div className="text-center py-4">Carregando mensagens...</div>
-              ) : messages.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  Nenhuma mensagem para exibir. Envie uma mensagem para iniciar a conversa.
-                </div>
-              ) : (
-                messages.map((message: Message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.sender_id === user?.id ? "justify-end" : "justify-start"}`}
-                  >
-                    <div className="group relative">
-                      <div
-                        className={`max-w-[80%] rounded-lg p-3 ${
-                          message.sender_id === user?.id
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted"
-                        }`}
-                      >
-                        <p>{message.content}</p>
-                        <p className="text-xs opacity-70 mt-1">
-                          {new Date(message.created_at).toLocaleTimeString([], { 
-                            hour: "2-digit", 
-                            minute: "2-digit" 
-                          })}
-                        </p>
-                      </div>
-                      
-                      {message.sender_id === user?.id && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="absolute top-0 right-0 -mt-2 -mr-2 opacity-0 group-hover:opacity-100 h-6 w-6 bg-background/80"
-                          onClick={() => handleDeleteMessage(message.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-            <div className="p-2 border-t">
-              <div className="flex items-end gap-2">
-                <Textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder="Digite sua mensagem..."
-                  className="min-h-[60px] resize-none"
-                  disabled={sendMessage.isPending}
-                />
-                <Button 
-                  size="icon" 
-                  type="button" 
-                  onClick={handleSendMessage}
-                  disabled={sendMessage.isPending || !newMessage.trim()}
-                >
-                  <Send className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-          </div>
+        <DialogContent className="sm:max-w-md md:max-w-xl p-0 gap-0 h-[80vh] max-h-[600px] flex flex-col">
+          <ChatHeader 
+            recipientName={recipientName}
+            recipientAvatar={recipientAvatar}
+            onSearchClick={() => {}}
+            onClearChat={() => setIsDeleteDialogOpen(true)}
+            onSearch={handleSearch}
+            isSearching={isSearching}
+          />
+
+          <ChatMessages
+            messages={messages}
+            isLoading={isLoading}
+            isLoadingMore={isFetchingMore}
+            isError={isError}
+            currentUserId={user?.id}
+            onDeleteMessage={handleDeleteMessage}
+            onEditMessage={handleEditMessage}
+            onLoadMore={handleLoadMoreMessages}
+            hasMore={hasMore}
+            totalCount={totalCount}
+            searchQuery={searchQuery}
+          />
+          
+          {recipientIsTyping && (
+            <TypingIndicator 
+              isTyping={recipientIsTyping} 
+              username={recipientName} 
+            />
+          )}
+          
+          <ChatMessageInput
+            message={newMessage}
+            onMessageChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={handleKeyPress}
+            onSendMessage={handleSendMessage}
+            isSubmitting={sendMessage.isPending}
+            onTypingStatusChange={handleTypingStatusChange}
+            onAttachmentChange={handleAttachmentChange}
+            attachment={attachment}
+          />
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Limpar conversa</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja limpar toda esta conversa? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleClearConversation}
-              disabled={clearConversation.isPending}
-            >
-              {clearConversation.isPending ? "Limpando..." : "Limpar conversa"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConversationDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleClearConversation}
+        isPending={clearConversation.isPending}
+      />
     </>
   );
 };
