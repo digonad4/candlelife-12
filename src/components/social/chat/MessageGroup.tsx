@@ -1,19 +1,22 @@
 
 import { Message } from "@/hooks/messages/types";
 import { MessageItem } from "./MessageItem";
+import { ReactNode } from "react";
 
 interface MessageGroupProps {
   messages: Message[];
   currentUserId?: string;
   onDeleteMessage: (messageId: string) => void;
   onEditMessage: (messageId: string, newContent: string) => void;
+  highlightSearchText?: (text: string) => ReactNode;
 }
 
 export const MessageGroup = ({
   messages,
   currentUserId,
   onDeleteMessage,
-  onEditMessage
+  onEditMessage,
+  highlightSearchText
 }: MessageGroupProps) => {
   // Função para agrupar mensagens consecutivas do mesmo remetente
   const groupMessages = (messages: Message[]): {
@@ -43,7 +46,12 @@ export const MessageGroup = ({
       {groupedMessages.map(({ message, isFirstInGroup, isLastInGroup }) => (
         <MessageItem
           key={message.id}
-          message={message}
+          message={{
+            ...message,
+            content: highlightSearchText ? 
+              highlightSearchText(message.content) as unknown as string : 
+              message.content
+          }}
           currentUserId={currentUserId}
           onDeleteMessage={onDeleteMessage}
           onEditMessage={onEditMessage}

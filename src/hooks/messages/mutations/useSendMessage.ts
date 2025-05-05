@@ -10,10 +10,51 @@ export const useSendMessage = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ recipientId, content }: { recipientId: string; content: string }) => {
+    mutationFn: async ({ 
+      recipientId, 
+      content, 
+      attachment 
+    }: { 
+      recipientId: string; 
+      content: string;
+      attachment?: File | null;
+    }) => {
       if (!user) throw new Error("Usuário não autenticado");
       if (recipientId === user.id) throw new Error("Você não pode enviar mensagens para si mesmo");
 
+      // Handle file upload if there's an attachment
+      let attachmentUrl = null;
+      let attachmentType = null;
+      let attachmentName = null;
+
+      if (attachment) {
+        const fileExt = attachment.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+        const filePath = `message-attachments/${user.id}/${fileName}`;
+        
+        // Upload to storage
+        const { error: uploadError, data: uploadData } = await supabase
+          .storage
+          .from('message-attachments')
+          .upload(filePath, attachment);
+
+        if (uploadError) {
+          console.error("Erro ao fazer upload do arquivo:", uploadError);
+          throw uploadError;
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('message-attachments')
+          .getPublicUrl(filePath);
+          
+        attachmentUrl = publicUrl;
+        attachmentType = attachment.type;
+        attachmentName = attachment.name;
+      }
+
+      // Insert message with attachment info if present
       const { data, error } = await supabase
         .from("messages")
         .insert({
@@ -21,7 +62,10 @@ export const useSendMessage = () => {
           recipient_id: recipientId,
           content: content.trim(),
           read: false,
-          deleted_by_recipient: false
+          deleted_by_recipient: false,
+          attachment_url: attachmentUrl,
+          attachment_type: attachmentType,
+          attachment_name: attachmentName
         })
         .select()
         .single();

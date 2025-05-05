@@ -6,6 +6,7 @@ import { Message } from "@/hooks/messages/types";
 import { ChatPagination } from "./ChatPagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageGroup } from "./MessageGroup";
+import { Badge } from "@/components/ui/badge";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -18,6 +19,7 @@ interface ChatMessagesProps {
   onLoadMore: () => void;
   hasMore: boolean;
   totalCount: number;
+  searchQuery?: string;
 }
 
 export const ChatMessages = ({
@@ -30,26 +32,43 @@ export const ChatMessages = ({
   onEditMessage,
   onLoadMore,
   hasMore,
-  totalCount
+  totalCount,
+  searchQuery
 }: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = React.useState(true);
 
   useEffect(() => {
-    // Apenas rola automaticamente se não estamos carregando mais mensagens (paginação)
-    if (shouldScrollToBottom && !isLoadingMore) {
+    // Only auto-scroll if not paginating or searching
+    if (shouldScrollToBottom && !isLoadingMore && !searchQuery) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       setShouldScrollToBottom(false);
     }
-  }, [messages, isLoadingMore, shouldScrollToBottom]);
+  }, [messages, isLoadingMore, shouldScrollToBottom, searchQuery]);
 
-  // Reseta a flag de rolagem quando novas mensagens entram que não são da paginação
+  // Reset scroll flag when new messages arrive that aren't from pagination
   useEffect(() => {
-    if (!isLoadingMore) {
+    if (!isLoadingMore && !searchQuery) {
       setShouldScrollToBottom(true);
     }
-  }, [messages.length, isLoadingMore]);
+  }, [messages.length, isLoadingMore, searchQuery]);
+  
+  // If search is active, highlight the results
+  const highlightSearchText = (text: string) => {
+    if (!searchQuery) return text;
+    
+    const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'));
+    return (
+      <>
+        {parts.map((part, i) => 
+          part.toLowerCase() === searchQuery.toLowerCase() ? 
+            <span key={i} className="bg-yellow-200 text-black rounded px-1">{part}</span> : 
+            part
+        )}
+      </>
+    );
+  };
 
   const renderLoadingSkeletons = () => {
     return Array(3).fill(0).map((_, index) => (
@@ -80,6 +99,14 @@ export const ChatMessages = ({
         </div>
       ) : messages && messages.length > 0 ? (
         <>
+          {searchQuery && (
+            <div className="mb-4">
+              <Badge variant="outline" className="bg-muted">
+                {messages.length === 0 ? 'Nenhum resultado' : `${messages.length} resultado${messages.length !== 1 ? 's' : ''}`} para "{searchQuery}"
+              </Badge>
+            </div>
+          )}
+          
           <ChatPagination
             hasMore={hasMore}
             isLoading={isLoadingMore}
@@ -99,13 +126,14 @@ export const ChatMessages = ({
             currentUserId={currentUserId}
             onDeleteMessage={onDeleteMessage}
             onEditMessage={onEditMessage}
+            highlightSearchText={searchQuery ? highlightSearchText : undefined}
           />
 
           <div ref={messagesEndRef} />
         </>
       ) : (
         <div className="text-center py-8 text-muted-foreground">
-          Nenhuma mensagem ainda. Diga olá!
+          {searchQuery ? 'Nenhuma mensagem corresponde à sua pesquisa.' : 'Nenhuma mensagem ainda. Diga olá!'}
         </div>
       )}
     </ScrollArea>

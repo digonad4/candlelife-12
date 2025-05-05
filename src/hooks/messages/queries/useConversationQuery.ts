@@ -8,9 +8,9 @@ export const useConversationQuery = () => {
   const { user } = useMessagesContext();
   const queryClient = useQueryClient();
 
-  const getConversation = (userId: string, page = 1, pageSize = 20) => {
+  const getConversation = (userId: string, page = 1, pageSize = 20, searchQuery = '') => {
     return useQuery({
-      queryKey: ["chat", userId, page, pageSize],
+      queryKey: ["chat", userId, page, pageSize, searchQuery],
       queryFn: async () => {
         if (!user || !userId) return { messages: [], totalCount: 0, hasMore: false };
 
@@ -23,34 +23,34 @@ export const useConversationQuery = () => {
 
         queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
 
-        // Obter contagem total primeiro
-        const { count: totalCount, error: countError } = await supabase
+        let query = supabase
           .from("messages")
-          .select("*", { count: "exact", head: true })
+          .select("*", { count: "exact" })
           .or(
             `and(sender_id.eq.${user.id},recipient_id.eq.${userId}),` + 
             `and(sender_id.eq.${userId},recipient_id.eq.${user.id})`
           )
           .eq("deleted_by_recipient", false);
+          
+        // Add search filter if provided
+        if (searchQuery) {
+          query = query.ilike('content', `%${searchQuery}%`);
+        }
+
+        // Get count first
+        const { count: totalCount, error: countError } = await query;
 
         if (countError) {
           console.error("Error counting messages:", countError);
           throw countError;
         }
 
-        // Calcular offset com base na página e tamanho da página
+        // Calculate offset for pagination
         const from = (page - 1) * pageSize;
         const to = from + pageSize - 1;
 
-        // Buscar mensagens paginadas
-        const { data: messagesData, error } = await supabase
-          .from("messages")
-          .select("*")
-          .or(
-            `and(sender_id.eq.${user.id},recipient_id.eq.${userId}),` + 
-            `and(sender_id.eq.${userId},recipient_id.eq.${user.id})`
-          )
-          .eq("deleted_by_recipient", false)
+        // Execute the same query but with pagination and ordering
+        let { data: messagesData, error } = await query
           .order("created_at", { ascending: false })
           .range(from, to);
 
@@ -59,7 +59,7 @@ export const useConversationQuery = () => {
           throw error;
         }
 
-        // Filtrar mensagens excluídas pelo destinatário e ordenar cronologicamente
+        // Filter deleted messages and reverse for chronological order
         const filteredMessages = messagesData?.filter(msg => {
           if (msg.recipient_id === user.id) {
             return !msg.deleted_by_recipient;
@@ -67,7 +67,7 @@ export const useConversationQuery = () => {
           return true;
         }) || [];
 
-        // Invertemos a ordem para exibição (buscamos em ordem decrescente para paginação)
+        // Invertemos a ordem para exibição (chronological)
         filteredMessages.reverse();
 
         const messagesWithProfiles = await Promise.all(
@@ -101,7 +101,6 @@ export const useConversationQuery = () => {
 
         const hasMore = from + messagesWithProfiles.length < (totalCount || 0);
 
-        console.log(`Messages loaded: ${messagesWithProfiles.length}, Page: ${page}, Total: ${totalCount}`);
         return { 
           messages: messagesWithProfiles,
           totalCount: totalCount || 0,
