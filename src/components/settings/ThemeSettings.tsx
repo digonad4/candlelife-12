@@ -5,7 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { 
   Moon, Sun, Palette, Zap, Ghost, Mountain, Coffee, 
   PaintBucket, Sunset, Leaf, Waves, Sparkles, Clock, 
-  Crown
+  Crown, Terminal
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useTheme } from "@/context/ThemeContext";
@@ -26,6 +26,7 @@ const themeCategories = [
       { id: "cyberpunk", name: "Cyberpunk", icon: Zap },
       { id: "dracula", name: "Dracula", icon: Ghost },
       { id: "nord", name: "Nord", icon: Mountain },
+      { id: "super-hacker", name: "Super Hacker", icon: Terminal },
     ]
   },
   {
