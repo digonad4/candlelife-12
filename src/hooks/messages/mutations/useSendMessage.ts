@@ -23,9 +23,9 @@ export const useSendMessage = () => {
       if (recipientId === user.id) throw new Error("Você não pode enviar mensagens para si mesmo");
 
       // Handle file upload if there's an attachment
-      let attachmentUrl = null;
-      let attachmentType = null;
-      let attachmentName = null;
+      let attachmentUrl: string | null = null;
+      let attachmentType: string | null = null;
+      let attachmentName: string | null = null;
 
       if (attachment) {
         const fileExt = attachment.name.split('.').pop();
