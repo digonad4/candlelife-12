@@ -59,8 +59,8 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
     }, 500);
   };
 
-  const handleSendMessage = (content: string, attachment: File | null) => {
-    if ((!content.trim() && !attachment) || !user) return;
+  const handleSendMessage = (content: string, attachment: File | null): boolean => {
+    if ((!content.trim() && !attachment) || !user) return false; // Return false instead of undefined
 
     sendMessage.mutate(
       { recipientId, content: content.trim() || " ", attachment },
