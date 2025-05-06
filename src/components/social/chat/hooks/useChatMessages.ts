@@ -78,24 +78,41 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
           onSuccess: () => {
             sendTypingStatus(recipientId, false);
             refetch();
+            return true;
           },
-          onError: (error) => {
+          onError: (error: any) => {
+            console.error("Erro ao enviar mensagem:", error);
             toast({
               title: "Erro",
-              description: `Não foi possível enviar a mensagem: ${error.message}`,
+              description: `Não foi possível enviar a mensagem: ${error.message || 'Erro desconhecido'}`,
               variant: "destructive",
             });
+            return false;
           }
         }
       );
       return true;
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
       return false;
     }
   };
 
   const handleClearConversation = () => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar autenticado para limpar conversas",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
     clearConversation.mutate(recipientId, {
       onSuccess: () => {
         setCurrentPage(1);
@@ -105,11 +122,27 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
           description: "Todas as mensagens foram removidas."
         });
         return true;
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Erro",
+          description: `Não foi possível limpar a conversa: ${error.message || 'Erro desconhecido'}`,
+          variant: "destructive",
+        });
       }
     });
   };
 
   const handleDeleteMessage = (messageId: string) => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar autenticado para excluir mensagens",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     deleteMessage.mutate(messageId, {
       onSuccess: () => {
         refetch();
@@ -117,16 +150,43 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
           title: "Mensagem excluída",
           description: "A mensagem foi excluída com sucesso."
         });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Erro",
+          description: `Não foi possível excluir a mensagem: ${error.message || 'Erro desconhecido'}`,
+          variant: "destructive",
+        });
       }
     });
   };
 
   const handleEditMessage = (messageId: string, newContent: string) => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar autenticado para editar mensagens",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     editMessage.mutate(
       { messageId, content: newContent },
       {
         onSuccess: () => {
           refetch();
+          toast({
+            title: "Mensagem editada",
+            description: "A mensagem foi editada com sucesso."
+          });
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Erro",
+            description: `Não foi possível editar a mensagem: ${error.message || 'Erro desconhecido'}`,
+            variant: "destructive",
+          });
         }
       }
     );
@@ -142,7 +202,9 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
   };
   
   const handleTypingStatusChange = (isTyping: boolean) => {
-    sendTypingStatus(recipientId, isTyping);
+    if (user) {
+      sendTypingStatus(recipientId, isTyping);
+    }
   };
 
   return {

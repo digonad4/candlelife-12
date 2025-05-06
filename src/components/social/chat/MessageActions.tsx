@@ -1,5 +1,5 @@
 
-import { MoreHorizontal, Trash, Edit } from "lucide-react";
+import { MoreHorizontal, Trash, Pencil } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,23 +16,23 @@ interface MessageActionsProps {
 
 export const MessageActions = ({ messageId, onDelete, onEdit }: MessageActionsProps) => {
   return (
-    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-6 w-6">
+          <Button variant="ghost" className="h-8 w-8 p-0">
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onEdit}>
-            <Edit className="h-4 w-4 mr-2" />
+            <Pencil className="mr-2 h-4 w-4" />
             <span>Editar</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={onDelete}
-            className="text-destructive focus:text-destructive"
+            className="text-destructive"
           >
-            <Trash className="h-4 w-4 mr-2" />
+            <Trash className="mr-2 h-4 w-4" />
             <span>Excluir</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
