@@ -33,6 +33,13 @@ export interface PaginatedMessages {
   hasMore: boolean;
 }
 
+export interface UserTypingStatus {
+  userId: string;
+  recipientId: string;
+  isTyping: boolean;
+  lastTyped: Date;
+}
+
 export interface MessagesContextValue {
   user: User | null;
 }
