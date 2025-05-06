@@ -62,24 +62,28 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
   const handleSendMessage = (content: string, attachment: File | null): boolean => {
     if ((!content.trim() && !attachment) || !user) return false;
 
-    sendMessage.mutate(
-      { recipientId, content: content.trim() || " ", attachment },
-      {
-        onSuccess: () => {
-          sendTypingStatus(recipientId, false);
-          refetch();
-        },
-        onError: (error) => {
-          toast({
-            title: "Erro",
-            description: `Não foi possível enviar a mensagem: ${error.message}`,
-            variant: "destructive",
-          });
+    try {
+      sendMessage.mutate(
+        { recipientId, content: content.trim() || " ", attachment },
+        {
+          onSuccess: () => {
+            sendTypingStatus(recipientId, false);
+            refetch();
+          },
+          onError: (error) => {
+            toast({
+              title: "Erro",
+              description: `Não foi possível enviar a mensagem: ${error.message}`,
+              variant: "destructive",
+            });
+          }
         }
-      }
-    );
-
-    return true;
+      );
+      return true;
+    } catch (error) {
+      console.error("Erro ao enviar mensagem:", error);
+      return false;
+    }
   };
 
   const handleClearConversation = () => {

@@ -1,52 +1,48 @@
 
-import { useAuth } from "@/context/AuthContext";
+import { createContext, useContext } from "react";
+import { User } from "@supabase/supabase-js";
 
-export type Message = {
+export interface Message {
   id: string;
-  content: string;
   sender_id: string;
   recipient_id: string;
-  read: boolean;
+  content: string;
   created_at: string;
+  read: boolean;
   deleted_by_recipient: boolean;
+  sender_username?: string;
+  sender_avatar_url?: string;
   attachment_url?: string | null;
   attachment_type?: string | null;
   attachment_name?: string | null;
-  sender_profile?: {
-    username: string;
-    avatar_url: string | null;
-  };
-  recipient_profile?: {
-    username: string;
-    avatar_url: string | null;
-  };
-};
+}
 
-export type ChatUser = {
+export interface ChatUser {
   id: string;
   username: string;
   avatar_url: string | null;
+  last_message: string | null;
+  last_message_time: string | null;
   unread_count: number;
-  last_message?: string;
-  last_message_time?: string;
-  is_typing?: boolean;
-};
+  is_online?: boolean;
+}
 
-export type PaginatedMessages = {
+export interface PaginatedMessages {
   messages: Message[];
   totalCount: number;
   hasMore: boolean;
-};
+}
+
+export interface MessagesContextValue {
+  user: User | null;
+}
+
+export const MessagesContext = createContext<MessagesContextValue>({ user: null });
 
 export const useMessagesContext = () => {
-  const { user } = useAuth();
-  return { user };
-};
-
-// Add new typing status context
-export type UserTypingStatus = {
-  userId: string;
-  recipientId: string; 
-  isTyping: boolean;
-  lastTyped: Date;
+  const context = useContext(MessagesContext);
+  if (!context) {
+    throw new Error("useMessagesContext must be used within a MessagesProvider");
+  }
+  return context;
 };
