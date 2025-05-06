@@ -2,10 +2,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useMessagesContext } from "../types";
+import { useAuth } from "@/context/AuthContext";
 
 export const useSendMessage = () => {
-  const { user } = useMessagesContext();
+  const { user } = useAuth(); // Usar diretamente o contexto de autenticação
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

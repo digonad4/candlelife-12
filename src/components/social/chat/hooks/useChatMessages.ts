@@ -60,7 +60,16 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
   };
 
   const handleSendMessage = (content: string, attachment: File | null): boolean => {
-    if ((!content.trim() && !attachment) || !user) return false;
+    if ((!content.trim() && !attachment) || !user) {
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar autenticado para enviar mensagens",
+          variant: "destructive",
+        });
+      }
+      return false;
+    }
 
     try {
       sendMessage.mutate(
