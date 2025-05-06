@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 
 export const useSendMessage = () => {
-  const { user } = useAuth(); // Usar diretamente o contexto de autenticação
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -24,8 +24,6 @@ export const useSendMessage = () => {
 
       // Handle file upload if there's an attachment
       let attachmentUrl: string | null = null;
-      let attachmentType: string | null = null;
-      let attachmentName: string | null = null;
 
       if (attachment) {
         const fileExt = attachment.name.split('.').pop();
@@ -50,23 +48,25 @@ export const useSendMessage = () => {
           .getPublicUrl(filePath);
           
         attachmentUrl = publicUrl;
-        attachmentType = attachment.type;
-        attachmentName = attachment.name;
       }
 
       // Insert message with attachment info if present
+      const insertData = {
+        sender_id: user.id,
+        recipient_id: recipientId,
+        content: content.trim(),
+        read: false,
+        deleted_by_recipient: false
+      };
+
+      // Only add attachment_url if there's an attachment
+      if (attachmentUrl) {
+        Object.assign(insertData, { attachment_url: attachmentUrl });
+      }
+
       const { data, error } = await supabase
         .from("messages")
-        .insert({
-          sender_id: user.id,
-          recipient_id: recipientId,
-          content: content.trim(),
-          read: false,
-          deleted_by_recipient: false,
-          attachment_url: attachmentUrl,
-          attachment_type: attachmentType,
-          attachment_name: attachmentName
-        })
+        .insert(insertData)
         .select()
         .single();
 

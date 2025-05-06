@@ -6,19 +6,18 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface MessageAttachmentProps {
   url: string;
-  type?: string | null;
-  name?: string | null;
 }
 
-export const MessageAttachment = ({ url, type, name }: MessageAttachmentProps) => {
+export const MessageAttachment = ({ url }: MessageAttachmentProps) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  // Check if attachment is an image
-  const isImage = type?.startsWith('image/');
-  // Check if attachment is a video
-  const isVideo = type?.startsWith('video/');
+  // Determine file type from URL or file extension
+  const fileExtension = url.split('.').pop()?.toLowerCase() || '';
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExtension);
+  const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(fileExtension);
+  
   // For the filename display
-  const displayName = name || url.split('/').pop() || 'Anexo';
+  const displayName = url.split('/').pop() || 'Anexo';
 
   const renderPreviewContent = () => {
     if (isImage) {
@@ -28,7 +27,7 @@ export const MessageAttachment = ({ url, type, name }: MessageAttachmentProps) =
     if (isVideo) {
       return (
         <video controls className="max-w-full max-h-[80vh]">
-          <source src={url} type={type || ''} />
+          <source src={url} />
           Seu navegador não suporta a reprodução deste vídeo.
         </video>
       );

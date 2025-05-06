@@ -13,8 +13,6 @@ export interface Message {
   sender_username?: string;
   sender_avatar_url?: string;
   attachment_url?: string | null;
-  attachment_type?: string | null;
-  attachment_name?: string | null;
 }
 
 export interface ChatUser {

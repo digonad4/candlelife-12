@@ -1,4 +1,3 @@
-
 import { Message } from "@/hooks/messages/types";
 import { MessageActions } from "./MessageActions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -119,11 +118,7 @@ export const MessageItem = ({
               {typeof message.content === 'string' ? message.content : String(message.content)}
               
               {message.attachment_url && (
-                <MessageAttachment 
-                  url={message.attachment_url} 
-                  type={message.attachment_type || undefined}
-                  name={message.attachment_name || undefined}
-                />
+                <MessageAttachment url={message.attachment_url} />
               )}
             </div>
           )}
