@@ -19,13 +19,23 @@ export const useSendMessage = () => {
       content: string;
       attachment?: File | null;
     }) => {
-      if (!user) throw new Error("Usuário não autenticado");
-      if (recipientId === user.id) throw new Error("Você não pode enviar mensagens para si mesmo");
+      console.log("useSendMessage - Starting mutation", { recipientId, content, attachment });
+      
+      if (!user) {
+        console.error("useSendMessage - User not authenticated");
+        throw new Error("Usuário não autenticado");
+      }
+      
+      if (recipientId === user.id) {
+        console.error("useSendMessage - Cannot send message to self");
+        throw new Error("Você não pode enviar mensagens para si mesmo");
+      }
 
       // Handle file upload if there's an attachment
       let attachmentUrl: string | null = null;
 
       if (attachment) {
+        console.log("useSendMessage - Uploading attachment", attachment);
         const fileExt = attachment.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
         const filePath = `message-attachments/${user.id}/${fileName}`;
@@ -37,7 +47,7 @@ export const useSendMessage = () => {
           .upload(filePath, attachment);
 
         if (uploadError) {
-          console.error("Erro ao fazer upload do arquivo:", uploadError);
+          console.error("useSendMessage - Error uploading file:", uploadError);
           throw uploadError;
         }
 
@@ -48,6 +58,7 @@ export const useSendMessage = () => {
           .getPublicUrl(filePath);
           
         attachmentUrl = publicUrl;
+        console.log("useSendMessage - Attachment uploaded, URL:", attachmentUrl);
       }
 
       // Insert message with attachment info if present
@@ -56,13 +67,11 @@ export const useSendMessage = () => {
         recipient_id: recipientId,
         content: content.trim(),
         read: false,
-        deleted_by_recipient: false
+        deleted_by_recipient: false,
+        ...(attachmentUrl && { attachment_url: attachmentUrl })
       };
 
-      // Only add attachment_url if there's an attachment
-      if (attachmentUrl) {
-        Object.assign(insertData, { attachment_url: attachmentUrl });
-      }
+      console.log("useSendMessage - Inserting message", insertData);
 
       const { data, error } = await supabase
         .from("messages")
@@ -71,17 +80,20 @@ export const useSendMessage = () => {
         .single();
 
       if (error) {
-        console.error("Erro ao enviar mensagem:", error);
+        console.error("useSendMessage - Error inserting message:", error);
         throw error;
       }
 
+      console.log("useSendMessage - Message sent successfully", data);
       return data;
     },
     onSuccess: (newMessage) => {
+      console.log("useSendMessage - onSuccess", newMessage);
       queryClient.invalidateQueries({ queryKey: ["chatUsers"] });
       queryClient.invalidateQueries({ queryKey: ["chat", newMessage.recipient_id] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("useSendMessage - onError", error);
       toast({
         title: "Erro",
         description: `Não foi possível enviar a mensagem: ${error.message}`,

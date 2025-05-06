@@ -60,22 +60,34 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
   };
 
   const handleSendMessage = (content: string, attachment: File | null): boolean => {
-    if ((!content.trim() && !attachment) || !user) {
-      if (!user) {
-        toast({
-          title: "Erro",
-          description: "Você precisa estar autenticado para enviar mensagens",
-          variant: "destructive",
-        });
-      }
+    console.log("handleSendMessage called", { content, attachment, user });
+    
+    if ((!content.trim() && !attachment)) {
+      toast({
+        title: "Erro",
+        description: "Digite uma mensagem ou anexe um arquivo para enviar",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar autenticado para enviar mensagens",
+        variant: "destructive",
+      });
       return false;
     }
 
     try {
+      console.log("Sending message...", { recipientId, content, attachment });
+      
       sendMessage.mutate(
         { recipientId, content: content.trim() || " ", attachment },
         {
           onSuccess: () => {
+            console.log("Message sent successfully");
             sendTypingStatus(recipientId, false);
             refetch();
             return true;

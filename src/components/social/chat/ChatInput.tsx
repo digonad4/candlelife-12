@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Paperclip, SendHorizonal, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatInputProps {
   onSendMessage: (content: string, attachment: File | null) => boolean;
@@ -20,6 +21,7 @@ export const ChatInput = ({
   const [isTyping, setIsTyping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
   
   // Clear typing status when component unmounts
   useEffect(() => {
@@ -59,13 +61,37 @@ export const ChatInput = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (message.trim() || attachment) {
+    if (!message.trim() && !attachment) {
+      toast({
+        title: "Erro",
+        description: "Por favor, digite uma mensagem ou anexe um arquivo para enviar.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      console.log("Tentando enviar mensagem:", message, attachment);
       const success = onSendMessage(message, attachment);
+      
       if (success) {
         setMessage("");
         setAttachment(null);
         onTypingStatusChange(false);
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível enviar a mensagem. Tente novamente.",
+          variant: "destructive",
+        });
       }
+    } catch (error) {
+      console.error("Erro ao enviar mensagem:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao enviar a mensagem.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -137,7 +163,7 @@ export const ChatInput = ({
           type="submit" 
           size="icon" 
           className="h-10 w-10"
-          disabled={isSubmitting || (!message.trim() && !attachment)}
+          disabled={isSubmitting}
         >
           <SendHorizonal className="h-5 w-5" />
         </Button>
