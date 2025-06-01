@@ -1,4 +1,3 @@
-
 import "./App.css";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
@@ -19,14 +18,31 @@ import { supabase } from "./integrations/supabase/client";
 import { Toaster } from "./components/ui/toaster";
 import AppLayout from "./components/layout/AppLayout";
 import { SidebarProvider } from "./components/ui/sidebar";
+import { useState } from "react";
+import { FloatingChatSystem } from "./components/chat/FloatingChatSystem";
+import { pushNotificationService } from "./services/PushNotificationService";
+import { notificationService } from "./services/NotificationService";
+import { useOnlineStatus } from "./hooks/useOnlineStatus";
 
 function App() {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const [showFloatingChat, setShowFloatingChat] = useState(false);
+  const isOnline = useOnlineStatus();
   
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  // Initialize notification services
+  useEffect(() => {
+    const initServices = async () => {
+      await notificationService.initialize();
+      await pushNotificationService.initialize();
+    };
+    
+    initServices();
+  }, []);
 
   // Register the current user session when they log in
   useEffect(() => {
@@ -71,6 +87,9 @@ function App() {
       };
       
       registerSession();
+      setShowFloatingChat(true); // Show floating chat when user is logged in
+    } else {
+      setShowFloatingChat(false);
     }
   }, [user]);
 
@@ -102,6 +121,12 @@ function App() {
         </Routes>
         
         {!user && <Toaster />}
+        
+        {/* Floating Chat System */}
+        <FloatingChatSystem 
+          isVisible={showFloatingChat}
+          onToggle={() => setShowFloatingChat(!showFloatingChat)}
+        />
       </div>
     </SidebarProvider>
   );

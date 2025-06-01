@@ -1,173 +1,112 @@
-
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Paperclip, SendHorizonal, X } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { Send, Loader2, X } from "lucide-react";
+import { AttachmentUpload } from './AttachmentUpload';
 
 interface ChatInputProps {
-  onSendMessage: (content: string, attachment: File | null) => boolean;
+  onSendMessage: (message: string, file?: File | null) => Promise<void>;
   onTypingStatusChange: (isTyping: boolean) => void;
   isSubmitting: boolean;
+  className?: string;
 }
 
 export const ChatInput = ({
   onSendMessage,
   onTypingStatusChange,
-  isSubmitting
+  isSubmitting,
+  className = ""
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
-  const [attachment, setAttachment] = useState<File | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { toast } = useToast();
-  
-  // Clear typing status when component unmounts
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      onTypingStatusChange(false);
-    };
-  }, [onTypingStatusChange]);
-  
-  // Handle typing status changes with debounce
-  useEffect(() => {
-    if (message.length > 0 && !isTyping) {
-      setIsTyping(true);
-      onTypingStatusChange(true);
-    }
-    
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    
-    typingTimeoutRef.current = setTimeout(() => {
-      if (message.length === 0 || isTyping) {
-        setIsTyping(false);
-        onTypingStatusChange(false);
-      }
-    }, 1000);
-    
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, [message, isTyping, onTypingStatusChange]);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!message.trim() && !attachment) {
-      toast({
-        title: "Erro",
-        description: "Por favor, digite uma mensagem ou anexe um arquivo para enviar.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      console.log("Tentando enviar mensagem:", message, attachment);
-      const success = onSendMessage(message, attachment);
-      
-      if (success) {
-        setMessage("");
-        setAttachment(null);
+  const typingTimeout = useRef<NodeJS.Timeout>();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+
+    // Typing indicator logic
+    if (value.trim()) {
+      onTypingStatusChange(true);
+      clearTimeout(typingTimeout.current);
+      typingTimeout.current = setTimeout(() => {
         onTypingStatusChange(false);
-      } else {
-        toast({
-          title: "Erro",
-          description: "Não foi possível enviar a mensagem. Tente novamente.",
-          variant: "destructive",
-        });
+      }, 3000);
+    } else {
+      onTypingStatusChange(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if ((!message.trim() && !attachedFile) || isSubmitting) return;
+
+    try {
+      if (attachedFile) {
+        setIsUploading(true);
+        // Handle file upload here
+        console.log('Uploading file:', attachedFile);
       }
+      
+      await onSendMessage(message.trim(), attachedFile);
+      setMessage("");
+      setAttachedFile(null);
     } catch (error) {
-      console.error("Erro ao enviar mensagem:", error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao enviar a mensagem.",
-        variant: "destructive",
-      });
+      console.error('Error sending message:', error);
+    } finally {
+      setIsUploading(false);
     }
   };
-  
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Send message on Enter (without Shift)
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
+
+  const handleFileSelect = (file: File) => {
+    setAttachedFile(file);
   };
-  
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setAttachment(file);
-  };
-  
-  const clearAttachment = () => {
-    setAttachment(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+
+  const removeAttachment = () => {
+    setAttachedFile(null);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t p-4">
-      {attachment && (
-        <div className="mb-2 p-2 bg-muted rounded-md flex items-center justify-between">
-          <span className="text-sm truncate">{attachment.name}</span>
-          <Button 
-            type="button" 
-            variant="ghost"
-            size="icon"
-            onClick={clearAttachment}
-          >
+    <div className={`border-t bg-background p-4 ${className}`}>
+      {attachedFile && (
+        <div className="mb-2 p-2 bg-muted rounded flex items-center justify-between">
+          <span className="text-sm truncate">{attachedFile.name}</span>
+          <Button variant="ghost" size="sm" onClick={removeAttachment}>
             <X className="h-4 w-4" />
           </Button>
         </div>
       )}
       
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Paperclip className="h-5 w-5" />
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            className="hidden"
-            accept="image/*,video/*,application/pdf"
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <div className="flex-1 flex items-center gap-2">
+          <AttachmentUpload 
+            onFileSelect={handleFileSelect}
+            isUploading={isUploading}
           />
-        </Button>
-        
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Digite sua mensagem..."
-          className="min-h-10 resize-none"
-          rows={1}
-          disabled={isSubmitting}
-        />
+          
+          <Input
+            value={message}
+            onChange={handleInputChange}
+            placeholder="Digite sua mensagem..."
+            disabled={isSubmitting || isUploading}
+            className="flex-1"
+          />
+        </div>
         
         <Button 
           type="submit" 
-          size="icon" 
-          className="h-10 w-10"
-          disabled={isSubmitting}
+          disabled={(!message.trim() && !attachedFile) || isSubmitting || isUploading}
+          size="icon"
         >
-          <SendHorizonal className="h-5 w-5" />
+          {isSubmitting || isUploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
         </Button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 };
