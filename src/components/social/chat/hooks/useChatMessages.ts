@@ -59,7 +59,7 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
     }, 500);
   };
 
-  const handleSendMessage = (content: string, attachment: File | null): boolean => {
+  const handleSendMessage = async (content: string, attachment?: File | null): Promise<void> => {
     console.log("handleSendMessage called", { content, attachment, user });
     
     if ((!content.trim() && !attachment)) {
@@ -68,7 +68,7 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
         description: "Digite uma mensagem ou anexe um arquivo para enviar",
         variant: "destructive",
       });
-      return false;
+      return;
     }
     
     if (!user) {
@@ -77,33 +77,34 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
         description: "Você precisa estar autenticado para enviar mensagens",
         variant: "destructive",
       });
-      return false;
+      return;
     }
 
     try {
       console.log("Sending message...", { recipientId, content, attachment });
       
-      sendMessage.mutate(
-        { recipientId, content: content.trim() || " ", attachment },
-        {
-          onSuccess: () => {
-            console.log("Message sent successfully");
-            sendTypingStatus(recipientId, false);
-            refetch();
-            return true;
-          },
-          onError: (error: any) => {
-            console.error("Erro ao enviar mensagem:", error);
-            toast({
-              title: "Erro",
-              description: `Não foi possível enviar a mensagem: ${error.message || 'Erro desconhecido'}`,
-              variant: "destructive",
-            });
-            return false;
+      await new Promise<void>((resolve, reject) => {
+        sendMessage.mutate(
+          { recipientId, content: content.trim() || " ", attachment: attachment || undefined },
+          {
+            onSuccess: () => {
+              console.log("Message sent successfully");
+              sendTypingStatus(recipientId, false);
+              refetch();
+              resolve();
+            },
+            onError: (error: any) => {
+              console.error("Erro ao enviar mensagem:", error);
+              toast({
+                title: "Erro",
+                description: `Não foi possível enviar a mensagem: ${error.message || 'Erro desconhecido'}`,
+                variant: "destructive",
+              });
+              reject(error);
+            }
           }
-        }
-      );
-      return true;
+        );
+      });
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
       toast({
@@ -111,7 +112,6 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
         description: "Não foi possível enviar a mensagem. Tente novamente mais tarde.",
         variant: "destructive",
       });
-      return false;
     }
   };
 

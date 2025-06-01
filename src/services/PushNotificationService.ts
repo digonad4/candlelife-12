@@ -69,13 +69,16 @@ class PushNotificationService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // For now, we'll store the token in user_sessions table as device_info
+      // Later, a proper user_push_tokens table should be created via SQL migration
+      const deviceInfo = `FCM_TOKEN:${token}:${Capacitor.getPlatform()}`;
+      
       await supabase
-        .from('user_push_tokens')
+        .from('user_sessions')
         .upsert({
           user_id: user.id,
-          fcm_token: token,
-          platform: Capacitor.getPlatform(),
-          updated_at: new Date().toISOString()
+          device_info: deviceInfo,
+          last_active: new Date().toISOString()
         });
     } catch (error) {
       console.error('Error saving FCM token:', error);
@@ -93,19 +96,7 @@ class PushNotificationService {
               id: Date.now(),
               extra: data,
               sound: 'default',
-              smallIcon: 'ic_launcher_foreground',
-              actionTypeId: 'OPEN_CHAT',
-              actions: [
-                {
-                  id: 'reply',
-                  title: 'Responder',
-                  input: true
-                },
-                {
-                  id: 'view',
-                  title: 'Ver'
-                }
-              ]
+              smallIcon: 'ic_launcher_foreground'
             }
           ]
         });

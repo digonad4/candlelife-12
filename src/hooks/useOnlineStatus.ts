@@ -25,11 +25,12 @@ export function useOnlineStatus() {
 
     const updateOnlineStatus = async () => {
       try {
+        // For now, we'll just update the updated_at timestamp to track activity
+        // The is_online field would need to be added to the profiles table via SQL migration
         await supabase
           .from('profiles')
           .update({ 
-            is_online: isOnline,
-            last_seen: new Date().toISOString()
+            updated_at: new Date().toISOString()
           })
           .eq('id', user.id);
       } catch (error) {

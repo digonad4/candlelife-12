@@ -20,7 +20,7 @@ interface ChatContentProps {
   onDeleteMessage: (messageId: string) => void;
   onEditMessage: (messageId: string, newContent: string) => void;
   onLoadMore: () => void;
-  onSendMessage: (content: string, attachment: File | null) => boolean;
+  onSendMessage: (content: string, attachment?: File | null) => Promise<void>;
   onTypingStatusChange: (isTyping: boolean) => void;
 }
 
@@ -43,6 +43,10 @@ export const ChatContent = ({
 }: ChatContentProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const handleSendMessage = async (message: string, file?: File | null) => {
+    await onSendMessage(message, file);
+  };
 
   return (
     <>
@@ -68,7 +72,7 @@ export const ChatContent = ({
       )}
       
       <ChatInput
-        onSendMessage={onSendMessage}
+        onSendMessage={handleSendMessage}
         onTypingStatusChange={onTypingStatusChange}
         isSubmitting={isSubmitting}
       />
