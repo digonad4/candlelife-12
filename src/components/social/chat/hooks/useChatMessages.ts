@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMessages } from "@/hooks/useMessages"; 
 import { useAuth } from "@/context/AuthContext";
@@ -41,11 +40,12 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
   // Initialize chat and fetch messages when opened
   useEffect(() => {
     if (isOpen) {
+      console.log("Chat opened for recipient:", recipientId);
       setCurrentPage(1);
       setSearchQuery("");
       refetch();
     }
-  }, [isOpen, refetch]);
+  }, [isOpen, refetch, recipientId]);
 
   // Handle search
   const handleSearch = (query: string) => {
@@ -60,7 +60,7 @@ export const useChatMessages = ({ recipientId, isOpen }: UseChatMessagesProps) =
   };
 
   const handleSendMessage = async (content: string, attachment?: File | null): Promise<void> => {
-    console.log("handleSendMessage called", { content, attachment, user });
+    console.log("handleSendMessage called", { content, attachment, user: user?.id, recipientId });
     
     if ((!content.trim() && !attachment)) {
       toast({

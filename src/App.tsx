@@ -1,135 +1,58 @@
-import "./App.css";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./context/AuthContext";
-import { useTheme } from "./context/ThemeContext";
-import Settings from "./pages/Settings";
+
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { MessagesProvider } from "./context/MessagesContext";
+import { ThemeProvider } from "./context/ThemeContext";
+import AppLayout from "./components/layout/AppLayout";
+import Index from "./pages/Index";
 import Login from "./pages/Login";
-import ChangePassword from "./pages/ChangePassword";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
-import NotFound from "./pages/NotFound";
-import Clients from "./pages/Clients";
 import InvoicedTransactions from "./pages/InvoicedTransactions";
 import Expenses from "./pages/Expenses";
+import Clients from "./pages/Clients";
+import Settings from "./pages/Settings";
+import ChangePassword from "./pages/ChangePassword";
 import Social from "./pages/Social";
-import { useEffect } from "react";
-import Index from "./pages/Index";
-import { supabase } from "./integrations/supabase/client";
-import { Toaster } from "./components/ui/toaster";
-import AppLayout from "./components/layout/AppLayout";
-import { SidebarProvider } from "./components/ui/sidebar";
-import { useState } from "react";
-import { FloatingChatSystem } from "./components/chat/FloatingChatSystem";
-import { pushNotificationService } from "./services/PushNotificationService";
-import { notificationService } from "./services/NotificationService";
-import { useOnlineStatus } from "./hooks/useOnlineStatus";
+import NotFound from "./pages/NotFound";
 
-function App() {
-  const { user } = useAuth();
-  const { theme } = useTheme();
-  const [showFloatingChat, setShowFloatingChat] = useState(false);
-  const isOnline = useOnlineStatus();
-  
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+const queryClient = new QueryClient();
 
-  // Initialize notification services
-  useEffect(() => {
-    const initServices = async () => {
-      await notificationService.initialize();
-      await pushNotificationService.initialize();
-    };
-    
-    initServices();
-  }, []);
-
-  // Register the current user session when they log in
-  useEffect(() => {
-    if (user) {
-      const registerSession = async () => {
-        try {
-          // Get device information
-          const userAgent = navigator.userAgent;
-          let deviceInfo = "Unknown device";
-          
-          if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
-            deviceInfo = "Mobile device";
-          } else {
-            deviceInfo = "Computer";
-          }
-          
-          // Check if a session already exists with this device
-          const { data: existingSessions } = await supabase
-            .from("user_sessions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("device_info", deviceInfo);
-            
-          // If it doesn't exist, create a new one
-          if (!existingSessions || existingSessions.length === 0) {
-            await supabase
-              .from("user_sessions")
-              .insert({
-                user_id: user.id,
-                device_info: deviceInfo,
-              });
-          } else {
-            // If it exists, update the timestamp
-            await supabase
-              .from("user_sessions")
-              .update({ last_active: new Date().toISOString() })
-              .eq("id", existingSessions[0].id);
-          }
-        } catch (error) {
-          console.error("Error registering session:", error);
-        }
-      };
-      
-      registerSession();
-      setShowFloatingChat(true); // Show floating chat when user is logged in
-    } else {
-      setShowFloatingChat(false);
-    }
-  }, [user]);
-
-  // Component to handle redirects based on authentication
-  const AuthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
-    return user ? <>{children}</> : <Navigate to="/login" replace />;
-  };
-
-  return (
-    <SidebarProvider defaultOpen={false}>
-      <div className="min-h-screen flex w-full bg-background">
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-          <Route path="/change-password" element={<ChangePassword />} />
-          
-          {/* Authenticated routes using the new AppLayout */}
-          <Route element={<AuthenticatedRoute><AppLayout /></AuthenticatedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/invoiced" element={<InvoicedTransactions />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/social" element={<Social />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        
-        {!user && <Toaster />}
-        
-        {/* Floating Chat System */}
-        <FloatingChatSystem 
-          isVisible={showFloatingChat}
-          onToggle={() => setShowFloatingChat(!showFloatingChat)}
-        />
-      </div>
-    </SidebarProvider>
-  );
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
+      <AuthProvider>
+        <MessagesProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/change-password" element={<ChangePassword />} />
+                <Route element={<AppLayout />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/transactions" element={<Transactions />} />
+                  <Route path="/invoiced" element={<InvoicedTransactions />} />
+                  <Route path="/expenses" element={<Expenses />} />
+                  <Route path="/clients" element={<Clients />} />
+                  <Route path="/social" element={<Social />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
+                <Route path="/404" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </MessagesProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
+);
 
 export default App;

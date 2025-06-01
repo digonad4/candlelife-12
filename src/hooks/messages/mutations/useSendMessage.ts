@@ -19,7 +19,7 @@ export const useSendMessage = () => {
       content: string;
       attachment?: File | null;
     }) => {
-      console.log("useSendMessage - Starting mutation", { recipientId, content, attachment });
+      console.log("useSendMessage - Starting mutation", { recipientId, content, attachment, user: user?.id });
       
       if (!user) {
         console.error("useSendMessage - User not authenticated");
@@ -38,7 +38,7 @@ export const useSendMessage = () => {
         console.log("useSendMessage - Uploading attachment", attachment);
         const fileExt = attachment.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-        const filePath = `message-attachments/${user.id}/${fileName}`;
+        const filePath = `${user.id}/${fileName}`;
         
         // Upload to storage
         const { error: uploadError, data: uploadData } = await supabase

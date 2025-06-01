@@ -1,6 +1,5 @@
 
-import { createContext, useContext } from "react";
-import { User } from "@supabase/supabase-js";
+import { useAuth } from "@/context/AuthContext";
 
 export interface Message {
   id: string;
@@ -9,20 +8,20 @@ export interface Message {
   content: string;
   created_at: string;
   read: boolean;
-  deleted_by_recipient: boolean;
-  sender_username?: string;
-  sender_avatar_url?: string;
-  attachment_url?: string | null;
+  deleted_by_recipient?: boolean;
+  attachment_url?: string;
 }
 
 export interface ChatUser {
   id: string;
   username: string;
-  avatar_url: string | null;
-  last_message: string | null;
-  last_message_time: string | null;
+  avatar_url?: string;
+  last_message?: {
+    content: string;
+    created_at: string;
+    sender_id: string;
+  };
   unread_count: number;
-  is_online?: boolean;
 }
 
 export interface PaginatedMessages {
@@ -31,23 +30,7 @@ export interface PaginatedMessages {
   hasMore: boolean;
 }
 
-export interface UserTypingStatus {
-  userId: string;
-  recipientId: string;
-  isTyping: boolean;
-  lastTyped: Date;
-}
-
-export interface MessagesContextValue {
-  user: User | null;
-}
-
-export const MessagesContext = createContext<MessagesContextValue>({ user: null });
-
 export const useMessagesContext = () => {
-  const context = useContext(MessagesContext);
-  if (!context) {
-    throw new Error("useMessagesContext must be used within a MessagesProvider");
-  }
-  return context;
+  const { user } = useAuth();
+  return { user };
 };
