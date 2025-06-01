@@ -8,30 +8,21 @@ import { useMemo } from 'react';
 export function useElectron() {
   // Check if running in Electron environment
   const isElectron = useMemo(() => {
-    return window.electron !== undefined;
+    return false; // Always false since we're not using Electron
   }, []);
   
-  // Get platform information (win32, darwin, linux, or web)
+  // Get platform information (always 'web' since we're not using Electron)
   const platform = useMemo(() => {
-    return window.electron?.platform || 'web';
+    return 'web';
   }, []);
   
   /**
    * Open a file dialog and return the selected file path
-   * @returns Promise with the selected file path or null
+   * @returns Promise with null since not available in web
    */
   const openFile = async () => {
-    if (!isElectron) {
-      console.log('File dialog can only be opened in Electron environment');
-      return null;
-    }
-    
-    try {
-      return await window.electron?.openFile();
-    } catch (error) {
-      console.error('Error opening file dialog:', error);
-      return null;
-    }
+    console.log('File dialog is not available in web environment');
+    return null;
   };
 
   return {

@@ -10,9 +10,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import "./index.css";
 
-// Check if running in Electron
-const isElectron = window.electron !== undefined;
-
 const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -22,7 +19,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <AuthProvider>
           <ThemeProvider>
             <SidebarProvider defaultOpen={false}>
-              <div className={`min-h-screen flex w-full ${isElectron ? 'electron-app' : ''}`}>
+              <div className="min-h-screen flex w-full">
                 <App />
                 <Toaster />
               </div>
