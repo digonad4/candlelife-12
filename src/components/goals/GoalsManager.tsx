@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { useGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { GoalCard } from "./GoalCard";
@@ -12,13 +13,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export function GoalsManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [creationProgress, setCreationProgress] = useState(0);
   
-  const { goals, createGoal, updateGoal, deleteGoal, isCreating } = useGoals();
+  const { goals, createGoal, updateGoal, deleteGoal, isCreating, isUpdating } = useGoals();
   const goalProgress = useGoalProgress(goals);
 
   const handleCreateGoal = (data: any) => {
-    createGoal(data);
-    setIsDialogOpen(false);
+    console.log("🎯 Criando nova meta:", data);
+    
+    // Simular progresso de criação
+    setCreationProgress(10);
+    
+    try {
+      createGoal(data);
+      
+      // Simular progresso
+      setTimeout(() => setCreationProgress(50), 300);
+      setTimeout(() => setCreationProgress(80), 600);
+      setTimeout(() => {
+        setCreationProgress(100);
+        setIsDialogOpen(false);
+        setCreationProgress(0);
+      }, 900);
+      
+    } catch (error) {
+      console.error("❌ Erro ao criar meta:", error);
+      setCreationProgress(0);
+    }
   };
 
   const handleEditGoal = (goal: any) => {
@@ -28,6 +49,7 @@ export function GoalsManager() {
 
   const handleUpdateGoal = (data: any) => {
     if (editingGoal) {
+      console.log("📝 Atualizando meta:", { ...data, id: editingGoal.id });
       updateGoal({ ...data, id: editingGoal.id });
       setEditingGoal(null);
       setIsDialogOpen(false);
@@ -42,8 +64,20 @@ export function GoalsManager() {
 
   const openCreateDialog = () => {
     setEditingGoal(null);
+    setCreationProgress(0);
     setIsDialogOpen(true);
   };
+
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+    setEditingGoal(null);
+    setCreationProgress(0);
+  };
+
+  // Calcular progresso geral das metas
+  const overallProgress = goals.length > 0 
+    ? goalProgress.reduce((sum, progress) => sum + Math.min(progress.percentage, 100), 0) / goals.length
+    : 0;
 
   if (goals.length === 0) {
     return (
@@ -78,10 +112,22 @@ export function GoalsManager() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Target className="h-5 w-5" />
-          Suas Metas Financeiras
-        </h2>
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Suas Metas Financeiras
+          </h2>
+          
+          {/* Barra de progresso geral */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Progresso geral das metas</span>
+              <span className="font-medium">{Math.round(overallProgress)}%</span>
+            </div>
+            <Progress value={overallProgress} className="h-2 w-64" />
+          </div>
+        </div>
+        
         <Button onClick={openCreateDialog}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Meta
@@ -99,18 +145,30 @@ export function GoalsManager() {
         ))}
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={closeDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editingGoal ? "Editar Meta" : "Criar Nova Meta"}
             </DialogTitle>
           </DialogHeader>
+          
+          {/* Progress bar for creation */}
+          {!editingGoal && creationProgress > 0 && (
+            <div className="space-y-2 mb-4">
+              <div className="flex justify-between text-sm">
+                <span>Criando meta...</span>
+                <span>{creationProgress}%</span>
+              </div>
+              <Progress value={creationProgress} className="h-2" />
+            </div>
+          )}
+          
           <GoalForm
             goal={editingGoal}
             onSubmit={editingGoal ? handleUpdateGoal : handleCreateGoal}
-            onCancel={() => setIsDialogOpen(false)}
-            isLoading={isCreating}
+            onCancel={closeDialog}
+            isLoading={isCreating || isUpdating}
           />
         </DialogContent>
       </Dialog>
