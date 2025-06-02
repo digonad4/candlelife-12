@@ -10,6 +10,9 @@ export interface Message {
   read: boolean;
   deleted_by_recipient?: boolean;
   attachment_url?: string;
+  // Campos adicionais para exibição
+  sender_username?: string;
+  sender_avatar_url?: string;
 }
 
 export interface ChatUser {
@@ -28,6 +31,13 @@ export interface PaginatedMessages {
   messages: Message[];
   totalCount: number;
   hasMore: boolean;
+}
+
+export interface UserTypingStatus {
+  userId: string;
+  recipientId: string;
+  isTyping: boolean;
+  lastTyped: Date;
 }
 
 export const useMessagesContext = () => {

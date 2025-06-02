@@ -30,7 +30,10 @@ export const useConversationQuery = (
 
       let query = supabase
         .from("messages")
-        .select("*", { count: "exact" })
+        .select(`
+          *,
+          sender_profile:profiles!messages_sender_id_fkey(username, avatar_url)
+        `, { count: "exact" })
         .or(`and(sender_id.eq.${user.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${user.id})`)
         .eq("deleted_by_recipient", false)
         .order("created_at", { ascending: false });
@@ -42,12 +45,19 @@ export const useConversationQuery = (
       const offset = (currentPage - 1) * pageSize;
       query = query.range(offset, offset + pageSize - 1);
 
-      const { data: messages, error, count } = await query;
+      const { data: messagesData, error, count } = await query;
 
       if (error) {
         console.error("useConversationQuery - Error fetching messages:", error);
         throw error;
       }
+
+      // Transformar os dados para incluir informações do remetente
+      const messages = (messagesData || []).map((msg: any) => ({
+        ...msg,
+        sender_username: msg.sender_profile?.username,
+        sender_avatar_url: msg.sender_profile?.avatar_url
+      }));
 
       console.log("useConversationQuery - Fetched messages:", {
         messagesCount: messages?.length || 0,
@@ -55,7 +65,7 @@ export const useConversationQuery = (
       });
 
       return {
-        messages: (messages || []).reverse() as Message[],
+        messages: messages.reverse() as Message[],
         totalCount: count || 0,
         hasMore: count ? count > currentPage * pageSize : false
       };

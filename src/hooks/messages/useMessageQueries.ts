@@ -4,7 +4,6 @@ import { useChatUsersQuery } from "./queries/useChatUsersQuery";
 import { ChatUser } from "./types";
 
 export const useMessageQueries = () => {
-  const { getConversation } = useConversationQuery();
   const { getChatUsers } = useChatUsersQuery();
 
   // Função para calcular o total de mensagens não lidas
@@ -15,7 +14,7 @@ export const useMessageQueries = () => {
 
   return {
     getChatUsers,
-    getConversation,
+    getConversation: useConversationQuery,
     getTotalUnreadCount
   };
 };

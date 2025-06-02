@@ -41,7 +41,7 @@ export const ChatUserItem = ({ chatUser, onClick }: ChatUserItemProps) => {
         <p className="font-medium">{chatUser.username}</p>
         {chatUser.last_message && (
           <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-            {chatUser.last_message}
+            {chatUser.last_message.content}
           </p>
         )}
       </div>

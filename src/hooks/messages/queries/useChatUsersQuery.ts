@@ -61,10 +61,13 @@ export const useChatUsersQuery = () => {
               userMap.set(otherUserId, {
                 id: otherUserId,
                 username: profileData.username,
-                avatar_url: profileData.avatar_url,
+                avatar_url: profileData.avatar_url || undefined,
                 unread_count: 0,
-                last_message: message.content,
-                last_message_time: message.created_at
+                last_message: {
+                  content: message.content,
+                  created_at: message.created_at,
+                  sender_id: message.sender_id
+                }
               });
             }
           }
@@ -85,8 +88,8 @@ export const useChatUsersQuery = () => {
             return b.unread_count - a.unread_count;
           }
           
-          const dateA = a.last_message_time ? new Date(a.last_message_time).getTime() : 0;
-          const dateB = b.last_message_time ? new Date(b.last_message_time).getTime() : 0;
+          const dateA = a.last_message ? new Date(a.last_message.created_at).getTime() : 0;
+          const dateB = b.last_message ? new Date(b.last_message.created_at).getTime() : 0;
           return dateB - dateA;
         });
       },
