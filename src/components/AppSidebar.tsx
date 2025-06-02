@@ -12,7 +12,7 @@ import { Button } from "./ui/button";
 import { X } from "lucide-react";
 
 interface AppSidebarProps {
-  openChat: (userId: string, userName: string, userAvatar?: string) => void;
+  openChat?: (userId: string, userName: string, userAvatar?: string) => void;
 }
 
 export const AppSidebar = ({ openChat }: AppSidebarProps) => {
@@ -26,6 +26,19 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
     await signOut();
     navigate("/login");
   };
+
+  // Default openChat implementation that navigates to social page
+  const defaultOpenChat = (userId: string, userName: string, userAvatar?: string) => {
+    // Navigate to social page and emit custom event to open chat
+    navigate("/social");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('open-chat', {
+        detail: { userId, userName, userAvatar }
+      }));
+    }, 100);
+  };
+
+  const chatHandler = openChat || defaultOpenChat;
 
   const renderNavItem = (icon: React.ElementType, label: string, to: string, notificationCount?: number) => {
     const Icon = icon;
@@ -94,7 +107,7 @@ export const AppSidebar = ({ openChat }: AppSidebarProps) => {
           <div className="flex items-center gap-2">
             {/* Mostrar badge de notificação na sidebar */}
             <div className="block">
-              <NotificationBadge openChat={openChat} />
+              <NotificationBadge openChat={chatHandler} />
             </div>
             
             {/* Botão para fechar a sidebar */}
