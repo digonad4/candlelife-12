@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus } from "lucide-react";
 import { subDays } from "date-fns";
 import { DateFilter } from "@/components/dashboard/DateFilter";
-import { FinancialInsights } from "@/components/insights/FinancialInsights";
+import { EnhancedFinancialInsights } from "@/components/insights/EnhancedFinancialInsights";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -65,8 +65,8 @@ const Dashboard = () => {
         onEndDateChange={setEndDate}
       />
 
-      {/* Financial Insights */}
-      <FinancialInsights />
+      {/* Enhanced Financial Insights with Goals */}
+      <EnhancedFinancialInsights />
 
       {/* Chart */}
       <div className="w-full">
@@ -79,7 +79,7 @@ const Dashboard = () => {
       {/* Rounded button to add transaction */}
       <Button
         size="lg"
-        className="fixed bottom-7 right-7 rounded-full w-14 h-14 md:w-16 md:h-16 shadow-lg flex items-center justify-center"
+        className="fixed bottom-7 right-7 rounded-full w-14 h-14 md:w-16 md:h-16 shadow-lg flex items-center justify-center z-40"
         onClick={() => setIsModalOpen(true)}
       >
         <Plus className="w-6 h-6" />
@@ -93,6 +93,7 @@ const Dashboard = () => {
           queryClient.invalidateQueries({ queryKey: ["recent-transactions"] });
           queryClient.invalidateQueries({ queryKey: ["expense-chart"] });
           queryClient.invalidateQueries({ queryKey: ["financial-insights"] });
+          queryClient.invalidateQueries({ queryKey: ["financial-goals"] });
         }}
       />
     </div>

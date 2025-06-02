@@ -71,6 +71,48 @@ export type Database = {
           },
         ]
       }
+      financial_goals: {
+        Row: {
+          active: boolean
+          amount: number
+          category: string | null
+          created_at: string
+          end_date: string | null
+          goal_type: string
+          id: string
+          period: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          category?: string | null
+          created_at?: string
+          end_date?: string | null
+          goal_type: string
+          id?: string
+          period?: string
+          start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          category?: string | null
+          created_at?: string
+          end_date?: string | null
+          goal_type?: string
+          id?: string
+          period?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachment_url: string | null
