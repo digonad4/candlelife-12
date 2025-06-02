@@ -65,7 +65,7 @@ const Dashboard = () => {
       <RecentTransactions startDate={startDate} endDate={endDate} />
 
       {/* Rounded button to add transaction */}
-      <Button size="lg" onClick={() => setIsModalOpen(true)} className="fixed bottom-7 right-7 rounded-full w-14 h-14 md:w-20 md:h-16 shadow-lg flex items-center justify-center z-40">
+      <Button size="lg" onClick={() => setIsModalOpen(true)} className="fixed bottom-7 right-7 rounded-full w-14 h-14 md:w-20 md:h-16 shadow-lg flex items-center justify-center z-40 my-[64px] mx-[35px]">
         <Plus className="w-6 h-6" />
       </Button>
 
