@@ -17,8 +17,9 @@ export const useSidebar = () => {
   }
 
   const { state, toggleSidebar: originalToggle, setOpenMobile, openMobile } = context;
-  // Aqui vamos tratar todos os dispositivos de modo consistente
-  const isSidebarOpen = openMobile || state === "expanded";
+  
+  // Determine if sidebar is open based on device type
+  const isSidebarOpen = isMobile ? openMobile : state === "expanded";
 
   const toggleSidebar = () => {
     if (isMobile) {
@@ -30,30 +31,27 @@ export const useSidebar = () => {
   };
 
   useEffect(() => {
-    // Aplicando o comportamento de clique fora do sidebar para todos os dispositivos
-    if (openMobile || state === "expanded") {
+    // Handle click outside to close sidebar
+    if (isSidebarOpen) {
       const handleClickOutside = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
         if (
           target &&
           !target.closest('[data-sidebar="sidebar"]') &&
-          !target.closest('button[aria-label="Toggle Sidebar"]')
+          !target.closest('button[aria-label="Toggle Sidebar"]') &&
+          !target.closest('button[aria-label="Close Sidebar"]')
         ) {
           if (isMobile) {
             setOpenMobile(false);
-          } else {
-            // Para desktop, só fechamos se o sidebar estiver expandido
-            if (state === "expanded") {
-              originalToggle();
-            }
           }
+          // For desktop, we don't auto-close on outside click to avoid UX issues
         }
       };
 
       document.addEventListener("click", handleClickOutside);
       return () => document.removeEventListener("click", handleClickOutside);
     }
-  }, [isMobile, openMobile, setOpenMobile, state, originalToggle]);
+  }, [isMobile, openMobile, setOpenMobile, isSidebarOpen]);
 
   return {
     isSidebarOpen,
