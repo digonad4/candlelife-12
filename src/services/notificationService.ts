@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export class NotificationService {
@@ -106,6 +105,16 @@ export class NotificationService {
     return 'web';
   }
 
+  showMessageNotification(title: string, body: string, data?: any) {
+    if (this.isPageVisible) {
+      // Usuário está ativo, mostrar notificação in-app
+      this.showInAppNotification({ content: body }, { username: title.replace('Nova mensagem de ', ''), ...data });
+    } else {
+      // Usuário está em background, mostrar notificação do sistema
+      this.showSystemNotification({ content: body }, { username: title.replace('Nova mensagem de ', ''), ...data });
+    }
+  }
+
   showNotification(message: any, sender: any) {
     if (this.isPageVisible) {
       // Usuário está ativo, mostrar notificação in-app
@@ -201,3 +210,6 @@ export class NotificationService {
     }
   }
 }
+
+// Export singleton instance
+export const notificationService = NotificationService.getInstance();
