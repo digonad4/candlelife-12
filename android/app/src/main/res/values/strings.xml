@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Candle_Life</string>
+    <string name="title_activity_main">Candle_Life</string>
+    <string name="package_name">com.candlelife.app</string>
+    <string name="custom_url_scheme">com.candlelife.app</string>
+</resources>
