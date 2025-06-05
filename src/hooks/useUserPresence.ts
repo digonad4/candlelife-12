@@ -3,12 +3,42 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { UserPresence } from "@/types/social";
+import { useRealtimeSubscription } from "./useRealtimeSubscription";
 
 export const useUserPresence = () => {
   const { user } = useAuth();
   const [userPresences, setUserPresences] = useState<Record<string, UserPresence>>({});
   const presenceUpdateInterval = useRef<NodeJS.Timeout>();
   const lastActivityTime = useRef<number>(Date.now());
+
+  // Usar o novo hook para subscription
+  useRealtimeSubscription({
+    channelName: 'user-presence-updates',
+    filters: [
+      {
+        event: '*',
+        schema: 'public',
+        table: 'user_presence'
+      }
+    ],
+    onSubscriptionChange: (payload) => {
+      const rawPresence = payload.new as any;
+      if (rawPresence) {
+        // Convert null to undefined for current_conversation
+        const presence: UserPresence = {
+          ...rawPresence,
+          status: rawPresence.status as 'online' | 'away' | 'offline',
+          current_conversation: rawPresence.current_conversation || undefined
+        };
+        
+        setUserPresences(prev => ({
+          ...prev,
+          [presence.user_id]: presence
+        }));
+      }
+    },
+    dependencies: [user?.id]
+  });
 
   // Atualizar presença do usuário atual
   const updateMyPresence = async (status: 'online' | 'away' | 'offline', conversationId?: string) => {
@@ -79,41 +109,6 @@ export const useUserPresence = () => {
       updateMyPresence('offline');
     };
   }, [user]);
-
-  // Escutar mudanças de presença em tempo real
-  useEffect(() => {
-    const channel = supabase
-      .channel('user-presence')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_presence'
-        },
-        (payload) => {
-          const rawPresence = payload.new as any;
-          if (rawPresence) {
-            // Convert null to undefined for current_conversation
-            const presence: UserPresence = {
-              ...rawPresence,
-              status: rawPresence.status as 'online' | 'away' | 'offline',
-              current_conversation: rawPresence.current_conversation || undefined
-            };
-            
-            setUserPresences(prev => ({
-              ...prev,
-              [presence.user_id]: presence
-            }));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   // Buscar presenças iniciais
   useEffect(() => {

@@ -1,16 +1,16 @@
+
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { InvoicedTransactionCard } from "@/components/invoiced/InvoicedTransactionCard";
 import { ConfirmPaymentsDialog } from "@/components/invoiced/ConfirmPaymentsDialog";
 import { useExpenses } from "@/hooks/useExpenses";
-import { Plus } from "lucide-react";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay, format } from "date-fns";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 type Transaction = {
   id: string;
@@ -32,9 +32,6 @@ const ExpensesManagement = () => {
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const queryClient = useQueryClient();
-  const channelRef = useRef<any>(null);
-  const userIdRef = useRef<string | null>(null);
-  const subscriptionInProgressRef = useRef<boolean>(false);
 
   const { transactions, isLoading, confirmPayments } = useExpenses(
     user?.id,
@@ -48,91 +45,23 @@ const ExpensesManagement = () => {
     descriptionFilter
   );
 
-  useEffect(() => {
-    const currentUserId = user?.id || null;
-    
-    // If user changed or logged out, clean up existing channel
-    if (userIdRef.current !== currentUserId) {
-      if (channelRef.current) {
-        console.log("🛑 User changed, cleaning up expenses channel");
-        try {
-          supabase.removeChannel(channelRef.current);
-        } catch (error) {
-          console.warn("Error removing channel:", error);
-        }
-        channelRef.current = null;
-        subscriptionInProgressRef.current = false;
+  // Usar o novo hook para subscription robusta
+  useRealtimeSubscription({
+    channelName: 'expenses-transactions',
+    filters: [
+      {
+        event: '*',
+        schema: 'public',
+        table: 'transactions',
+        filter: `user_id=eq.${user?.id || ''}`
       }
-      userIdRef.current = currentUserId;
-    }
-
-    if (!currentUserId) {
-      return;
-    }
-
-    // If we already have a subscription in progress or completed, don't create another one
-    if (subscriptionInProgressRef.current) {
-      console.log("📡 Expenses subscription already in progress, skipping");
-      return;
-    }
-
-    // Clean up any existing channel before creating a new one
-    if (channelRef.current) {
-      console.log("🛑 Cleaning up existing expenses channel before creating new one");
-      try {
-        supabase.removeChannel(channelRef.current);
-      } catch (error) {
-        console.warn("Error removing existing channel:", error);
-      }
-      channelRef.current = null;
-    }
-
-    // Create unique channel name to avoid conflicts
-    const channelName = `expenses-transactions-${currentUserId}-${Date.now()}`;
-    console.log("📡 Creating expenses channel:", channelName);
-    
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "transactions",
-          filter: `user_id=eq.${currentUserId}`,
-        },
-        () => {
-          console.log("📢 Alteração detectada em despesas. Atualizando...");
-          queryClient.invalidateQueries({ queryKey: ["expenses"] });
-        }
-      );
-
-    // Store reference and mark subscription as in progress BEFORE subscribing
-    channelRef.current = channel;
-    subscriptionInProgressRef.current = true;
-
-    // Subscribe to the channel
-    channel.subscribe((status) => {
-      console.log("Expenses channel subscription status:", status);
-      if (status === 'CLOSED') {
-        console.log("🛑 Expenses channel subscription closed");
-        subscriptionInProgressRef.current = false;
-      }
-    });
-
-    return () => {
-      console.log("🛑 Removendo canal de Despesas:", channelName);
-      if (channelRef.current) {
-        try {
-          supabase.removeChannel(channelRef.current);
-        } catch (error) {
-          console.warn("Error removing channel:", error);
-        }
-        channelRef.current = null;
-        subscriptionInProgressRef.current = false;
-      }
-    };
-  }, [queryClient, user?.id]);
+    ],
+    onSubscriptionChange: () => {
+      console.log("📢 Alteração detectada em despesas. Atualizando...");
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    },
+    dependencies: [user?.id]
+  });
 
   const toggleTransactionSelection = (transactionId: string) => {
     setSelectedTransactions((prev) =>

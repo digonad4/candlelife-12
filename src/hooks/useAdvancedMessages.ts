@@ -4,18 +4,63 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Message, ChatUser } from "@/types/social";
-import { NotificationService } from "@/services/notificationService";
+import { notificationService } from "@/services/notificationService";
+import { useRealtimeSubscription } from "./useRealtimeSubscription";
 
 export const useAdvancedMessages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [notificationService] = useState(() => NotificationService.getInstance());
 
   // Inicializar serviço de notificações
   useEffect(() => {
     notificationService.initialize();
-  }, [notificationService]);
+  }, []);
+
+  // Usar o novo hook para subscription
+  useRealtimeSubscription({
+    channelName: 'advanced-messages',
+    filters: [
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `recipient_id=eq.${user?.id || ''}`
+      }
+    ],
+    onSubscriptionChange: async (payload) => {
+      console.log("Nova mensagem recebida:", payload);
+      
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['chat-users'] });
+      
+      const newMessage = payload.new as Message;
+      if (newMessage.sender_id !== user?.id) {
+        queryClient.invalidateQueries({ queryKey: ['conversation', newMessage.sender_id] });
+        
+        const { data: senderData } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', newMessage.sender_id)
+          .single();
+
+        if (senderData) {
+          // Mostrar notificação
+          notificationService.showNotification(newMessage, senderData);
+          
+          // Atualizar badge count
+          const { data: unreadCount } = await supabase
+            .from('messages')
+            .select('id', { count: 'exact' })
+            .eq('recipient_id', user?.id)
+            .eq('read', false);
+          
+          notificationService.updateBadgeCount(unreadCount?.length || 0);
+        }
+      }
+    },
+    dependencies: [user?.id]
+  });
 
   // Buscar conversas do usuário
   const getChatUsers = useQuery({
@@ -248,56 +293,6 @@ export const useAdvancedMessages = () => {
       queryClient.invalidateQueries({ queryKey: ['chat-users'] });
     }
   });
-
-  // Escutar novas mensagens em tempo real
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('new-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `recipient_id=eq.${user.id}`
-        },
-        async (payload) => {
-          const newMessage = payload.new as Message;
-          
-          // Buscar dados do remetente
-          const { data: senderData } = await supabase
-            .from('profiles')
-            .select('username, avatar_url')
-            .eq('id', newMessage.sender_id)
-            .single();
-
-          if (senderData) {
-            // Mostrar notificação
-            notificationService.showNotification(newMessage, senderData);
-            
-            // Atualizar badge count
-            const { data: unreadCount } = await supabase
-              .from('messages')
-              .select('id', { count: 'exact' })
-              .eq('recipient_id', user.id)
-              .eq('read', false);
-            
-            notificationService.updateBadgeCount(unreadCount?.length || 0);
-          }
-
-          // Invalidar queries para atualizar UI
-          queryClient.invalidateQueries({ queryKey: ['conversation'] });
-          queryClient.invalidateQueries({ queryKey: ['chat-users'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient, notificationService]);
 
   // Calcular total de mensagens não lidas
   const getTotalUnreadCount = (): number => {

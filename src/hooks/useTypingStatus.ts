@@ -3,11 +3,51 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { TypingStatus } from "@/types/social";
+import { useRealtimeSubscription } from "./useRealtimeSubscription";
 
 export const useTypingStatus = () => {
   const { user } = useAuth();
   const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
   const typingTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // Usar o novo hook para subscription robusta
+  useRealtimeSubscription({
+    channelName: 'typing-status-updates',
+    filters: [
+      {
+        event: '*',
+        schema: 'public',
+        table: 'typing_status'
+      }
+    ],
+    onSubscriptionChange: (payload) => {
+      const typingStatus = payload.new as TypingStatus;
+      
+      if (typingStatus && typingStatus.conversation_with_user_id === user?.id) {
+        setTypingUsers(prev => ({
+          ...prev,
+          [typingStatus.user_id]: typingStatus.is_typing
+        }));
+
+        // Remover status após timeout se não foi atualizado
+        if (typingStatus.is_typing) {
+          const timeoutKey = typingStatus.user_id;
+          
+          if (typingTimeouts.current[timeoutKey]) {
+            clearTimeout(typingTimeouts.current[timeoutKey]);
+          }
+
+          typingTimeouts.current[timeoutKey] = setTimeout(() => {
+            setTypingUsers(prev => ({
+              ...prev,
+              [typingStatus.user_id]: false
+            }));
+          }, 5000);
+        }
+      }
+    },
+    dependencies: [user?.id]
+  });
 
   // Enviar status de digitação
   const sendTypingStatus = async (conversationWithUserId: string, isTyping: boolean) => {
@@ -41,53 +81,6 @@ export const useTypingStatus = () => {
   const isUserTyping = (userId: string): boolean => {
     return typingUsers[userId] || false;
   };
-
-  // Escutar mudanças de status de digitação em tempo real
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('typing-status')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'typing_status'
-        },
-        (payload) => {
-          const typingStatus = payload.new as TypingStatus;
-          
-          if (typingStatus && typingStatus.conversation_with_user_id === user.id) {
-            setTypingUsers(prev => ({
-              ...prev,
-              [typingStatus.user_id]: typingStatus.is_typing
-            }));
-
-            // Remover status após timeout se não foi atualizado
-            if (typingStatus.is_typing) {
-              const timeoutKey = typingStatus.user_id;
-              
-              if (typingTimeouts.current[timeoutKey]) {
-                clearTimeout(typingTimeouts.current[timeoutKey]);
-              }
-
-              typingTimeouts.current[timeoutKey] = setTimeout(() => {
-                setTypingUsers(prev => ({
-                  ...prev,
-                  [typingStatus.user_id]: false
-                }));
-              }, 5000);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
 
   // Cleanup timeouts
   useEffect(() => {
