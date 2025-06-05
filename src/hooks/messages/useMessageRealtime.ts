@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "../use-toast";
 import { useMessagesContext } from "./types";
 import { Message } from "./types";
-import { notificationService } from "@/services/NotificationService";
+import { notificationService } from "@/services/notificationService";
 
 export const useMessageRealtime = () => {
   const { user } = useMessagesContext();

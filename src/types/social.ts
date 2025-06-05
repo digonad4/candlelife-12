@@ -30,7 +30,7 @@ export interface UserPresence {
   user_id: string;
   status: 'online' | 'away' | 'offline';
   last_seen: string;
-  current_conversation?: string;
+  current_conversation?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -92,8 +92,15 @@ export const useUserPresence = () => {
           table: 'user_presence'
         },
         (payload) => {
-          const presence = payload.new as UserPresence;
-          if (presence) {
+          const rawPresence = payload.new as any;
+          if (rawPresence) {
+            // Convert null to undefined for current_conversation
+            const presence: UserPresence = {
+              ...rawPresence,
+              status: rawPresence.status as 'online' | 'away' | 'offline',
+              current_conversation: rawPresence.current_conversation || undefined
+            };
+            
             setUserPresences(prev => ({
               ...prev,
               [presence.user_id]: presence
@@ -116,11 +123,15 @@ export const useUserPresence = () => {
         .select('*');
 
       if (data) {
-        const presenceMap = data.reduce((acc, presence) => {
-          acc[presence.user_id] = {
-            ...presence,
-            status: presence.status as 'online' | 'away' | 'offline'
+        const presenceMap = data.reduce((acc, rawPresence) => {
+          // Convert null to undefined for current_conversation
+          const presence: UserPresence = {
+            ...rawPresence,
+            status: rawPresence.status as 'online' | 'away' | 'offline',
+            current_conversation: rawPresence.current_conversation || undefined
           };
+          
+          acc[presence.user_id] = presence;
           return acc;
         }, {} as Record<string, UserPresence>);
         
