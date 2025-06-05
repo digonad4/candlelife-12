@@ -117,7 +117,10 @@ export const useUserPresence = () => {
 
       if (data) {
         const presenceMap = data.reduce((acc, presence) => {
-          acc[presence.user_id] = presence;
+          acc[presence.user_id] = {
+            ...presence,
+            status: presence.status as 'online' | 'away' | 'offline'
+          };
           return acc;
         }, {} as Record<string, UserPresence>);
         

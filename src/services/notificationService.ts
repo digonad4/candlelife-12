@@ -153,11 +153,7 @@ export class NotificationService {
         messageId: message.id,
         senderId: sender.id,
         conversationId: message.sender_id
-      },
-      actions: [
-        { action: 'reply', title: 'Responder' },
-        { action: 'mark-read', title: 'Marcar como lida' }
-      ]
+      }
     });
 
     notification.onclick = () => {

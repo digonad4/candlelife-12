@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,7 +116,7 @@ export const useAdvancedMessages = () => {
     }) => {
       if (!user) throw new Error('Usuário não autenticado');
 
-      let attachmentUrl = null;
+      let attachmentUrl: string | null = null;
       
       if (attachment) {
         const fileExt = attachment.name.split('.').pop();
