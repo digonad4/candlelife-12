@@ -1,11 +1,10 @@
 
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useAuth } from "@/context/AuthContext";
-import { DeleteConversationDialog } from "@/components/social/chat/DeleteConversationDialog";
-import { ChatHeader } from "@/components/social/chat/ChatHeader";
-import { ChatContent } from "@/components/social/chat/ChatContent";
-import { useChatMessages } from "@/components/social/chat/hooks/useChatMessages";
+import { DeleteConversationDialog } from "./DeleteConversationDialog";
+import { ChatHeader } from "./ChatHeader";
+import { ChatContent } from "./ChatContent";
+import { useChatMessages } from "./hooks/useChatMessages";
 
 interface ChatModalProps {
   isOpen: boolean;

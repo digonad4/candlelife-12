@@ -40,35 +40,37 @@ export function FeedContent({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PostEditor editingPost={editingPost} onCancelEdit={onCancelEdit} />
       
       {isLoadingPosts ? (
         // Skeletons para carregamento
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4 border rounded-lg space-y-4">
+            <div key={i} className="p-3 sm:p-4 border rounded-lg space-y-4">
               <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
+                <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-24 sm:h-4 sm:w-32" />
+                  <Skeleton className="h-2 w-16 sm:h-3 sm:w-24" />
                 </div>
               </div>
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-40 w-full rounded-md" />
+              <Skeleton className="h-3 w-full sm:h-4" />
+              <Skeleton className="h-3 w-3/4 sm:h-4" />
+              <Skeleton className="h-32 w-full rounded-md sm:h-40" />
             </div>
           ))}
         </div>
       ) : filteredPosts.length === 0 ? (
-        <div className="text-center py-10 text-muted-foreground">
-          {showMyPostsOnly ? 
-            "Você ainda não criou nenhuma publicação." : 
-            "Nenhuma publicação encontrada na comunidade."}
+        <div className="text-center py-8 sm:py-10 text-muted-foreground">
+          <p className="text-sm sm:text-base">
+            {showMyPostsOnly ? 
+              "Você ainda não criou nenhuma publicação." : 
+              "Nenhuma publicação encontrada na comunidade."}
+          </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {filteredPosts.map((post) => (
             <PostItem
               key={post.id}

@@ -9,6 +9,7 @@ interface TransactionSummaryProps {
   totalTransactions?: number;
   totalIncome?: number;
   totalExpenses?: number;
+  totalInvestments?: number;
   balance?: number;
   startDate?: Date;
   endDate?: Date;
@@ -18,6 +19,7 @@ export function TransactionSummary({
   totalTransactions: propsTotalTransactions,
   totalIncome: propsTotalIncome,
   totalExpenses: propsTotalExpenses,
+  totalInvestments: propsTotalInvestments,
   balance: propsBalance,
   startDate,
   endDate,
@@ -32,6 +34,7 @@ export function TransactionSummary({
         totalTransactions: 0,
         totalIncome: 0,
         totalExpenses: 0,
+        totalInvestments: 0,
         balance: 0
       };
 
@@ -61,11 +64,15 @@ export function TransactionSummary({
       const expenses = transactions
         .filter(t => t.type === "expense" && t.payment_status === "confirmed")
         .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+      const investments = transactions
+        .filter(t => t.type === "investment")
+        .reduce((sum, t) => sum + Number(t.amount), 0);
 
       return {
         totalTransactions: totalTx,
         totalIncome: income,
         totalExpenses: expenses,
+        totalInvestments: investments,
         balance: income - expenses
       };
     },
@@ -76,17 +83,13 @@ export function TransactionSummary({
   const totalTransactions = propsTotalTransactions ?? summaryData?.totalTransactions ?? 0;
   const totalIncome = propsTotalIncome ?? summaryData?.totalIncome ?? 0;
   const totalExpenses = propsTotalExpenses ?? summaryData?.totalExpenses ?? 0;
+  const totalInvestments = propsTotalInvestments ?? summaryData?.totalInvestments ?? 0;
   const balance = propsBalance ?? summaryData?.balance ?? 0;
-
-  console.log("TransactionSummary - Valores:", { 
-    propsValues: { propsTotalTransactions, propsTotalIncome, propsTotalExpenses, propsBalance },
-    calculatedValues: { totalTransactions, totalIncome, totalExpenses, balance }
-  });
 
   return (
     <Card className="mb-6 bg-card">
       <CardContent className="pt-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Total de Transações</p>
             <p className="text-2xl font-bold text-foreground">{totalTransactions}</p>
@@ -101,6 +104,12 @@ export function TransactionSummary({
             <p className="text-sm text-muted-foreground">Despesas</p>
             <p className="text-2xl font-bold text-red-600">
               {totalExpenses.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Investimentos</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {totalInvestments.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
           </div>
           <div>

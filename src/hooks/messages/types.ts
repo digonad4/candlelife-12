@@ -1,18 +1,17 @@
-
 import { useAuth } from "@/context/AuthContext";
 
 export interface Message {
   id: string;
+  content: string;
   sender_id: string;
   recipient_id: string;
-  content: string;
   created_at: string;
   read: boolean;
-  deleted_by_recipient?: boolean;
-  attachment_url?: string;
-  // Campos adicionais para exibição
+  read_at?: string | null;
+  attachment_url?: string | null;
   sender_username?: string;
-  sender_avatar_url?: string;
+  sender_avatar_url?: string | null;
+  deleted_by_recipient?: boolean;
 }
 
 export interface ChatUser {

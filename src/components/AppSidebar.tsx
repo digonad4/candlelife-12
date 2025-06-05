@@ -1,163 +1,127 @@
 
-import { NavLink, useOutletContext } from "react-router-dom";
-import { LayoutDashboard, Receipt, Users, FileText, Settings, LogOut, Wallet, MessageSquare } from "lucide-react";
-import { useSidebar } from "../hooks/useSidebar";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { UserProfile } from "./UserProfile";
-import { useMessages } from "@/hooks/useMessages";
-import { NotificationBadge } from "./ui/notification-badge";
-import { Button } from "./ui/button";
-import { X } from "lucide-react";
+import {
+  LayoutDashboard,
+  CreditCard,
+  Receipt,
+  TrendingDown,
+  Users,
+  Settings,
+  MessageSquare,
+  Flame,
+  LogOut,
+} from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
-interface AppSidebarProps {
-  openChat?: (userId: string, userName: string, userAvatar?: string) => void;
-}
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarGroup, SidebarGroupContent } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Target } from "lucide-react";
 
-export const AppSidebar = ({ openChat }: AppSidebarProps) => {
-  const { isSidebarOpen, toggleSidebar } = useSidebar();
-  const { signOut } = useAuth();
+export function AppSidebar() {
+  const location = useLocation();
   const navigate = useNavigate();
-  const { getTotalUnreadCount } = useMessages();
-  const totalUnreadMessages = getTotalUnreadCount();
-  
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/login");
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
   };
 
-  // Default openChat implementation that navigates to social page
-  const defaultOpenChat = (userId: string, userName: string, userAvatar?: string) => {
-    // Navigate to social page and emit custom event to open chat
-    navigate("/social");
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('open-chat', {
-        detail: { userId, userName, userAvatar }
-      }));
-    }, 100);
-  };
-
-  const chatHandler = openChat || defaultOpenChat;
-
-  const renderNavItem = (icon: React.ElementType, label: string, to: string, notificationCount?: number) => {
-    const Icon = icon;
-
-    return (
-      <li>
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <NavLink
-              to={to}
-              className={({ isActive }) =>
-                `flex items-center p-3 rounded-md transition-colors relative
-                ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}
-                ${!isSidebarOpen ? "justify-center" : ""}`
-              }
-              onClick={() => isSidebarOpen && toggleSidebar()}
-            >
-              <TooltipTrigger asChild>
-                <span className={`flex items-center ${isSidebarOpen ? "w-full" : ""}`}>
-                  <Icon size={20} className={isSidebarOpen ? "mr-3" : ""} />
-                  {isSidebarOpen && <span>{label}</span>}
-                  {notificationCount !== undefined && notificationCount > 0 && (
-                    <span className={`flex items-center justify-center bg-destructive text-destructive-foreground rounded-full text-xs font-bold h-5 w-5 p-0 ${isSidebarOpen ? "ml-2" : "absolute -top-1 -right-1"}`}>
-                      {notificationCount > 9 ? "9+" : notificationCount}
-                    </span>
-                  )}
-                </span>
-              </TooltipTrigger>
-              {!isSidebarOpen && (
-                <TooltipContent side="right">
-                  <p>{label}</p>
-                  {notificationCount !== undefined && notificationCount > 0 && (
-                    <p className="text-xs text-destructive">{notificationCount} mensagens não lidas</p>
-                  )}
-                </TooltipContent>
-              )}
-            </NavLink>
-          </Tooltip>
-        </TooltipProvider>
-      </li>
-    );
-  };
-
-  const sidebarItems = [
-    renderNavItem(LayoutDashboard, "Dashboard", "/dashboard"),
-    renderNavItem(Receipt, "Transações", "/transactions"),
-    renderNavItem(Users, "Clientes", "/clients"),
-    renderNavItem(FileText, "Faturados", "/invoiced"),
-    renderNavItem(Wallet, "Gestão de Despesas", "/expenses"),
-    renderNavItem(MessageSquare, "Comunidade", "/social", totalUnreadMessages),
-    renderNavItem(Settings, "Configurações", "/settings")
+  const menuItems = [
+    { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+    { icon: CreditCard, label: "Transações", href: "/transactions" },
+    { icon: Target, label: "Metas", href: "/goals" },
+    { icon: Receipt, label: "Faturadas", href: "/invoiced" },
+    { icon: TrendingDown, label: "Despesas", href: "/expenses" },
+    { icon: Users, label: "Clientes", href: "/clients" },
+    { icon: MessageSquare, label: "Comunidade", href: "/social" },
+    { icon: Settings, label: "Configurações", href: "/settings" },
   ];
 
   return (
-    <>
-      <aside
-        className={`sidebar bg-sidebar fixed inset-y-0 left-0 z-30 transition-all duration-300 ease-in-out overflow-hidden shadow-md border-r border-sidebar-border flex flex-col ${
-          isSidebarOpen ? "w-64" : "w-0"
-        } ${!isSidebarOpen ? "-translate-x-full" : "translate-x-0"}`}
-        data-sidebar="sidebar"
-      >
-        <div className="sidebar-header py-4 px-4 flex items-center justify-between">
-          <h1 className="text-lg font-bold transition-opacity duration-300">
-            
-          </h1>
-          <div className="flex items-center gap-2">
-            {/* Mostrar badge de notificação na sidebar */}
-            <div className="block">
-              <NotificationBadge openChat={chatHandler} />
+    <Sidebar className="border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <SidebarHeader className="border-b px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            <Flame className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">CandleLife</h2>
+            <p className="text-sm text-muted-foreground">Gestão Financeira</p>
+          </div>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="px-4 py-6">
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location.pathname === item.href}
+                    className="w-full justify-start gap-3 px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground data-[active=true]:bg-accent data-[active=true]:text-accent-foreground"
+                  >
+                    <Link to={item.href} className="flex items-center gap-3">
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t px-6 py-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user?.user_metadata?.avatar_url} />
+              <AvatarFallback>{user?.user_metadata?.name?.charAt(0) || user?.email?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-foreground truncate">
+                {user?.user_metadata?.name || 'Usuário'}
+              </h3>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             </div>
-            
-            {/* Botão para fechar a sidebar */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="ml-2" 
-              onClick={toggleSidebar}
-              aria-label="Close Sidebar"
+          </div>
+          
+          <Separator />
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="flex-1"
             >
-              <X className="h-5 w-5" />
+              <Link to="/settings">
+                <Settings className="h-3 w-3 mr-1" />
+                Conta
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="flex-1"
+            >
+              <LogOut className="h-3 w-3 mr-1" />
+              Sair
             </Button>
           </div>
         </div>
-
-        <div className="px-4 py-2 mb-3">
-          <UserProfile />
-        </div>
-
-        <nav className="sidebar-nav mt-4 flex-1">
-          <ul className="space-y-2 px-2">
-            {sidebarItems}
-          </ul>
-        </nav>
-
-        <div className="mt-auto mb-4 px-2">
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <button
-                className={`flex items-center p-3 rounded-md transition-colors w-full text-left text-sidebar-foreground hover:bg-sidebar-accent/50 ${
-                  !isSidebarOpen ? "justify-center" : ""
-                }`}
-                onClick={handleLogout}
-              >
-                <TooltipTrigger asChild>
-                  <span className={`flex items-center ${isSidebarOpen ? "w-full" : ""}`}>
-                    <LogOut size={20} className={isSidebarOpen ? "mr-3" : ""} />
-                    {isSidebarOpen && <span>Sair</span>}
-                  </span>
-                </TooltipTrigger>
-                {!isSidebarOpen && (
-                  <TooltipContent side="right">
-                    <p>Sair</p>
-                  </TooltipContent>
-                )}
-              </button>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </aside>
-    </>
+      </SidebarFooter>
+    </Sidebar>
   );
-};
+}

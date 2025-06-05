@@ -1,4 +1,3 @@
-
 import { Transaction } from "@/types/transaction";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,10 +16,11 @@ interface EditTransactionFormProps {
 export interface EditFormData {
   description: string;
   amount: string;
-  type: "expense" | "income";
+  type: "expense" | "income" | "investment";
   payment_method: string;
   payment_status: "pending" | "confirmed" | "failed";
-  client_id?: string; // Adicionado como opcional para transações faturadas
+  client_id?: string;
+  goal_id?: string;
 }
 
 export function EditTransactionForm({ transaction, onSubmit }: EditTransactionFormProps) {
@@ -30,7 +30,8 @@ export function EditTransactionForm({ transaction, onSubmit }: EditTransactionFo
     type: transaction.type,
     payment_method: transaction.payment_method,
     payment_status: transaction.payment_status,
-    client_id: transaction.client?.name || "", // Inicializa com o client existente, se houver
+    client_id: transaction.client_id || "",
+    goal_id: transaction.goal_id || "none",
   });
 
   // Busca os clientes do Supabase
@@ -43,16 +44,35 @@ export function EditTransactionForm({ transaction, onSubmit }: EditTransactionFo
     },
   });
 
+  // Busca as metas financeiras
+  const { data: goals, isLoading: isGoalsLoading } = useQuery({
+    queryKey: ["financial-goals-edit"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("financial_goals")
+        .select("id, description")
+        .eq("active", true)
+        .order("description", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const handleChange = (key: keyof EditFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const submitData = {
+      ...formData,
+      goal_id: formData.goal_id === "none" ? "" : formData.goal_id
+    };
+    onSubmit(submitData);
   };
 
   const isInvoiceSelected = formData.payment_method === "invoice";
+  const isInvestmentSelected = formData.type === "investment";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -83,7 +103,7 @@ export function EditTransactionForm({ transaction, onSubmit }: EditTransactionFo
         <Label>Tipo</Label>
         <RadioGroup
           value={formData.type}
-          onValueChange={(value) => handleChange("type", value as "income" | "expense")}
+          onValueChange={(value) => handleChange("type", value as "income" | "expense" | "investment")}
           className="flex gap-4"
         >
           <div className="flex items-center space-x-2">
@@ -93,6 +113,10 @@ export function EditTransactionForm({ transaction, onSubmit }: EditTransactionFo
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="expense" id="expense" />
             <Label htmlFor="expense">Despesa</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="investment" id="investment" />
+            <Label htmlFor="investment">Investimento</Label>
           </div>
         </RadioGroup>
       </div>
@@ -104,7 +128,7 @@ export function EditTransactionForm({ transaction, onSubmit }: EditTransactionFo
           onValueChange={(value) => {
             handleChange("payment_method", value);
             if (value !== "invoice") {
-              handleChange("client_id", ""); // Limpa o client_id se não for "invoice"
+              handleChange("client_id", "");
             }
           }}
         >
@@ -135,6 +159,30 @@ export function EditTransactionForm({ transaction, onSubmit }: EditTransactionFo
               {clients?.map((client) => (
                 <SelectItem key={client.id} value={client.id}>
                   {client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Campo de seleção de meta, exibido apenas se "Investimento" for selecionado */}
+      {isInvestmentSelected && (
+        <div className="space-y-2">
+          <Label htmlFor="goal_id">Meta Financeira</Label>
+          <Select
+            value={formData.goal_id}
+            onValueChange={(value) => handleChange("goal_id", value)}
+            disabled={isGoalsLoading}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={isGoalsLoading ? "Carregando metas..." : "Selecione uma meta (opcional)"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhuma meta</SelectItem>
+              {goals?.map((goal) => (
+                <SelectItem key={goal.id} value={goal.id}>
+                  {goal.description}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useToast } from "./use-toast";
 import { usePostQueries } from "./posts/usePostQueries";
 import { usePostMutations } from "./posts/usePostMutations";
@@ -17,6 +17,10 @@ export const usePosts = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const channelRef = useRef<any>(null);
+  const userIdRef = useRef<string | null>(null);
+  const isSubscribingRef = useRef<boolean>(false);
+  
   const { 
     posts, 
     isLoadingPosts, 
@@ -44,10 +48,42 @@ export const usePosts = () => {
 
   // Configurar o canal de tempo real para atualização de posts
   useEffect(() => {
-    if (!user) return;
+    const currentUserId = user?.id || null;
+    
+    // If user changed or logged out, clean up existing channel
+    if (userIdRef.current !== currentUserId) {
+      if (channelRef.current) {
+        console.log("🛑 User changed, cleaning up posts channel");
+        try {
+          supabase.removeChannel(channelRef.current);
+        } catch (error) {
+          console.warn("Error removing channel:", error);
+        }
+        channelRef.current = null;
+        isSubscribingRef.current = false;
+      }
+      userIdRef.current = currentUserId;
+    }
 
+    if (!currentUserId) {
+      return;
+    }
+
+    // If we already have a channel or are subscribing, don't create another one
+    if (channelRef.current || isSubscribingRef.current) {
+      console.log("📡 Posts subscription already active or in progress, skipping");
+      return;
+    }
+
+    // Set subscribing flag to prevent concurrent subscriptions
+    isSubscribingRef.current = true;
+
+    // Create unique channel name to avoid conflicts
+    const channelName = `posts-realtime-${currentUserId}-${Date.now()}`;
+    console.log("📡 Creating new posts channel:", channelName);
+    
     const channel = supabase
-      .channel('posts-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -83,13 +119,44 @@ export const usePosts = () => {
           // Invalidar a query de posts quando houver mudanças em reações
           queryClient.invalidateQueries({ queryKey: ['posts'] });
         }
-      )
-      .subscribe();
+      );
+
+    // Subscribe to the channel
+    channel.subscribe((status) => {
+      console.log("Posts channel subscription status:", status);
+      if (status === 'SUBSCRIBED') {
+        console.log("✅ Posts channel successfully subscribed");
+        // Only store the channel reference after successful subscription
+        channelRef.current = channel;
+        isSubscribingRef.current = false;
+      } else if (status === 'CLOSED') {
+        console.log("🛑 Posts channel subscription closed");
+        if (channelRef.current === channel) {
+          channelRef.current = null;
+        }
+        isSubscribingRef.current = false;
+      } else if (status === 'CHANNEL_ERROR') {
+        console.log("❌ Posts channel subscription error");
+        if (channelRef.current === channel) {
+          channelRef.current = null;
+        }
+        isSubscribingRef.current = false;
+      }
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log("🛑 Cleaning up posts channel:", channelName);
+      isSubscribingRef.current = false;
+      if (channelRef.current === channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (error) {
+          console.warn("Error removing channel:", error);
+        }
+        channelRef.current = null;
+      }
     };
-  }, [user, queryClient]);
+  }, [user?.id, queryClient]);
 
   return {
     // Queries

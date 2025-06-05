@@ -6,6 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { MessageAttachment } from "./MessageAttachment";
+import { MessageStatus } from "./MessageStatus";
 
 interface MessageItemProps {
   message: Message;
@@ -81,7 +82,9 @@ export const MessageItem = ({
           isMyMessage
             ? "rounded-l-lg"
             : "rounded-r-lg",
-          "px-3 py-2"
+          "px-3 py-2",
+          // Adicionar borda para mensagens não lidas (apenas para mensagens que recebi)
+          !isMyMessage && !message.read_at && "border-2 border-primary/50"
         )}>
           {isFirstInGroup && !isMyMessage && (
             <div className="text-xs font-medium mb-1">
@@ -124,8 +127,15 @@ export const MessageItem = ({
           )}
           
           {isLastInGroup && (
-            <div className="text-xs opacity-70 mt-1 whitespace-nowrap">
-              {formattedTime}
+            <div className="flex items-center gap-2">
+              <div className="text-xs opacity-70 whitespace-nowrap">
+                {formattedTime}
+              </div>
+              {isMyMessage && (
+                <MessageStatus 
+                  status={message.read_at ? 'read' : message.read ? 'delivered' : 'sent'} 
+                />
+              )}
             </div>
           )}
           

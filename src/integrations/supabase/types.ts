@@ -77,11 +77,16 @@ export type Database = {
           amount: number
           category: string | null
           created_at: string
+          current_amount: number | null
+          description: string | null
           end_date: string | null
+          goal_icon: string | null
           goal_type: string
           id: string
+          monthly_contribution: number | null
           period: string
           start_date: string
+          target_date: string | null
           updated_at: string
           user_id: string
         }
@@ -90,11 +95,16 @@ export type Database = {
           amount: number
           category?: string | null
           created_at?: string
+          current_amount?: number | null
+          description?: string | null
           end_date?: string | null
+          goal_icon?: string | null
           goal_type: string
           id?: string
+          monthly_contribution?: number | null
           period?: string
           start_date?: string
+          target_date?: string | null
           updated_at?: string
           user_id: string
         }
@@ -103,15 +113,58 @@ export type Database = {
           amount?: number
           category?: string | null
           created_at?: string
+          current_amount?: number | null
+          description?: string | null
           end_date?: string | null
+          goal_icon?: string | null
           goal_type?: string
           id?: string
+          monthly_contribution?: number | null
           period?: string
           start_date?: string
+          target_date?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      goal_contributions: {
+        Row: {
+          amount: number
+          contribution_date: string
+          created_at: string
+          description: string | null
+          goal_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          contribution_date?: string
+          created_at?: string
+          description?: string | null
+          goal_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          contribution_date?: string
+          created_at?: string
+          description?: string | null
+          goal_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_contributions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "financial_goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -121,6 +174,7 @@ export type Database = {
           deleted_by_recipient: boolean | null
           id: string
           read: boolean
+          read_at: string | null
           recipient_id: string
           sender_id: string
         }
@@ -131,6 +185,7 @@ export type Database = {
           deleted_by_recipient?: boolean | null
           id?: string
           read?: boolean
+          read_at?: string | null
           recipient_id: string
           sender_id: string
         }
@@ -141,6 +196,7 @@ export type Database = {
           deleted_by_recipient?: boolean | null
           id?: string
           read?: boolean
+          read_at?: string | null
           recipient_id?: string
           sender_id?: string
         }
@@ -250,6 +306,7 @@ export type Database = {
           created_at: string
           date: string
           description: string
+          goal_id: string | null
           id: string
           payment_method: string
           payment_status: string
@@ -262,6 +319,7 @@ export type Database = {
           created_at?: string
           date?: string
           description: string
+          goal_id?: string | null
           id?: string
           payment_method?: string
           payment_status?: string
@@ -274,6 +332,7 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string
+          goal_id?: string | null
           id?: string
           payment_method?: string
           payment_status?: string
@@ -286,6 +345,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "financial_goals"
             referencedColumns: ["id"]
           },
         ]
@@ -397,6 +463,14 @@ export type Database = {
       get_user_reaction: {
         Args: { post_id: string; user_id: string }
         Returns: Json
+      }
+      mark_conversation_as_read: {
+        Args: { p_recipient_id: string; p_sender_id: string }
+        Returns: undefined
+      }
+      mark_message_as_read: {
+        Args: { p_message_id: string; p_user_id: string }
+        Returns: undefined
       }
       toggle_reaction: {
         Args: { p_post_id: string; p_user_id: string; p_reaction_type: string }

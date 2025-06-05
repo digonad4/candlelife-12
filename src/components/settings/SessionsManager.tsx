@@ -8,7 +8,6 @@ import {
 import { useUserSessions, UserSession } from "@/hooks/useUserSessions";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { getDeviceIcon, formatSessionDate } from "@/integrations/supabase/client";
 
 export function SessionsManager() {
   const { 
@@ -25,6 +24,10 @@ export function SessionsManager() {
       return <Smartphone className="h-5 w-5 text-primary" />;
     }
     return <Computer className="h-5 w-5 text-primary" />;
+  };
+
+  const formatSessionDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
   };
   
   if (isLoading) {
@@ -64,6 +67,7 @@ export function SessionsManager() {
             onTerminate={terminateSession.mutate} 
             isTerminating={terminateSession.isPending}
             getDeviceIconComponent={getDeviceIconComponent}
+            formatSessionDate={formatSessionDate}
           />
         ))}
         
@@ -81,12 +85,14 @@ function SessionCard({
   session, 
   onTerminate, 
   isTerminating,
-  getDeviceIconComponent
+  getDeviceIconComponent,
+  formatSessionDate
 }: { 
   session: UserSession;
   onTerminate: (id: string) => void;
   isTerminating: boolean;
   getDeviceIconComponent: (deviceInfo: string) => JSX.Element;
+  formatSessionDate: (dateString: string) => string;
 }) {
   return (
     <Card className={`border ${session.is_current ? "border-primary/50" : "border-border"}`}>

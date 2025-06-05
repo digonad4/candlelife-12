@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -7,12 +6,17 @@ import { useToast } from "@/components/ui/use-toast";
 export interface FinancialGoal {
   id: string;
   user_id: string;
-  goal_type: "expense_limit" | "savings_target" | "income_target" | "total_expense_limit";
+  goal_type: "emergency_fund" | "purchase_goal" | "investment_goal" | "custom_goal";
   category?: string;
   amount: number;
   period: "monthly" | "yearly";
   start_date: string;
   end_date?: string;
+  target_date?: string;
+  current_amount: number;
+  monthly_contribution: number;
+  description?: string;
+  goal_icon: string;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -22,9 +26,10 @@ export interface CreateGoalData {
   goal_type: FinancialGoal["goal_type"];
   category?: string;
   amount: number;
-  period: "monthly" | "yearly";
-  start_date: string;
-  end_date?: string;
+  target_date?: string;
+  monthly_contribution?: number;
+  description?: string;
+  goal_icon?: string;
 }
 
 export function useGoals() {
@@ -59,6 +64,9 @@ export function useGoals() {
         .insert({
           ...goalData,
           user_id: user.id,
+          current_amount: 0,
+          period: "monthly", // Mantendo para compatibilidade
+          start_date: new Date().toISOString().split('T')[0],
         })
         .select()
         .single();
@@ -121,14 +129,55 @@ export function useGoals() {
     },
   });
 
+  const addContribution = useMutation({
+    mutationFn: async ({ goalId, amount, description }: { goalId: string; amount: number; description?: string }) => {
+      if (!user) throw new Error("User not authenticated");
+      
+      // Adicionar contribuição
+      const { error: contributionError } = await supabase
+        .from("goal_contributions")
+        .insert({
+          goal_id: goalId,
+          user_id: user.id,
+          amount,
+          description,
+        });
+      
+      if (contributionError) throw contributionError;
+      
+      // Atualizar o valor atual da meta manualmente
+      const { data: currentGoal } = await supabase
+        .from("financial_goals")
+        .select("current_amount")
+        .eq("id", goalId)
+        .single();
+        
+      if (currentGoal) {
+        await supabase
+          .from("financial_goals")
+          .update({ current_amount: (currentGoal.current_amount || 0) + amount })
+          .eq("id", goalId);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-goals"] });
+      toast({
+        title: "Contribuição adicionada",
+        description: "Sua contribuição foi registrada com sucesso.",
+      });
+    },
+  });
+
   return {
     goals,
     isLoading,
     createGoal: createGoal.mutate,
     updateGoal: updateGoal.mutate,
     deleteGoal: deleteGoal.mutate,
+    addContribution: addContribution.mutate,
     isCreating: createGoal.isPending,
     isUpdating: updateGoal.isPending,
     isDeleting: deleteGoal.isPending,
+    isAddingContribution: addContribution.isPending,
   };
 }

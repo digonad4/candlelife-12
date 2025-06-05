@@ -1,3 +1,4 @@
+
 import { Transaction } from "@/types/transaction";
 import { TransactionItem } from "./TransactionItem";
 
@@ -6,7 +7,7 @@ interface TransactionListProps {
   isLoading: boolean;
   selectedTransactions: string[];
   onSelectTransaction: (id: string, isPending: boolean) => void;
-  onOpenConfirmDialog: (ids: string[]) => void; // Mantida para uso no TransactionItem
+  onOpenConfirmDialog: (ids: string[]) => void;
 }
 
 export function TransactionList({
@@ -28,15 +29,26 @@ export function TransactionList({
     );
   }
 
+  const handleToggleSelection = (id: string) => {
+    const transaction = transactions.find(t => t.id === id);
+    if (transaction) {
+      const isPending = transaction.payment_status === "pending" && 
+                       transaction.payment_method !== "invoice" && 
+                       transaction.type !== "investment";
+      onSelectTransaction(id, isPending);
+    }
+  };
+
   return (
     <div className="space-y-2">
       {transactions.map((transaction) => (
         <TransactionItem
           key={transaction.id}
           transaction={transaction}
-          selectedTransactions={selectedTransactions}
-          onSelectTransaction={onSelectTransaction}
-          onOpenConfirmDialog={onOpenConfirmDialog} // Passada para o TransactionItem
+          isSelected={selectedTransactions.includes(transaction.id)}
+          onToggleSelection={handleToggleSelection}
+          onOpenConfirmDialog={onOpenConfirmDialog}
+          showSelection={true}
         />
       ))}
     </div>

@@ -9,7 +9,7 @@ import { Transaction } from "@/types/transaction";
 type DatabaseTransaction = {
   id: string;
   user_id: string;
-  type: "expense" | "income";
+  type: "expense" | "income" | "investment";
   amount: number;
   date: string;
   description: string;
@@ -18,6 +18,7 @@ type DatabaseTransaction = {
   payment_method: string;
   recurring?: boolean;
   client_id?: string | null;
+  goal_id?: string | null;
   created_at: string;
 };
 
@@ -49,6 +50,7 @@ export function useFinancialData() {
         payment_status: transaction.payment_status || "pending",
         payment_method: mapPaymentMethod(transaction.payment_method),
         client_id: transaction.client_id,
+        goal_id: transaction.goal_id,
         category: transaction.category,
         recurring: transaction.recurring,
         created_at: transaction.created_at

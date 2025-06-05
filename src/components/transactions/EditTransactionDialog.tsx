@@ -36,6 +36,7 @@ export function EditTransactionDialog({
           payment_method: formData.payment_method,
           payment_status: formData.payment_status,
           client_id: formData.client_id || null,
+          goal_id: formData.type === "investment" ? (formData.goal_id || null) : null,
         })
         .eq("id", transaction.id)
         .eq("user_id", userId);
@@ -48,6 +49,8 @@ export function EditTransactionDialog({
       });
 
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-insights"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-goals"] });
       onOpenChange(false);
     } catch (error) {
       toast({

@@ -1,85 +1,78 @@
 
-import { Home, CreditCard, Receipt, Users, MessageSquare, Settings } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
-import { useMessageQueries } from "@/hooks/messages/useMessageQueries";
-import { useChatUsersQuery } from "@/hooks/messages/queries/useChatUsersQuery";
+import { LayoutDashboard, CreditCard, Target, Users, MessageSquare, Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { useState } from "react";
 
 export const MobileBottomNavigation = () => {
   const location = useLocation();
-  const { getChatUsers } = useChatUsersQuery();
-  const { getTotalUnreadCount } = useMessageQueries();
+  const isMobile = useIsMobile();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const { data: chatUsers = [] } = getChatUsers();
-  const totalUnreadCount = getTotalUnreadCount(chatUsers);
-
-  const navigationItems = [
-    { 
-      path: "/dashboard", 
-      icon: Home, 
-      label: "Dashboard" 
-    },
-    { 
-      path: "/transactions", 
-      icon: CreditCard, 
-      label: "Transações" 
-    },
-    { 
-      path: "/expenses", 
-      icon: Receipt, 
-      label: "Despesas" 
-    },
-    { 
-      path: "/clients", 
-      icon: Users, 
-      label: "Clientes" 
-    },
-    { 
-      path: "/social", 
-      icon: MessageSquare, 
-      label: "Social",
-      badge: totalUnreadCount > 0 ? totalUnreadCount : undefined
-    },
-    { 
-      path: "/settings", 
-      icon: Settings, 
-      label: "Config" 
-    }
+  const mainNavItems = [
+    { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+    { icon: CreditCard, label: "Transações", href: "/transactions" },
+    { icon: Target, label: "Metas", href: "/goals" },
+    { icon: Users, label: "Clientes", href: "/clients" },
+    { icon: MessageSquare, label: "Social", href: "/social" },
   ];
 
+  if (!isMobile) return null;
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 md:hidden">
-      <div className="grid grid-cols-6 h-16">
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t border-border">
+      <nav className="flex justify-around items-center py-2">
+        {mainNavItems.map((item) => {
+          const isActive = location.pathname === item.href;
           return (
             <Link
-              key={item.path}
-              to={item.path}
-              className={`flex flex-col items-center justify-center text-xs transition-colors relative ${
+              key={item.href}
+              to={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center p-2 transition-colors min-w-[60px]",
                 isActive 
-                  ? "text-primary bg-primary/10" 
+                  ? "text-primary" 
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+              )}
             >
-              <div className="relative">
-                <Icon className="h-5 w-5 mb-1" />
-                {item.badge && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-2 -right-2 h-4 w-4 flex items-center justify-center p-0 text-xs"
-                  >
-                    {item.badge > 9 ? "9+" : item.badge}
-                  </Badge>
-                )}
-              </div>
-              <span className="truncate max-w-full">{item.label}</span>
+              <item.icon className={cn("h-5 w-5 mb-1", isActive && "text-primary")} />
+              <span className="text-xs font-medium">{item.label}</span>
             </Link>
           );
         })}
-      </div>
+        
+        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+          <DrawerTrigger asChild>
+            <button className="flex flex-col items-center justify-center p-2 transition-colors min-w-[60px] text-muted-foreground hover:text-foreground">
+              <Settings className="h-5 w-5 mb-1" />
+              <span className="text-xs font-medium">Mais</span>
+            </button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Menu</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 space-y-4">
+              <Link
+                to="/settings"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors"
+                onClick={() => setIsDrawerOpen(false)}
+              >
+                <Settings className="h-5 w-5" />
+                <span>Configurações</span>
+              </Link>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </nav>
     </div>
   );
 };

@@ -34,6 +34,7 @@ export function GoalsManager() {
         setCreationProgress(100);
         setIsDialogOpen(false);
         setCreationProgress(0);
+        setEditingGoal(null);
       }, 900);
       
     } catch (error) {
@@ -81,31 +82,58 @@ export function GoalsManager() {
 
   if (goals.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Metas Financeiras
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center py-8">
-          <div className="space-y-4">
-            <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-              <Target className="h-6 w-6 text-muted-foreground" />
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Metas Financeiras
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center py-8">
+            <div className="space-y-4">
+              <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                <Target className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="font-medium">Nenhuma meta definida</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Defina metas financeiras para acompanhar seu progresso
+                </p>
+              </div>
+              <Button onClick={openCreateDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar primeira meta
+              </Button>
             </div>
-            <div>
-              <h3 className="font-medium">Nenhuma meta definida</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Defina metas financeiras para acompanhar seu progresso
-              </p>
-            </div>
-            <Button onClick={openCreateDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              Criar primeira meta
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Dialog open={isDialogOpen} onOpenChange={closeDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Criar Nova Meta</DialogTitle>
+            </DialogHeader>
+            
+            {/* Progress bar for creation */}
+            {creationProgress > 0 && (
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-sm">
+                  <span>Criando meta...</span>
+                  <span>{creationProgress}%</span>
+                </div>
+                <Progress value={creationProgress} className="h-2" />
+              </div>
+            )}
+            
+            <GoalForm
+              onSubmit={handleCreateGoal}
+              onCancel={closeDialog}
+              isLoading={isCreating}
+            />
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 

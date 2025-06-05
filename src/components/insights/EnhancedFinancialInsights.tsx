@@ -63,37 +63,80 @@ export function EnhancedFinancialInsights() {
       .filter(t => t.type === "income" && t.payment_status === "confirmed")
       .reduce((sum, t) => sum + t.amount, 0);
 
+    const currentInvestments = currentMonthTxs
+      .filter(t => t.type === "investment")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalInvestments = transactions
+      .filter(t => t.type === "investment")
+      .reduce((sum, t) => sum + t.amount, 0);
+
     const insights: any[] = [];
 
-    // Goal-based insights
+    // Investment-specific insights
+    if (currentInvestments > 0) {
+      const investmentRate = currentIncome > 0 ? (currentInvestments / currentIncome) : 0;
+      if (investmentRate >= 0.2) {
+        insights.push({
+          type: "investment_excellent",
+          title: "Excelente Taxa de Investimento! 📈",
+          description: `Você investiu ${Math.round(investmentRate * 100)}% da sua renda este mês (${formatCurrency(currentInvestments)})`,
+          action: "Continue investindo consistentemente para atingir suas metas",
+          impact: "low",
+          icon: <TrendingUp className="h-5 w-5 text-blue-500" />,
+        });
+      } else if (investmentRate >= 0.1) {
+        insights.push({
+          type: "investment_good",
+          title: "Boa Taxa de Investimento 💰",
+          description: `Você investiu ${Math.round(investmentRate * 100)}% da sua renda este mês`,
+          action: "Tente aumentar para 20% se possível",
+          impact: "medium",
+          icon: <TrendingUp className="h-5 w-5 text-blue-500" />,
+        });
+      }
+    }
+
+    if (totalInvestments > 0) {
+      insights.push({
+        type: "total_investments",
+        title: `Patrimônio Acumulado: ${formatCurrency(totalInvestments)}`,
+        description: `Você já acumulou um total de ${formatCurrency(totalInvestments)} em investimentos`,
+        action: "Continue investindo regularmente para fazer seu dinheiro trabalhar para você",
+        impact: "low",
+        icon: <PiggyBank className="h-5 w-5 text-blue-500" />,
+      });
+    }
+
+    // Goal-based insights - Updated to use correct status types
     goalProgress.forEach(progress => {
       const { goal, current, target, percentage, status } = progress;
       
-      if (status === "exceeded") {
+      if (percentage >= 100 && status === "achieved") {
         insights.push({
-          type: "goal_alert",
-          title: `Meta Excedida: ${goal.category || "Geral"}`,
-          description: `Você gastou ${formatCurrency(current)} de ${formatCurrency(target)} (${Math.round(percentage)}%)`,
-          action: "Considere reduzir gastos nesta categoria pelo resto do mês",
+          type: "goal_achieved",
+          title: `Meta Atingida! 🎉`,
+          description: `Você alcançou sua meta "${goal.description || 'Meta de Poupança'}" de ${formatCurrency(target)}`,
+          impact: "low",
+          icon: <Trophy className="h-5 w-5 text-green-500" />,
+        });
+      } else if (status === "behind") {
+        insights.push({
+          type: "goal_behind",
+          title: `Meta Atrasada: ${goal.description || "Meta"}`,
+          description: `Você está com ${Math.round(percentage)}% da sua meta. Precisa acelerar para atingir o objetivo.`,
+          action: "Considere aumentar as contribuições mensais ou fazer investimentos direcionados",
           impact: "high",
           icon: <AlertTriangle className="h-5 w-5 text-red-500" />,
         });
       } else if (status === "warning") {
         insights.push({
           type: "goal_warning",
-          title: `Atenção na Meta: ${goal.category || "Geral"}`,
-          description: `Você já gastou ${Math.round(percentage)}% da sua meta mensal`,
-          action: "Monitore seus gastos para não exceder o limite",
+          title: `Atenção na Meta: ${goal.description || "Meta"}`,
+          description: `Você está com ${Math.round(percentage)}% da sua meta e o prazo está se aproximando`,
+          action: "Monitore seu progresso e considere fazer investimentos específicos para esta meta",
           impact: "medium",
           icon: <Target className="h-5 w-5 text-yellow-500" />,
-        });
-      } else if (status === "achieved" && goal.goal_type.includes("target")) {
-        insights.push({
-          type: "goal_achieved",
-          title: `Meta Atingida! 🎉`,
-          description: `Você alcançou sua meta de ${goal.goal_type.includes("income") ? "receita" : "poupança"}`,
-          impact: "low",
-          icon: <Trophy className="h-5 w-5 text-green-500" />,
         });
       }
     });
@@ -105,7 +148,7 @@ export function EnhancedFinancialInsights() {
         type: "expense_increase",
         title: "Aumento de Gastos",
         description: `Seus gastos subiram ${increase}% em relação ao mês passado`,
-        action: "Analise onde foi o aumento e considere ajustes",
+        action: "Analise onde foi o aumento e considere reduzir para aumentar seus investimentos",
         impact: "high",
         icon: <TrendingUp className="h-5 w-5 text-red-500" />,
       });
@@ -113,21 +156,23 @@ export function EnhancedFinancialInsights() {
 
     if (currentIncome > 0) {
       const savingsRate = (currentIncome - currentExpenses) / currentIncome;
-      if (savingsRate < 0.1) {
+      const totalAllocationRate = (currentIncome - currentExpenses + currentInvestments) / currentIncome;
+      
+      if (savingsRate < 0.1 && currentInvestments === 0) {
         insights.push({
           type: "savings_low",
-          title: "Taxa de Poupança Baixa",
-          description: `Você está poupando apenas ${Math.round(savingsRate * 100)}% da sua renda`,
-          action: "Tente economizar pelo menos 20% da sua renda mensal",
-          impact: "medium",
-          icon: <PiggyBank className="h-5 w-5 text-yellow-500" />,
+          title: "Taxa de Poupança e Investimento Baixa",
+          description: `Você está poupando apenas ${Math.round(savingsRate * 100)}% da sua renda e não fez investimentos`,
+          action: "Tente economizar pelo menos 20% da sua renda mensal e destine parte para investimentos",
+          impact: "high",
+          icon: <PiggyBank className="h-5 w-5 text-red-500" />,
         });
-      } else if (savingsRate >= 0.3) {
+      } else if (totalAllocationRate >= 0.3) {
         insights.push({
-          type: "savings_good",
-          title: "Excelente Poupança! 👏",
-          description: `Você está poupando ${Math.round(savingsRate * 100)}% da sua renda`,
-          action: "Continue assim e considere investir o excedente",
+          type: "allocation_excellent",
+          title: "Excelente Gestão Financeira! 👏",
+          description: `Você está poupando/investindo ${Math.round(totalAllocationRate * 100)}% da sua renda`,
+          action: "Continue assim! Considere diversificar seus investimentos",
           impact: "low",
           icon: <CheckCircle className="h-5 w-5 text-green-500" />,
         });

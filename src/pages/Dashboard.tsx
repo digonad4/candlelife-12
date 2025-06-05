@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ExpenseModal } from "@/components/ExpenseModal";
@@ -21,15 +21,59 @@ const Dashboard = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(subDays(new Date(), 7));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
+  const channelRef = useRef<any>(null);
+  const userIdRef = useRef<string | null>(null);
+  const subscriptionInProgressRef = useRef<boolean>(false);
 
   // Set up Supabase real-time subscription for transaction changes
   useEffect(() => {
-    if (!user) return;
-    const channel = supabase.channel(`transactions-${user.id}`).on("postgres_changes", {
+    const currentUserId = user?.id || null;
+    
+    // If user changed or logged out, clean up existing channel
+    if (userIdRef.current !== currentUserId) {
+      if (channelRef.current) {
+        console.log("🛑 User changed, cleaning up dashboard channel");
+        try {
+          supabase.removeChannel(channelRef.current);
+        } catch (error) {
+          console.warn("Error removing channel:", error);
+        }
+        channelRef.current = null;
+        subscriptionInProgressRef.current = false;
+      }
+      userIdRef.current = currentUserId;
+    }
+
+    if (!currentUserId) {
+      return;
+    }
+    
+    // If we already have a subscription in progress or completed, don't create another one
+    if (subscriptionInProgressRef.current) {
+      console.log("📡 Dashboard subscription already in progress, skipping");
+      return;
+    }
+
+    // Clean up any existing channel before creating a new one
+    if (channelRef.current) {
+      console.log("🛑 Cleaning up existing dashboard channel before creating new one");
+      try {
+        supabase.removeChannel(channelRef.current);
+      } catch (error) {
+        console.warn("Error removing existing channel:", error);
+      }
+      channelRef.current = null;
+    }
+    
+    // Create unique channel name to avoid conflicts
+    const channelName = `dashboard-transactions-${currentUserId}-${Date.now()}`;
+    console.log("📡 Creating dashboard channel:", channelName);
+    
+    const channel = supabase.channel(channelName).on("postgres_changes", {
       event: "*",
       schema: "public",
       table: "transactions",
-      filter: `user_id=eq.${user.id}`
+      filter: `user_id=eq.${currentUserId}`
     }, () => {
       console.log("📢 Alteração detectada no banco de dados. Atualizando dashboard...");
       queryClient.invalidateQueries({
@@ -41,12 +85,34 @@ const Dashboard = () => {
       queryClient.invalidateQueries({
         queryKey: ["financial-insights"]
       });
-    }).subscribe();
+    });
+    
+    // Store reference and mark subscription as in progress BEFORE subscribing
+    channelRef.current = channel;
+    subscriptionInProgressRef.current = true;
+    
+    // Subscribe to the channel
+    channel.subscribe((status) => {
+      console.log("Dashboard channel subscription status:", status);
+      if (status === 'CLOSED') {
+        console.log("🛑 Dashboard channel subscription closed");
+        subscriptionInProgressRef.current = false;
+      }
+    });
+    
     return () => {
-      console.log("🛑 Removendo canal do Supabase.");
-      supabase.removeChannel(channel);
+      console.log("🛑 Removendo canal do Dashboard:", channelName);
+      if (channelRef.current) {
+        try {
+          supabase.removeChannel(channelRef.current);
+        } catch (error) {
+          console.warn("Error removing channel:", error);
+        }
+        channelRef.current = null;
+        subscriptionInProgressRef.current = false;
+      }
     };
-  }, [queryClient, user]);
+  }, [queryClient, user?.id]);
 
   return (
     <div className="w-full space-y-8">

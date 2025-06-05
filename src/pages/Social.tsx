@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePosts, Post } from "@/hooks/usePosts";
-import { ChatModal } from "@/components/social/chat/ChatModal";
+import { SimpleChatModal } from "@/components/social/chat/SimpleChatModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SocialHeader } from "@/components/social/SocialHeader";
 import { FeedContent } from "@/components/social/FeedContent";
@@ -104,7 +104,7 @@ const Social = () => {
   // If there's an error, display error message with button to try again
   if (postsError && !isLoadingPosts) {
     return (
-      <div className="w-full space-y-8">
+      <div className="w-full space-y-8 p-4">
         <SocialHeader openChat={openChat} />
         
         <ErrorMessage
@@ -117,13 +117,13 @@ const Social = () => {
   }
 
   return (
-    <div className="w-full space-y-8">
+    <div className="w-full space-y-4 sm:space-y-8 p-2 sm:p-4">
       <SocialHeader openChat={openChat} />
 
       <Tabs defaultValue="feed" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="feed">Feed da Comunidade</TabsTrigger>
-          <TabsTrigger value="my-posts">Minhas Publicações</TabsTrigger>
+        <TabsList className="mb-4 sm:mb-6 grid w-full grid-cols-2">
+          <TabsTrigger value="feed" className="text-sm">Feed da Comunidade</TabsTrigger>
+          <TabsTrigger value="my-posts" className="text-sm">Minhas Publicações</TabsTrigger>
         </TabsList>
         
         <TabsContent value="feed" className="w-full">
@@ -151,7 +151,7 @@ const Social = () => {
         </TabsContent>
       </Tabs>
 
-      <ChatModal 
+      <SimpleChatModal 
         isOpen={isChatOpen}
         onOpenChange={setIsChatOpen}
         recipientId={chatRecipient.id}
