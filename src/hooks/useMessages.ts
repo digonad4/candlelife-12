@@ -1,16 +1,18 @@
 
 import { useMessageQueries } from "./messages/useMessageQueries";
 import { useMessageMutations } from "./messages/useMessageMutations";
-import { useMessageRealtime } from "./messages/useMessageRealtime";
+import { useMessagesRealtime } from "./realtime/useMessagesRealtime";
 import { ChatUser, Message, PaginatedMessages } from "./messages/types";
 
 export type { Message, ChatUser, PaginatedMessages };
 
 export const useMessages = () => {
+  // Initialize realtime subscription
+  useMessagesRealtime();
+
   // Initialize all the hooks
   const { getChatUsers, getConversation, getTotalUnreadCount } = useMessageQueries();
   const { sendMessage, clearConversation, deleteMessage, editMessage } = useMessageMutations();
-  useMessageRealtime();
 
   // Get data from queries
   const { data: chatUsers = [], isLoading: isLoadingChatUsers } = getChatUsers();

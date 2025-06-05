@@ -16,6 +16,8 @@ import { ChatUsersList } from "./header/ChatUsersList";
 
 interface SocialHeaderProps {
   openChat: (userId: string, userName: string, userAvatar?: string) => void;
+  totalUnreadMessages: number;
+  onNotificationCenterToggle: () => void;
 }
 
 type UserSearchResult = {
@@ -24,9 +26,8 @@ type UserSearchResult = {
   avatar_url: string | null;
 };
 
-export const SocialHeader = ({ openChat }: SocialHeaderProps) => {
-  const { chatUsers, isLoadingChatUsers, getTotalUnreadCount } = useMessages();
-  const totalUnreadMessages = getTotalUnreadCount();
+export const SocialHeader = ({ openChat, totalUnreadMessages, onNotificationCenterToggle }: SocialHeaderProps) => {
+  const { chatUsers, isLoadingChatUsers } = useMessages();
   const { toast } = useToast();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");

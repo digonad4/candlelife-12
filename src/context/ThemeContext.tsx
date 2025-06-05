@@ -66,6 +66,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       setThemeState(newTheme);
       localStorage.setItem("theme", newTheme);
       
+      // Apply theme immediately to document
+      document.documentElement.setAttribute("data-theme", newTheme);
+      
       // If user is authenticated, save their preference to their profile
       if (user) {
         const { error } = await supabase
@@ -85,6 +88,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   // Apply theme to document
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
+    
+    // Also apply to document.body for better compatibility
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   }, [theme]);
 
   return (

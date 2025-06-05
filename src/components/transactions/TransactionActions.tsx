@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Trash2 } from "lucide-react";
+import { CheckCircle2, Trash2, Square, CheckSquare } from "lucide-react";
 
 interface TransactionActionsProps {
   selectedCount: number;
@@ -20,45 +20,50 @@ export function TransactionActions({
   onDeleteSelected
 }: TransactionActionsProps) {
   return (
-    <div className="mb-6 flex gap-2 flex-wrap">
-      <Button 
-        size="sm"
-        onClick={onSelectAll}
-        className="bg-blue-600 hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
-      >
-        <CheckCircle2 className="w-3 h-3 mr-1" />
-        Selecionar
-      </Button>
-      <Button 
-        size="sm"
-        onClick={onDeselectAll}
-        variant="outline"
-        className="border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200 shadow-md hover:shadow-lg"
-      >
-        <Trash2 className="w-3 h-3 mr-1" />
-        Limpar
-      </Button>
-      {selectedCount > 0 && (
-        <>
-          <Button 
+    <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg border">
+      <span className="text-sm font-medium">
+        {selectedCount} selecionada{selectedCount > 1 ? 's' : ''}
+      </span>
+      
+      <div className="flex items-center gap-2 ml-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onSelectAll}
+        >
+          <CheckSquare className="h-4 w-4 mr-1" />
+          Selecionar todas
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onDeselectAll}
+        >
+          <Square className="h-4 w-4 mr-1" />
+          Desmarcar todas
+        </Button>
+        
+        {hasPendingSelected && (
+          <Button
+            variant="default"
             size="sm"
             onClick={onConfirmSelected}
-            disabled={!hasPendingSelected}
-            className="bg-green-600 hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg"
           >
-            <CheckCircle2 className="w-3 h-3 mr-1" />
-            Confirmar ({selectedCount})
+            <CheckCircle2 className="h-4 w-4 mr-1" />
+            Confirmar pagamento
           </Button>
-          <Button 
-            size="sm"
-            onClick={onDeleteSelected}
-            className="bg-red-600 hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <Trash2 className="w-3 h-3 mr-1" />
-            Excluir ({selectedCount})
-          </Button>
-        </>
-      )}
+        )}
+        
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={onDeleteSelected}
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Excluir
+        </Button>
+      </div>
     </div>
   );
 }

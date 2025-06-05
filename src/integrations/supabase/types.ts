@@ -171,34 +171,99 @@ export type Database = {
           attachment_url: string | null
           content: string
           created_at: string
+          deleted_at: string | null
           deleted_by_recipient: boolean | null
+          delivered_at: string | null
+          edit_history: Json | null
+          edited_at: string | null
           id: string
+          is_soft_deleted: boolean | null
+          message_status: string | null
           read: boolean
           read_at: string | null
           recipient_id: string
+          reply_to_id: string | null
           sender_id: string
         }
         Insert: {
           attachment_url?: string | null
           content: string
           created_at?: string
+          deleted_at?: string | null
           deleted_by_recipient?: boolean | null
+          delivered_at?: string | null
+          edit_history?: Json | null
+          edited_at?: string | null
           id?: string
+          is_soft_deleted?: boolean | null
+          message_status?: string | null
           read?: boolean
           read_at?: string | null
           recipient_id: string
+          reply_to_id?: string | null
           sender_id: string
         }
         Update: {
           attachment_url?: string | null
           content?: string
           created_at?: string
+          deleted_at?: string | null
           deleted_by_recipient?: boolean | null
+          delivered_at?: string | null
+          edit_history?: Json | null
+          edited_at?: string | null
           id?: string
+          is_soft_deleted?: boolean | null
+          message_status?: string | null
           read?: boolean
           read_at?: string | null
           recipient_id?: string
+          reply_to_id?: string | null
           sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_settings: {
+        Row: {
+          created_at: string
+          do_not_disturb: boolean | null
+          email_notifications: boolean | null
+          id: string
+          push_notifications: boolean | null
+          read_receipts: boolean | null
+          show_online_status: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          do_not_disturb?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          push_notifications?: boolean | null
+          read_receipts?: boolean | null
+          show_online_status?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          do_not_disturb?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          push_notifications?: boolean | null
+          read_receipts?: boolean | null
+          show_online_status?: boolean | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -264,6 +329,36 @@ export type Database = {
           updated_at?: string
           username?: string
           view_mode?: string | null
+        }
+        Relationships: []
+      }
+      push_tokens: {
+        Row: {
+          created_at: string
+          device_info: string | null
+          id: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -380,6 +475,63 @@ export type Database = {
         }
         Relationships: []
       }
+      typing_status: {
+        Row: {
+          conversation_with_user_id: string
+          created_at: string
+          id: string
+          is_typing: boolean
+          last_typed: string
+          user_id: string
+        }
+        Insert: {
+          conversation_with_user_id: string
+          created_at?: string
+          id?: string
+          is_typing?: boolean
+          last_typed?: string
+          user_id: string
+        }
+        Update: {
+          conversation_with_user_id?: string
+          created_at?: string
+          id?: string
+          is_typing?: boolean
+          last_typed?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_presence: {
+        Row: {
+          created_at: string
+          current_conversation: string | null
+          id: string
+          last_seen: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_conversation?: string | null
+          id?: string
+          last_seen?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_conversation?: string | null
+          id?: string
+          last_seen?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_sessions: {
         Row: {
           created_at: string
@@ -449,6 +601,10 @@ export type Database = {
         Args: { p_user_id: string; p_other_user_id: string }
         Returns: undefined
       }
+      edit_message: {
+        Args: { p_message_id: string; p_user_id: string; p_new_content: string }
+        Returns: undefined
+      }
       get_reaction_counts_by_post: {
         Args: { post_id: string }
         Returns: {
@@ -468,13 +624,41 @@ export type Database = {
         Args: { p_recipient_id: string; p_sender_id: string }
         Returns: undefined
       }
+      mark_conversation_as_read_v2: {
+        Args: { p_recipient_id: string; p_sender_id: string }
+        Returns: undefined
+      }
       mark_message_as_read: {
+        Args: { p_message_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      mark_message_as_read_v2: {
+        Args: { p_message_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      soft_delete_message: {
         Args: { p_message_id: string; p_user_id: string }
         Returns: undefined
       }
       toggle_reaction: {
         Args: { p_post_id: string; p_user_id: string; p_reaction_type: string }
         Returns: Json
+      }
+      update_typing_status: {
+        Args: {
+          p_user_id: string
+          p_conversation_with_user_id: string
+          p_is_typing: boolean
+        }
+        Returns: undefined
+      }
+      update_user_presence: {
+        Args: {
+          p_user_id: string
+          p_status: string
+          p_conversation_id?: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
