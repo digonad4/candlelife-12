@@ -7,15 +7,26 @@ import { useCommentMutations } from "./posts/useCommentMutations";
 import { useReactionMutations } from "./posts/useReactionMutations";
 import { usePostsRealtime } from "./realtime/usePostsRealtime";
 import { Post, Comment } from "./posts/types";
+<<<<<<< HEAD
+=======
+import { useAuth } from "@/context/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRealtimeSubscription } from "./useRealtimeSubscription";
+>>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
 
 // Exportando tipos para uso em outros componentes
 export type { Post, Comment };
 
 export const usePosts = () => {
   const { toast } = useToast();
+<<<<<<< HEAD
   
   // Initialize realtime subscription
   usePostsRealtime();
+=======
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+>>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
   
   const { 
     posts, 
@@ -42,6 +53,36 @@ export const usePosts = () => {
     }
   }, [postsError, toast]);
 
+<<<<<<< HEAD
+=======
+  // Usar o novo hook para subscription robusta
+  useRealtimeSubscription({
+    channelName: 'posts-realtime',
+    filters: [
+      {
+        event: '*',
+        schema: 'public',
+        table: 'posts'
+      },
+      {
+        event: '*',
+        schema: 'public',
+        table: 'comments'
+      },
+      {
+        event: '*',
+        schema: 'public',
+        table: 'reactions'
+      }
+    ],
+    onSubscriptionChange: () => {
+      // Invalidar a query de posts quando houver mudanças
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+    dependencies: [user?.id]
+  });
+
+>>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
   return {
     // Queries
     posts,

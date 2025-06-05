@@ -6,7 +6,10 @@ import { usePosts } from "@/hooks/usePosts";
 import { useAdvancedMessages } from "@/hooks/useAdvancedMessages";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import { useTypingStatus } from "@/hooks/useTypingStatus";
+<<<<<<< HEAD
 import { usePresenceRealtime } from "@/hooks/realtime/usePresenceRealtime";
+=======
+>>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { SocialHeader } from "./SocialHeader";
@@ -26,9 +29,12 @@ const SocialHub = () => {
   const { updateMyPresence } = useUserPresence();
   const { sendTypingStatus } = useTypingStatus();
   
+<<<<<<< HEAD
   // Initialize presence realtime subscription
   usePresenceRealtime();
   
+=======
+>>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
   const [editingPost, setEditingPost] = useState<any>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
