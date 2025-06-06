@@ -128,6 +128,54 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_requests: {
+        Row: {
+          created_at: string
+          id: string
+          receiver_id: string
+          sender_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          receiver_id: string
+          sender_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          created_at: string
+          id: string
+          user1_id: string
+          user2_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user1_id: string
+          user2_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user1_id?: string
+          user2_id?: string
+        }
+        Relationships: []
+      }
       goal_contributions: {
         Row: {
           amount: number
@@ -597,6 +645,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_friend_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      are_friends: {
+        Args: { p_user1_id: string; p_user2_id: string }
+        Returns: boolean
+      }
       clear_conversation: {
         Args: { p_user_id: string; p_other_user_id: string }
         Returns: undefined
@@ -635,6 +691,18 @@ export type Database = {
       mark_message_as_read_v2: {
         Args: { p_message_id: string; p_user_id: string }
         Returns: undefined
+      }
+      reject_friend_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      remove_friendship: {
+        Args: { p_friend_id: string }
+        Returns: Json
+      }
+      send_friend_request: {
+        Args: { p_receiver_id: string }
+        Returns: Json
       }
       soft_delete_message: {
         Args: { p_message_id: string; p_user_id: string }
