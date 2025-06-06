@@ -19,8 +19,10 @@ export const MobileBottomNavigation = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { hapticFeedback } = useNative();
-  const { totalUnreadMessages } = useAdvancedMessages();
+  const { getTotalUnreadCount } = useAdvancedMessages();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const totalUnreadMessages = getTotalUnreadCount();
 
   const mainNavItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },

@@ -21,7 +21,7 @@ const SocialHub = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { posts, isLoadingPosts, postsError, refetchPosts } = usePosts();
-  const { chatUsers, totalUnreadMessages, getChatUsers } = useAdvancedMessages();
+  const { useChatUsers, getTotalUnreadCount } = useAdvancedMessages();
   const { updateMyPresence } = useUserPresence();
   const { sendTypingStatus } = useTypingStatus();
   
@@ -29,6 +29,10 @@ const SocialHub = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  
+  const chatUsersQuery = useChatUsers();
+  const totalUnreadMessages = getTotalUnreadCount();
+  const chatUsers = chatUsersQuery.data || [];
 
   // Marcar usuário como online quando entrar na página
   useEffect(() => {
@@ -158,7 +162,7 @@ const SocialHub = () => {
         <TabsContent value="messages" className="w-full">
           <ChatList 
             chatUsers={chatUsers}
-            isLoading={getChatUsers.isLoading}
+            isLoading={chatUsersQuery.isLoading}
             onSelectUser={(user) => openChat(user.id, user.username, user.avatar_url)}
           />
         </TabsContent>

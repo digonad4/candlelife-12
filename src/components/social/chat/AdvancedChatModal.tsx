@@ -31,18 +31,24 @@ export const AdvancedChatModal = ({
   const [currentPage, setCurrentPage] = useState(1);
 
   const { 
-    getConversation, 
-    sendMessage, 
-    editMessage, 
-    deleteMessage, 
-    markConversationAsRead,
-    clearConversation 
+    useConversation, 
+    useSendMessage, 
+    useEditMessage, 
+    useDeleteMessage, 
+    useMarkConversationAsRead,
+    useClearConversation 
   } = useAdvancedMessages();
 
   const { isUserOnline, updateMyPresence } = useUserPresence();
   const { sendTypingStatus, isUserTyping } = useTypingStatus();
 
-  const conversationQuery = getConversation(recipientId, searchQuery);
+  const conversationQuery = useConversation(recipientId, searchQuery);
+  const sendMessage = useSendMessage();
+  const editMessage = useEditMessage();
+  const deleteMessage = useDeleteMessage();
+  const markConversationAsRead = useMarkConversationAsRead();
+  const clearConversation = useClearConversation();
+
   const messages = conversationQuery.data?.messages || [];
   const hasMore = conversationQuery.data?.hasNextPage || false;
 

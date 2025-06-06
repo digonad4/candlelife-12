@@ -17,6 +17,7 @@ interface Message {
   edited_at?: string;
   is_soft_deleted?: boolean;
   reply_to_id?: string;
+  message_status?: string;
   profiles?: {
     username: string;
     avatar_url?: string;
@@ -77,7 +78,7 @@ export const useAdvancedMessages = () => {
   });
 
   // Query para buscar usuários do chat
-  const getChatUsers = useQuery({
+  const useChatUsers = () => useQuery({
     queryKey: ['chat-users', user?.id],
     queryFn: async (): Promise<ChatUser[]> => {
       if (!user) return [];
@@ -156,7 +157,7 @@ export const useAdvancedMessages = () => {
   });
 
   // Query para buscar conversa específica
-  const getConversation = useCallback((otherUserId: string | null, cursor?: string) => {
+  const useConversation = useCallback((otherUserId: string | null, cursor?: string) => {
     return useQuery({
       queryKey: ['conversation', otherUserId, cursor],
       queryFn: async (): Promise<ConversationData> => {
@@ -177,6 +178,7 @@ export const useAdvancedMessages = () => {
             edited_at,
             is_soft_deleted,
             reply_to_id,
+            message_status,
             profiles:sender_id(username, avatar_url)
           `)
           .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
@@ -201,11 +203,18 @@ export const useAdvancedMessages = () => {
 
         // Transform data to match Message interface
         const transformedMessages: Message[] = messages.map(msg => ({
-          ...msg,
+          id: msg.id,
+          content: msg.content,
+          sender_id: msg.sender_id,
+          recipient_id: msg.recipient_id,
+          created_at: msg.created_at,
+          read: msg.read,
           attachment_url: msg.attachment_url || undefined,
           edited_at: msg.edited_at || undefined,
           is_soft_deleted: msg.is_soft_deleted || undefined,
-          reply_to_id: msg.reply_to_id || undefined
+          reply_to_id: msg.reply_to_id || undefined,
+          message_status: msg.message_status || 'sent',
+          profiles: Array.isArray(msg.profiles) && msg.profiles.length > 0 ? msg.profiles[0] : undefined
         })).reverse();
 
         return {
@@ -221,7 +230,7 @@ export const useAdvancedMessages = () => {
   }, [user]);
 
   // Mutation para enviar mensagem
-  const sendMessage = useMutation({
+  const useSendMessage = () => useMutation({
     mutationFn: async ({ 
       recipientId, 
       content, 
@@ -272,7 +281,7 @@ export const useAdvancedMessages = () => {
   });
 
   // Mutation para marcar mensagens como lidas
-  const markConversationAsRead = useMutation({
+  const useMarkConversationAsRead = () => useMutation({
     mutationFn: async (otherUserId: string) => {
       if (!user) throw new Error('User not authenticated');
 
@@ -291,7 +300,7 @@ export const useAdvancedMessages = () => {
   });
 
   // Mutation para editar mensagem
-  const editMessage = useMutation({
+  const useEditMessage = () => useMutation({
     mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
       if (!user) throw new Error('User not authenticated');
 
@@ -313,7 +322,7 @@ export const useAdvancedMessages = () => {
   });
 
   // Mutation para deletar mensagem
-  const deleteMessage = useMutation({
+  const useDeleteMessage = () => useMutation({
     mutationFn: async (messageId: string) => {
       if (!user) throw new Error('User not authenticated');
 
@@ -337,7 +346,7 @@ export const useAdvancedMessages = () => {
   });
 
   // Mutation para limpar conversa
-  const clearConversation = useMutation({
+  const useClearConversation = () => useMutation({
     mutationFn: async (otherUserId: string) => {
       if (!user) throw new Error('User not authenticated');
 
@@ -391,25 +400,20 @@ export const useAdvancedMessages = () => {
 
   // Function to get total unread count
   const getTotalUnreadCount = useCallback((): number => {
-    const chatUsers = getChatUsers.data || [];
+    const chatUsersQuery = useChatUsers();
+    const chatUsers = chatUsersQuery.data || [];
     return chatUsers.reduce((total, user) => total + (user.unread_count || 0), 0);
-  }, [getChatUsers.data]);
+  }, []);
 
   return {
-    // Data access (direct data)
-    chatUsers: getChatUsers.data || [],
-    totalUnreadMessages: getTotalUnreadCount(),
-
-    // Queries (hooks)
-    getChatUsers,
-    getConversation,
-
-    // Mutations
-    sendMessage,
-    markConversationAsRead,
-    editMessage,
-    deleteMessage,
-    clearConversation,
+    // Hooks (queries and mutations)
+    useChatUsers,
+    useConversation,
+    useSendMessage,
+    useMarkConversationAsRead,
+    useEditMessage,
+    useDeleteMessage,
+    useClearConversation,
 
     // Estado
     activeConversation,

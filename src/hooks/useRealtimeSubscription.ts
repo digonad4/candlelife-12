@@ -24,7 +24,6 @@ export const useRealtimeSubscription = ({
   const { user } = useAuth();
   const channelRef = useRef<any>(null);
   const isSubscribedRef = useRef<boolean>(false);
-  const isSubscribingRef = useRef<boolean>(false);
   const userIdRef = useRef<string | null>(null);
   
   // Função de cleanup robusta
@@ -42,7 +41,6 @@ export const useRealtimeSubscription = ({
     }
     
     isSubscribedRef.current = false;
-    isSubscribingRef.current = false;
   }, [channelName]);
 
   // Função para criar subscription
@@ -50,8 +48,8 @@ export const useRealtimeSubscription = ({
     const currentUserId = user?.id || null;
     
     // Verificar se já existe subscription ativa
-    if (isSubscribedRef.current || isSubscribingRef.current) {
-      console.log(`⏭️ Subscription already active/in progress for: ${channelName}`);
+    if (isSubscribedRef.current || channelRef.current) {
+      console.log(`⏭️ Subscription already active for: ${channelName}`);
       return;
     }
 
@@ -60,9 +58,6 @@ export const useRealtimeSubscription = ({
       return;
     }
 
-    // Marcar como em progresso
-    isSubscribingRef.current = true;
-    
     // Criar nome único do canal
     const uniqueChannelName = `${channelName}-${currentUserId}-${Date.now()}`;
     console.log(`📡 Creating subscription: ${uniqueChannelName}`);
@@ -91,21 +86,18 @@ export const useRealtimeSubscription = ({
         console.log(`✅ Successfully subscribed to: ${uniqueChannelName}`);
         channelRef.current = channel;
         isSubscribedRef.current = true;
-        isSubscribingRef.current = false;
       } else if (status === 'CLOSED') {
         console.log(`🛑 Subscription closed: ${uniqueChannelName}`);
         if (channelRef.current === channel) {
           channelRef.current = null;
         }
         isSubscribedRef.current = false;
-        isSubscribingRef.current = false;
       } else if (status === 'CHANNEL_ERROR') {
         console.error(`❌ Subscription error: ${uniqueChannelName}`);
         if (channelRef.current === channel) {
           channelRef.current = null;
         }
         isSubscribedRef.current = false;
-        isSubscribingRef.current = false;
       }
     });
     
@@ -141,7 +133,6 @@ export const useRealtimeSubscription = ({
 
   return {
     isSubscribed: isSubscribedRef.current,
-    isSubscribing: isSubscribingRef.current,
     cleanup: cleanupSubscription
   };
 };
