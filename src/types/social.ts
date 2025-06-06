@@ -1,6 +1,4 @@
 
-<<<<<<< HEAD
-=======
 export interface Message {
   id: string;
   sender_id: string;
@@ -27,7 +25,6 @@ export interface EditHistory {
   edited_at: string;
 }
 
->>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
 export interface UserPresence {
   id: string;
   user_id: string;
@@ -69,10 +66,6 @@ export interface PushToken {
   updated_at: string;
 }
 
-<<<<<<< HEAD
-// Re-export Message and related types from the messages module
-export type { Message, EditHistory, ChatUser } from "@/hooks/messages/types";
-=======
 export interface ChatUser {
   id: string;
   username: string;
@@ -82,4 +75,3 @@ export interface ChatUser {
   presence?: UserPresence;
   is_typing?: boolean;
 }
->>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
