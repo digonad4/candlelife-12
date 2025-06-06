@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,7 +16,7 @@ interface Message {
   edited_at?: string;
   is_soft_deleted?: boolean;
   reply_to_id?: string;
-  message_status?: string;
+  message_status: 'sending' | 'sent' | 'delivered' | 'read';
   profiles?: {
     username: string;
     avatar_url?: string;
@@ -28,7 +27,7 @@ interface ChatUser {
   id: string;
   username: string;
   avatar_url?: string;
-  last_message?: string;
+  last_message?: Message;
   last_message_at?: string;
   unread_count?: number;
 }
@@ -91,7 +90,9 @@ export const useAdvancedMessages = () => {
           recipient_id,
           content,
           created_at,
-          read
+          read,
+          id,
+          message_status
         `)
         .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order("created_at", { ascending: false });
@@ -132,8 +133,16 @@ export const useAdvancedMessages = () => {
           msg.recipient_id === user.id && !msg.read
         ).length;
 
-        const lastMessage = userMessages[0]?.content || undefined;
-        const lastMessageAt = userMessages[0]?.created_at || undefined;
+        const lastMessageData = userMessages[0];
+        const lastMessage: Message | undefined = lastMessageData ? {
+          id: lastMessageData.id,
+          content: lastMessageData.content,
+          sender_id: lastMessageData.sender_id,
+          recipient_id: lastMessageData.recipient_id,
+          created_at: lastMessageData.created_at,
+          read: lastMessageData.read,
+          message_status: (lastMessageData.message_status as 'sending' | 'sent' | 'delivered' | 'read') || 'sent'
+        } : undefined;
 
         return {
           id: profile.id,
@@ -141,7 +150,7 @@ export const useAdvancedMessages = () => {
           avatar_url: profile.avatar_url || undefined,
           unread_count: unreadCount,
           last_message: lastMessage,
-          last_message_at: lastMessageAt
+          last_message_at: lastMessageData?.created_at
         };
       }) || [];
 
@@ -213,7 +222,7 @@ export const useAdvancedMessages = () => {
           edited_at: msg.edited_at || undefined,
           is_soft_deleted: msg.is_soft_deleted || undefined,
           reply_to_id: msg.reply_to_id || undefined,
-          message_status: msg.message_status || 'sent',
+          message_status: (msg.message_status as 'sending' | 'sent' | 'delivered' | 'read') || 'sent',
           profiles: Array.isArray(msg.profiles) && msg.profiles.length > 0 ? msg.profiles[0] : undefined
         })).reverse();
 
