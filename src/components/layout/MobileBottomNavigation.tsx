@@ -19,10 +19,8 @@ export const MobileBottomNavigation = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { hapticFeedback } = useNative();
-  const { getTotalUnreadCount } = useAdvancedMessages();
+  const { totalUnreadMessages } = useAdvancedMessages();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
-  const totalUnread = getTotalUnreadCount();
 
   const mainNavItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
@@ -33,7 +31,7 @@ export const MobileBottomNavigation = () => {
       icon: MessageSquare, 
       label: "Chat", 
       href: "/chat",
-      badge: totalUnread > 0 ? (totalUnread > 99 ? "99+" : totalUnread.toString()) : undefined
+      badge: totalUnreadMessages > 0 ? (totalUnreadMessages > 99 ? "99+" : totalUnreadMessages.toString()) : undefined
     },
   ];
 

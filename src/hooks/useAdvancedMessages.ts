@@ -77,31 +77,86 @@ export const useAdvancedMessages = () => {
   });
 
   // Query para buscar usuários do chat
-  const useChatUsers = () => {
-    return useQuery({
-      queryKey: ['chat-users', user?.id],
-      queryFn: async (): Promise<ChatUser[]> => {
-        if (!user) return [];
+  const getChatUsers = useQuery({
+    queryKey: ['chat-users', user?.id],
+    queryFn: async (): Promise<ChatUser[]> => {
+      if (!user) return [];
 
-        const { data, error } = await supabase.rpc('get_chat_users', {
-          current_user_id: user.id
-        });
+      // Get all users who have exchanged messages with current user
+      const { data: messagesData, error: messagesError } = await supabase
+        .from("messages")
+        .select(`
+          sender_id,
+          recipient_id,
+          content,
+          created_at,
+          read
+        `)
+        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+        .order("created_at", { ascending: false });
 
-        if (error) {
-          console.error('Error fetching chat users:', error);
-          throw error;
-        }
+      if (messagesError) {
+        console.error("Error fetching messages:", messagesError);
+        return [];
+      }
 
-        return data || [];
-      },
-      enabled: !!user,
-      staleTime: 30000,
-      gcTime: 300000
-    });
-  };
+      // Get unique user IDs who have chatted with current user
+      const userIds = new Set<string>();
+      messagesData?.forEach(msg => {
+        if (msg.sender_id !== user.id) userIds.add(msg.sender_id);
+        if (msg.recipient_id !== user.id) userIds.add(msg.recipient_id);
+      });
+
+      if (userIds.size === 0) return [];
+
+      // Get profiles for these users
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", Array.from(userIds));
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        return [];
+      }
+
+      // Calculate unread counts and last messages for each user
+      const chatUsers: ChatUser[] = profiles?.map(profile => {
+        const userMessages = messagesData?.filter(msg => 
+          (msg.sender_id === profile.id && msg.recipient_id === user.id) ||
+          (msg.sender_id === user.id && msg.recipient_id === profile.id)
+        ) || [];
+
+        const unreadCount = userMessages.filter(msg => 
+          msg.recipient_id === user.id && !msg.read
+        ).length;
+
+        const lastMessage = userMessages[0]?.content || undefined;
+        const lastMessageAt = userMessages[0]?.created_at || undefined;
+
+        return {
+          id: profile.id,
+          username: profile.username,
+          avatar_url: profile.avatar_url || undefined,
+          unread_count: unreadCount,
+          last_message: lastMessage,
+          last_message_at: lastMessageAt
+        };
+      }) || [];
+
+      return chatUsers.sort((a, b) => {
+        const aTime = a.last_message_at || '';
+        const bTime = b.last_message_at || '';
+        return new Date(bTime).getTime() - new Date(aTime).getTime();
+      });
+    },
+    enabled: !!user,
+    staleTime: 30000,
+    gcTime: 300000
+  });
 
   // Query para buscar conversa específica
-  const useConversation = (otherUserId: string | null, cursor?: string) => {
+  const getConversation = useCallback((otherUserId: string | null, cursor?: string) => {
     return useQuery({
       queryKey: ['conversation', otherUserId, cursor],
       queryFn: async (): Promise<ConversationData> => {
@@ -144,8 +199,17 @@ export const useAdvancedMessages = () => {
         const hasNextPage = (data || []).length > MESSAGES_PER_PAGE;
         const nextCursor = hasNextPage ? messages[messages.length - 1]?.created_at : undefined;
 
+        // Transform data to match Message interface
+        const transformedMessages: Message[] = messages.map(msg => ({
+          ...msg,
+          attachment_url: msg.attachment_url || undefined,
+          edited_at: msg.edited_at || undefined,
+          is_soft_deleted: msg.is_soft_deleted || undefined,
+          reply_to_id: msg.reply_to_id || undefined
+        })).reverse();
+
         return {
-          messages: messages.reverse(),
+          messages: transformedMessages,
           hasNextPage,
           nextCursor
         };
@@ -154,157 +218,147 @@ export const useAdvancedMessages = () => {
       staleTime: 10000,
       gcTime: 300000
     });
-  };
+  }, [user]);
 
   // Mutation para enviar mensagem
-  const useSendMessage = () => {
-    return useMutation({
-      mutationFn: async ({ 
-        recipientId, 
-        content, 
-        attachmentUrl,
-        replyToId 
-      }: { 
-        recipientId: string; 
-        content: string; 
-        attachmentUrl?: string;
-        replyToId?: string;
-      }) => {
-        if (!user) throw new Error('User not authenticated');
+  const sendMessage = useMutation({
+    mutationFn: async ({ 
+      recipientId, 
+      content, 
+      attachmentUrl,
+      replyToId 
+    }: { 
+      recipientId: string; 
+      content: string; 
+      attachmentUrl?: string;
+      replyToId?: string;
+    }) => {
+      if (!user) throw new Error('User not authenticated');
 
-        const { data, error } = await supabase
-          .from('messages')
-          .insert({
-            sender_id: user.id,
-            recipient_id: recipientId,
-            content,
-            attachment_url: attachmentUrl,
-            reply_to_id: replyToId
-          })
-          .select()
-          .single();
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: user.id,
+          recipient_id: recipientId,
+          content,
+          attachment_url: attachmentUrl,
+          reply_to_id: replyToId
+        })
+        .select()
+        .single();
 
-        if (error) throw error;
-        return data;
-      },
-      onSuccess: () => {
-        // Invalidar queries relacionadas
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({
+        queryKey: ['chat-users']
+      });
+      if (activeConversation) {
         queryClient.invalidateQueries({
-          queryKey: ['chat-users']
-        });
-        if (activeConversation) {
-          queryClient.invalidateQueries({
-            queryKey: ['conversation', activeConversation]
-          });
-        }
-      },
-      onError: (error) => {
-        console.error('Error sending message:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível enviar a mensagem",
-          variant: "destructive"
+          queryKey: ['conversation', activeConversation]
         });
       }
-    });
-  };
+    },
+    onError: (error) => {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem",
+        variant: "destructive"
+      });
+    }
+  });
 
   // Mutation para marcar mensagens como lidas
-  const useMarkAsRead = () => {
-    return useMutation({
-      mutationFn: async (otherUserId: string) => {
-        if (!user) throw new Error('User not authenticated');
+  const markConversationAsRead = useMutation({
+    mutationFn: async (otherUserId: string) => {
+      if (!user) throw new Error('User not authenticated');
 
-        const { error } = await supabase.rpc('mark_conversation_as_read_v2', {
-          p_recipient_id: user.id,
-          p_sender_id: otherUserId
-        });
+      const { error } = await supabase.rpc('mark_conversation_as_read_v2', {
+        p_recipient_id: user.id,
+        p_sender_id: otherUserId
+      });
 
-        if (error) throw error;
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: ['chat-users']
-        });
-      }
-    });
-  };
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['chat-users']
+      });
+    }
+  });
 
   // Mutation para editar mensagem
-  const useEditMessage = () => {
-    return useMutation({
-      mutationFn: async ({ messageId, newContent }: { messageId: string; newContent: string }) => {
-        if (!user) throw new Error('User not authenticated');
+  const editMessage = useMutation({
+    mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
+      if (!user) throw new Error('User not authenticated');
 
-        const { error } = await supabase.rpc('edit_message', {
-          p_message_id: messageId,
-          p_user_id: user.id,
-          p_new_content: newContent
+      const { error } = await supabase.rpc('edit_message', {
+        p_message_id: messageId,
+        p_user_id: user.id,
+        p_new_content: content
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      if (activeConversation) {
+        queryClient.invalidateQueries({
+          queryKey: ['conversation', activeConversation]
         });
-
-        if (error) throw error;
-      },
-      onSuccess: () => {
-        if (activeConversation) {
-          queryClient.invalidateQueries({
-            queryKey: ['conversation', activeConversation]
-          });
-        }
       }
-    });
-  };
+    }
+  });
 
   // Mutation para deletar mensagem
-  const useDeleteMessage = () => {
-    return useMutation({
-      mutationFn: async (messageId: string) => {
-        if (!user) throw new Error('User not authenticated');
+  const deleteMessage = useMutation({
+    mutationFn: async (messageId: string) => {
+      if (!user) throw new Error('User not authenticated');
 
-        const { error } = await supabase.rpc('soft_delete_message', {
-          p_message_id: messageId,
-          p_user_id: user.id
-        });
+      const { error } = await supabase.rpc('soft_delete_message', {
+        p_message_id: messageId,
+        p_user_id: user.id
+      });
 
-        if (error) throw error;
-      },
-      onSuccess: () => {
-        if (activeConversation) {
-          queryClient.invalidateQueries({
-            queryKey: ['conversation', activeConversation]
-          });
-        }
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      if (activeConversation) {
         queryClient.invalidateQueries({
-          queryKey: ['chat-users']
+          queryKey: ['conversation', activeConversation]
         });
       }
-    });
-  };
+      queryClient.invalidateQueries({
+        queryKey: ['chat-users']
+      });
+    }
+  });
 
   // Mutation para limpar conversa
-  const useClearConversation = () => {
-    return useMutation({
-      mutationFn: async (otherUserId: string) => {
-        if (!user) throw new Error('User not authenticated');
+  const clearConversation = useMutation({
+    mutationFn: async (otherUserId: string) => {
+      if (!user) throw new Error('User not authenticated');
 
-        const { error } = await supabase.rpc('clear_conversation', {
-          p_user_id: user.id,
-          p_other_user_id: otherUserId
-        });
+      const { error } = await supabase.rpc('clear_conversation', {
+        p_user_id: user.id,
+        p_other_user_id: otherUserId
+      });
 
-        if (error) throw error;
-      },
-      onSuccess: () => {
-        if (activeConversation) {
-          queryClient.invalidateQueries({
-            queryKey: ['conversation', activeConversation]
-          });
-        }
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      if (activeConversation) {
         queryClient.invalidateQueries({
-          queryKey: ['chat-users']
+          queryKey: ['conversation', activeConversation]
         });
       }
-    });
-  };
+      queryClient.invalidateQueries({
+        queryKey: ['chat-users']
+      });
+    }
+  });
 
   // Função para enviar status de digitação
   const sendTypingStatus = useCallback(async (otherUserId: string, isTyping: boolean) => {
@@ -335,17 +389,27 @@ export const useAdvancedMessages = () => {
     }
   }, [user]);
 
+  // Function to get total unread count
+  const getTotalUnreadCount = useCallback((): number => {
+    const chatUsers = getChatUsers.data || [];
+    return chatUsers.reduce((total, user) => total + (user.unread_count || 0), 0);
+  }, [getChatUsers.data]);
+
   return {
-    // Queries
-    useChatUsers,
-    useConversation,
+    // Data access (direct data)
+    chatUsers: getChatUsers.data || [],
+    totalUnreadMessages: getTotalUnreadCount(),
+
+    // Queries (hooks)
+    getChatUsers,
+    getConversation,
 
     // Mutations
-    useSendMessage,
-    useMarkAsRead,
-    useEditMessage,
-    useDeleteMessage,
-    useClearConversation,
+    sendMessage,
+    markConversationAsRead,
+    editMessage,
+    deleteMessage,
+    clearConversation,
 
     // Estado
     activeConversation,
@@ -353,6 +417,7 @@ export const useAdvancedMessages = () => {
     typingUsers,
 
     // Funções
-    sendTypingStatus
+    sendTypingStatus,
+    getTotalUnreadCount
   };
 };

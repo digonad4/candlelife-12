@@ -71,7 +71,16 @@ export const useRealtimeSubscription = ({
     
     // Adicionar filtros
     filters.forEach(filter => {
-      channel = channel.on('postgres_changes', filter, onSubscriptionChange || (() => {}));
+      channel = channel.on(
+        'postgres_changes',
+        {
+          event: filter.event as any,
+          schema: filter.schema || 'public',
+          table: filter.table,
+          filter: filter.filter
+        },
+        onSubscriptionChange || (() => {})
+      );
     });
     
     // Subscribe com tratamento de status

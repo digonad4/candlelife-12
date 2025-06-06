@@ -42,10 +42,9 @@ export const AdvancedChatModal = ({
   const { isUserOnline, updateMyPresence } = useUserPresence();
   const { sendTypingStatus, isUserTyping } = useTypingStatus();
 
-  const conversationQuery = getConversation(recipientId, currentPage, 20, searchQuery);
+  const conversationQuery = getConversation(recipientId, searchQuery);
   const messages = conversationQuery.data?.messages || [];
-  const hasMore = conversationQuery.data?.hasMore || false;
-  const totalCount = conversationQuery.data?.totalCount || 0;
+  const hasMore = conversationQuery.data?.hasNextPage || false;
 
   const isRecipientOnline = isUserOnline(recipientId);
   const isRecipientTyping = isUserTyping(recipientId);
@@ -55,7 +54,7 @@ export const AdvancedChatModal = ({
       await sendMessage.mutateAsync({
         recipientId,
         content,
-        attachment
+        attachmentUrl: attachment ? undefined : undefined // Handle file upload separately if needed
       });
       
       // Marcar como lendo esta conversa
@@ -129,7 +128,7 @@ export const AdvancedChatModal = ({
             isLoadingMore={conversationQuery.isLoading && currentPage > 1}
             isError={conversationQuery.isError}
             hasMore={hasMore}
-            totalCount={totalCount}
+            totalCount={messages.length}
             searchQuery={searchQuery}
             onDeleteMessage={handleDeleteMessage}
             onEditMessage={handleEditMessage}
