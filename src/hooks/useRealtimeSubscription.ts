@@ -25,6 +25,7 @@ export const useRealtimeSubscription = ({
   const channelRef = useRef<any>(null);
   const isSubscribedRef = useRef<boolean>(false);
   const userIdRef = useRef<string | null>(null);
+  const subscriptionAttemptRef = useRef<boolean>(false);
   
   // Função de cleanup robusta
   const cleanupSubscription = useCallback(() => {
@@ -41,15 +42,16 @@ export const useRealtimeSubscription = ({
     }
     
     isSubscribedRef.current = false;
+    subscriptionAttemptRef.current = false;
   }, [channelName]);
 
   // Função para criar subscription
   const createSubscription = useCallback(() => {
     const currentUserId = user?.id || null;
     
-    // Verificar se já existe subscription ativa
-    if (isSubscribedRef.current || channelRef.current) {
-      console.log(`⏭️ Subscription already active for: ${channelName}`);
+    // Verificar se já existe subscription ativa ou tentativa em andamento
+    if (isSubscribedRef.current || channelRef.current || subscriptionAttemptRef.current) {
+      console.log(`⏭️ Subscription already active or in progress for: ${channelName}`);
       return;
     }
 
@@ -57,6 +59,9 @@ export const useRealtimeSubscription = ({
       console.log(`❌ No user ID for subscription: ${channelName}`);
       return;
     }
+
+    // Marcar que estamos tentando criar uma subscription
+    subscriptionAttemptRef.current = true;
 
     // Criar nome único do canal
     const uniqueChannelName = `${channelName}-${currentUserId}-${Date.now()}`;
@@ -86,18 +91,21 @@ export const useRealtimeSubscription = ({
         console.log(`✅ Successfully subscribed to: ${uniqueChannelName}`);
         channelRef.current = channel;
         isSubscribedRef.current = true;
+        subscriptionAttemptRef.current = false;
       } else if (status === 'CLOSED') {
         console.log(`🛑 Subscription closed: ${uniqueChannelName}`);
         if (channelRef.current === channel) {
           channelRef.current = null;
         }
         isSubscribedRef.current = false;
+        subscriptionAttemptRef.current = false;
       } else if (status === 'CHANNEL_ERROR') {
         console.error(`❌ Subscription error: ${uniqueChannelName}`);
         if (channelRef.current === channel) {
           channelRef.current = null;
         }
         isSubscribedRef.current = false;
+        subscriptionAttemptRef.current = false;
       }
     });
     
@@ -121,8 +129,10 @@ export const useRealtimeSubscription = ({
       return;
     }
 
-    // Criar subscription se necessário
-    createSubscription();
+    // Só criar subscription se não existir nenhuma ativa ou em progresso
+    if (!isSubscribedRef.current && !channelRef.current && !subscriptionAttemptRef.current) {
+      createSubscription();
+    }
 
     // Cleanup ao desmontar
     return () => {
