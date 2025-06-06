@@ -25,14 +25,6 @@ const Dashboard = () => {
   // Usar o novo hook para subscription robusta
   useRealtimeSubscription({
     channelName: 'dashboard-transactions',
-<<<<<<< HEAD
-    filters: [{
-      event: '*',
-      schema: 'public',
-      table: 'transactions',
-      filter: `user_id=eq.${user?.id || ''}`
-    }],
-=======
     filters: [
       {
         event: '*',
@@ -41,7 +33,6 @@ const Dashboard = () => {
         filter: `user_id=eq.${user?.id || ''}`
       }
     ],
->>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
     onSubscriptionChange: () => {
       console.log("📢 Alteração detectada no banco de dados. Atualizando dashboard...");
       queryClient.invalidateQueries({

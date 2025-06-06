@@ -1,12 +1,7 @@
 
-<<<<<<< HEAD
-import { useEffect, useRef } from 'react';
-import { realtimeManager } from '@/services/RealtimeManager';
-=======
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
->>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
 
 interface SubscriptionConfig {
   channelName: string;
@@ -26,40 +21,6 @@ export const useRealtimeSubscription = ({
   filters = [],
   dependencies = []
 }: SubscriptionConfig) => {
-<<<<<<< HEAD
-  const cleanupRef = useRef<(() => void) | null>(null);
-  const subscriberIdRef = useRef(`${channelName}-${Math.random().toString(36).substr(2, 9)}`);
-
-  useEffect(() => {
-    console.log(`📡 useRealtimeSubscription: Setting up ${channelName}`);
-
-    const cleanup = realtimeManager.subscribe(
-      {
-        channelName,
-        filters,
-        onSubscriptionChange
-      },
-      subscriberIdRef.current
-    );
-
-    cleanupRef.current = cleanup;
-
-    return () => {
-      console.log(`🧹 useRealtimeSubscription: Cleaning up ${channelName}`);
-      if (cleanupRef.current) {
-        cleanupRef.current();
-      }
-    };
-  }, [channelName, onSubscriptionChange, JSON.stringify(filters), ...dependencies]);
-
-  return {
-    isSubscribed: cleanupRef.current !== null,
-    cleanup: () => {
-      if (cleanupRef.current) {
-        cleanupRef.current();
-      }
-    }
-=======
   const { user } = useAuth();
   const channelRef = useRef<any>(null);
   const isSubscribedRef = useRef<boolean>(false);
@@ -173,6 +134,5 @@ export const useRealtimeSubscription = ({
     isSubscribed: isSubscribedRef.current,
     isSubscribing: isSubscribingRef.current,
     cleanup: cleanupSubscription
->>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
   };
 };

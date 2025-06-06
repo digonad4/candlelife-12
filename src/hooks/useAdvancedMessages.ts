@@ -1,393 +1,358 @@
-<<<<<<< HEAD
 
-import { useAuth } from "@/context/AuthContext";
-import { useMessages } from "./useMessages";
-import { useMessageRead } from "./messages/useMessageRead";
+import { useState, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from './use-toast';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 
-export const useAdvancedMessages = () => {
-  const { user } = useAuth();
-  const { 
-    chatUsers, 
-    isLoadingChatUsers, 
-    getConversation, 
-    sendMessage, 
-    clearConversation, 
-    deleteMessage, 
-    editMessage 
-  } = useMessages();
-
-  const { markConversationAsRead } = useMessageRead();
-
-  // Calculate total unread count with null safety
-  const getTotalUnreadCount = (): number => {
-    if (!chatUsers || !Array.isArray(chatUsers)) return 0;
-    return chatUsers.reduce((total, chatUser) => {
-      const unreadCount = chatUser?.unread_count || 0;
-      return total + unreadCount;
-    }, 0);
+interface Message {
+  id: string;
+  content: string;
+  sender_id: string;
+  recipient_id: string;
+  created_at: string;
+  read: boolean;
+  attachment_url?: string;
+  edited_at?: string;
+  is_soft_deleted?: boolean;
+  reply_to_id?: string;
+  profiles?: {
+    username: string;
+    avatar_url?: string;
   };
+}
 
-  // Get chat users query with error handling
-  const getChatUsers = {
-    data: chatUsers || [],
-    isLoading: isLoadingChatUsers
-  };
+interface ChatUser {
+  id: string;
+  username: string;
+  avatar_url?: string;
+  last_message?: string;
+  last_message_at?: string;
+  unread_count?: number;
+}
 
-  // Create conversation function that handles the user ID properly
-  const createConversation = (recipientId: string, page: number = 1, pageSize: number = 20, searchQuery: string = "") => {
-    console.log("createConversation called with:", { recipientId, page, pageSize, searchQuery, userId: user?.id });
-    
-    if (!user?.id || !recipientId) {
-      console.warn("No user ID or recipient ID available for conversation");
-      return { 
-        data: { messages: [], hasMore: false, totalCount: 0 }, 
-        isLoading: false, 
-        isError: true,
-        error: new Error("Missing user or recipient ID")
-      };
-    }
-    
-    const conversationQuery = getConversation(recipientId, page, pageSize, searchQuery);
-    console.log("Conversation query result:", conversationQuery);
-    
-    return conversationQuery;
-  };
+interface ConversationData {
+  messages: Message[];
+  hasNextPage: boolean;
+  nextCursor?: string;
+}
 
-  return {
-    chatUsers: chatUsers || [],
-    isLoadingChatUsers,
-    getTotalUnreadCount,
-    getChatUsers,
-    getConversation: createConversation,
-    sendMessage,
-    clearConversation,
-    deleteMessage,
-    editMessage,
-    markConversationAsRead
-=======
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { Message, ChatUser } from "@/types/social";
-import { notificationService } from "@/services/notificationService";
-import { useRealtimeSubscription } from "./useRealtimeSubscription";
+const MESSAGES_PER_PAGE = 20;
 
 export const useAdvancedMessages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [activeConversation, setActiveConversation] = useState<string | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const typingTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  // Inicializar serviço de notificações
-  useEffect(() => {
-    notificationService.initialize();
-  }, []);
-
-  // Usar o novo hook para subscription
+  // Subscription para mensagens em tempo real
   useRealtimeSubscription({
-    channelName: 'advanced-messages',
+    channelName: 'messages-realtime',
     filters: [
       {
-        event: 'INSERT',
-        schema: 'public',
+        event: '*',
+        schema: 'public', 
         table: 'messages',
-        filter: `recipient_id=eq.${user?.id || ''}`
+        filter: user ? `or(sender_id.eq.${user.id},recipient_id.eq.${user.id})` : undefined
       }
     ],
-    onSubscriptionChange: async (payload) => {
-      console.log("Nova mensagem recebida:", payload);
+    onSubscriptionChange: (payload) => {
+      console.log('📨 Realtime message update:', payload);
       
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
-      queryClient.invalidateQueries({ queryKey: ['chat-users'] });
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({
+        queryKey: ['chat-users']
+      });
       
-      const newMessage = payload.new as Message;
-      if (newMessage.sender_id !== user?.id) {
-        queryClient.invalidateQueries({ queryKey: ['conversation', newMessage.sender_id] });
-        
-        const { data: senderData } = await supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', newMessage.sender_id)
-          .single();
-
-        if (senderData) {
-          // Mostrar notificação
-          notificationService.showNotification(newMessage, senderData);
-          
-          // Atualizar badge count
-          const { data: unreadCount } = await supabase
-            .from('messages')
-            .select('id', { count: 'exact' })
-            .eq('recipient_id', user?.id)
-            .eq('read', false);
-          
-          notificationService.updateBadgeCount(unreadCount?.length || 0);
-        }
+      if (activeConversation) {
+        queryClient.invalidateQueries({
+          queryKey: ['conversation', activeConversation]
+        });
       }
     },
-    dependencies: [user?.id]
+    dependencies: [user?.id, activeConversation]
   });
 
-  // Buscar conversas do usuário
-  const getChatUsers = useQuery({
-    queryKey: ['chat-users', user?.id],
-    queryFn: async (): Promise<ChatUser[]> => {
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          sender:profiles!messages_sender_id_fkey(id, username, avatar_url),
-          recipient:profiles!messages_recipient_id_fkey(id, username, avatar_url)
-        `)
-        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-        .eq('is_soft_deleted', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Agrupar mensagens por conversa
-      const conversationMap = new Map<string, ChatUser>();
-      
-      data?.forEach((message: any) => {
-        const otherUser = message.sender_id === user.id ? message.recipient : message.sender;
-        const conversationId = otherUser.id;
-        
-        if (!conversationMap.has(conversationId)) {
-          conversationMap.set(conversationId, {
-            id: otherUser.id,
-            username: otherUser.username,
-            avatar_url: otherUser.avatar_url,
-            last_message: message,
-            unread_count: 0
-          });
-        }
-
-        // Atualizar contagem de não lidas
-        if (message.recipient_id === user.id && !message.read) {
-          const chatUser = conversationMap.get(conversationId)!;
-          chatUser.unread_count++;
-        }
-      });
-
-      return Array.from(conversationMap.values());
-    },
-    enabled: !!user
-  });
-
-  // Buscar mensagens de uma conversa específica
-  const getConversation = (recipientId: string, page = 1, pageSize = 20, searchQuery = "") => {
+  // Query para buscar usuários do chat
+  const useChatUsers = () => {
     return useQuery({
-      queryKey: ['conversation', recipientId, page, pageSize, searchQuery],
-      queryFn: async () => {
-        if (!user) return { messages: [], totalCount: 0, hasMore: false };
+      queryKey: ['chat-users', user?.id],
+      queryFn: async (): Promise<ChatUser[]> => {
+        if (!user) return [];
+
+        const { data, error } = await supabase.rpc('get_chat_users', {
+          current_user_id: user.id
+        });
+
+        if (error) {
+          console.error('Error fetching chat users:', error);
+          throw error;
+        }
+
+        return data || [];
+      },
+      enabled: !!user,
+      staleTime: 30000,
+      gcTime: 300000
+    });
+  };
+
+  // Query para buscar conversa específica
+  const useConversation = (otherUserId: string | null, cursor?: string) => {
+    return useQuery({
+      queryKey: ['conversation', otherUserId, cursor],
+      queryFn: async (): Promise<ConversationData> => {
+        if (!user || !otherUserId) {
+          return { messages: [], hasNextPage: false };
+        }
 
         let query = supabase
           .from('messages')
           .select(`
-            *,
-            sender:profiles!messages_sender_id_fkey(username, avatar_url)
+            id,
+            content,
+            sender_id,
+            recipient_id,
+            created_at,
+            read,
+            attachment_url,
+            edited_at,
+            is_soft_deleted,
+            reply_to_id,
+            profiles:sender_id(username, avatar_url)
           `)
-          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${user.id})`)
+          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
           .eq('is_soft_deleted', false)
           .order('created_at', { ascending: false })
-          .range((page - 1) * pageSize, page * pageSize - 1);
+          .limit(MESSAGES_PER_PAGE + 1);
 
-        if (searchQuery) {
-          query = query.ilike('content', `%${searchQuery}%`);
+        if (cursor) {
+          query = query.lt('created_at', cursor);
         }
 
-        const { data, error, count } = await query;
+        const { data, error } = await query;
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching conversation:', error);
+          throw error;
+        }
 
-        const messages = (data || []).reverse().map((msg: any) => ({
-          ...msg,
-          sender_username: msg.sender?.username,
-          sender_avatar_url: msg.sender?.avatar_url
-        }));
+        const messages = (data || []).slice(0, MESSAGES_PER_PAGE);
+        const hasNextPage = (data || []).length > MESSAGES_PER_PAGE;
+        const nextCursor = hasNextPage ? messages[messages.length - 1]?.created_at : undefined;
 
         return {
-          messages,
-          totalCount: count || 0,
-          hasMore: (count || 0) > page * pageSize
+          messages: messages.reverse(),
+          hasNextPage,
+          nextCursor
         };
       },
-      enabled: !!user && !!recipientId
+      enabled: !!user && !!otherUserId,
+      staleTime: 10000,
+      gcTime: 300000
     });
   };
 
-  // Enviar mensagem
-  const sendMessage = useMutation({
-    mutationFn: async ({ recipientId, content, attachment }: {
-      recipientId: string;
-      content: string;
-      attachment?: File;
-    }) => {
-      if (!user) throw new Error('Usuário não autenticado');
+  // Mutation para enviar mensagem
+  const useSendMessage = () => {
+    return useMutation({
+      mutationFn: async ({ 
+        recipientId, 
+        content, 
+        attachmentUrl,
+        replyToId 
+      }: { 
+        recipientId: string; 
+        content: string; 
+        attachmentUrl?: string;
+        replyToId?: string;
+      }) => {
+        if (!user) throw new Error('User not authenticated');
 
-      let attachmentUrl: string | null = null;
-      
-      if (attachment) {
-        const fileExt = attachment.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
+        const { data, error } = await supabase
+          .from('messages')
+          .insert({
+            sender_id: user.id,
+            recipient_id: recipientId,
+            content,
+            attachment_url: attachmentUrl,
+            reply_to_id: replyToId
+          })
+          .select()
+          .single();
 
-        const { error: uploadError } = await supabase.storage
-          .from('attachments')
-          .upload(filePath, attachment);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('attachments')
-          .getPublicUrl(filePath);
-
-        attachmentUrl = publicUrl;
+        if (error) throw error;
+        return data;
+      },
+      onSuccess: () => {
+        // Invalidar queries relacionadas
+        queryClient.invalidateQueries({
+          queryKey: ['chat-users']
+        });
+        if (activeConversation) {
+          queryClient.invalidateQueries({
+            queryKey: ['conversation', activeConversation]
+          });
+        }
+      },
+      onError: (error) => {
+        console.error('Error sending message:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível enviar a mensagem",
+          variant: "destructive"
+        });
       }
-
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          sender_id: user.id,
-          recipient_id: recipientId,
-          content,
-          attachment_url: attachmentUrl,
-          message_status: 'sending'
-        })
-        .select(`
-          *,
-          sender:profiles!messages_sender_id_fkey(username, avatar_url)
-        `)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['conversation'] });
-      queryClient.invalidateQueries({ queryKey: ['chat-users'] });
-    }
-  });
-
-  // Editar mensagem
-  const editMessage = useMutation({
-    mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
-      if (!user) throw new Error('Usuário não autenticado');
-
-      const { error } = await supabase.rpc('edit_message', {
-        p_message_id: messageId,
-        p_user_id: user.id,
-        p_new_content: content
-      });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversation'] });
-      toast({ title: "Mensagem editada com sucesso" });
-    }
-  });
-
-  // Excluir mensagem
-  const deleteMessage = useMutation({
-    mutationFn: async (messageId: string) => {
-      if (!user) throw new Error('Usuário não autenticado');
-
-      const { error } = await supabase.rpc('soft_delete_message', {
-        p_message_id: messageId,
-        p_user_id: user.id
-      });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversation'] });
-      toast({ title: "Mensagem excluída" });
-    }
-  });
-
-  // Marcar mensagem como lida
-  const markAsRead = useMutation({
-    mutationFn: async ({ messageId }: { messageId: string }) => {
-      if (!user) throw new Error('Usuário não autenticado');
-
-      const { error } = await supabase.rpc('mark_message_as_read_v2', {
-        p_message_id: messageId,
-        p_user_id: user.id
-      });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversation'] });
-      queryClient.invalidateQueries({ queryKey: ['chat-users'] });
-    }
-  });
-
-  // Marcar conversa como lida
-  const markConversationAsRead = useMutation({
-    mutationFn: async ({ recipientId, senderId }: { recipientId: string; senderId: string }) => {
-      const { error } = await supabase.rpc('mark_conversation_as_read_v2', {
-        p_recipient_id: recipientId,
-        p_sender_id: senderId
-      });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversation'] });
-      queryClient.invalidateQueries({ queryKey: ['chat-users'] });
-    }
-  });
-
-  // Limpar conversa
-  const clearConversation = useMutation({
-    mutationFn: async (recipientId: string) => {
-      if (!user) throw new Error('Usuário não autenticado');
-
-      const { error } = await supabase.rpc('clear_conversation', {
-        p_user_id: user.id,
-        p_other_user_id: recipientId
-      });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversation'] });
-      queryClient.invalidateQueries({ queryKey: ['chat-users'] });
-    }
-  });
-
-  // Calcular total de mensagens não lidas
-  const getTotalUnreadCount = (): number => {
-    const chatUsers = getChatUsers.data || [];
-    return chatUsers.reduce((total, user) => total + user.unread_count, 0);
+    });
   };
+
+  // Mutation para marcar mensagens como lidas
+  const useMarkAsRead = () => {
+    return useMutation({
+      mutationFn: async (otherUserId: string) => {
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await supabase.rpc('mark_conversation_as_read_v2', {
+          p_recipient_id: user.id,
+          p_sender_id: otherUserId
+        });
+
+        if (error) throw error;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ['chat-users']
+        });
+      }
+    });
+  };
+
+  // Mutation para editar mensagem
+  const useEditMessage = () => {
+    return useMutation({
+      mutationFn: async ({ messageId, newContent }: { messageId: string; newContent: string }) => {
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await supabase.rpc('edit_message', {
+          p_message_id: messageId,
+          p_user_id: user.id,
+          p_new_content: newContent
+        });
+
+        if (error) throw error;
+      },
+      onSuccess: () => {
+        if (activeConversation) {
+          queryClient.invalidateQueries({
+            queryKey: ['conversation', activeConversation]
+          });
+        }
+      }
+    });
+  };
+
+  // Mutation para deletar mensagem
+  const useDeleteMessage = () => {
+    return useMutation({
+      mutationFn: async (messageId: string) => {
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await supabase.rpc('soft_delete_message', {
+          p_message_id: messageId,
+          p_user_id: user.id
+        });
+
+        if (error) throw error;
+      },
+      onSuccess: () => {
+        if (activeConversation) {
+          queryClient.invalidateQueries({
+            queryKey: ['conversation', activeConversation]
+          });
+        }
+        queryClient.invalidateQueries({
+          queryKey: ['chat-users']
+        });
+      }
+    });
+  };
+
+  // Mutation para limpar conversa
+  const useClearConversation = () => {
+    return useMutation({
+      mutationFn: async (otherUserId: string) => {
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await supabase.rpc('clear_conversation', {
+          p_user_id: user.id,
+          p_other_user_id: otherUserId
+        });
+
+        if (error) throw error;
+      },
+      onSuccess: () => {
+        if (activeConversation) {
+          queryClient.invalidateQueries({
+            queryKey: ['conversation', activeConversation]
+          });
+        }
+        queryClient.invalidateQueries({
+          queryKey: ['chat-users']
+        });
+      }
+    });
+  };
+
+  // Função para enviar status de digitação
+  const sendTypingStatus = useCallback(async (otherUserId: string, isTyping: boolean) => {
+    if (!user) return;
+
+    try {
+      await supabase.rpc('update_typing_status', {
+        p_user_id: user.id,
+        p_conversation_with_user_id: otherUserId,
+        p_is_typing: isTyping
+      });
+
+      if (isTyping) {
+        const timeoutKey = `${user.id}-${otherUserId}`;
+        
+        if (typingTimeouts.current.has(timeoutKey)) {
+          clearTimeout(typingTimeouts.current.get(timeoutKey)!);
+        }
+
+        const timeout = setTimeout(() => {
+          sendTypingStatus(otherUserId, false);
+        }, 3000);
+
+        typingTimeouts.current.set(timeoutKey, timeout);
+      }
+    } catch (error) {
+      console.error('Error updating typing status:', error);
+    }
+  }, [user]);
 
   return {
     // Queries
-    getChatUsers,
-    getConversation,
-    
+    useChatUsers,
+    useConversation,
+
     // Mutations
-    sendMessage,
-    editMessage,
-    deleteMessage,
-    markAsRead,
-    markConversationAsRead,
-    clearConversation,
-    
-    // Utilities
-    getTotalUnreadCount,
-    
-    // Loading states
-    isLoadingChatUsers: getChatUsers.isLoading,
-    
-    // Notification service
-    notificationService
->>>>>>> a54c83b6aeb620917159af6bd1e06b32ec0fcdef
+    useSendMessage,
+    useMarkAsRead,
+    useEditMessage,
+    useDeleteMessage,
+    useClearConversation,
+
+    // Estado
+    activeConversation,
+    setActiveConversation,
+    typingUsers,
+
+    // Funções
+    sendTypingStatus
   };
 };
