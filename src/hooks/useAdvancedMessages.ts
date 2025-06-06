@@ -29,7 +29,7 @@ interface ChatUser {
   avatar_url?: string;
   last_message?: Message;
   last_message_at?: string;
-  unread_count?: number;
+  unread_count: number;
 }
 
 interface ConversationData {
@@ -148,7 +148,7 @@ export const useAdvancedMessages = () => {
           id: profile.id,
           username: profile.username,
           avatar_url: profile.avatar_url || undefined,
-          unread_count: unreadCount,
+          unread_count: unreadCount || 0,
           last_message: lastMessage,
           last_message_at: lastMessageData?.created_at
         };
