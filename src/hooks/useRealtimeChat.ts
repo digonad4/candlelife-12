@@ -120,7 +120,7 @@ export const useRealtimeChat = ({
         await supabase.rpc('update_user_presence', {
           p_user_id: user.id,
           p_status: 'online',
-          p_conversation_id: recipientId || null
+          p_conversation_id: recipientId || undefined
         });
 
         // Track presence in channel
