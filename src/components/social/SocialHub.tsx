@@ -3,15 +3,13 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePosts } from "@/hooks/usePosts";
-import { useAdvancedMessages } from "@/hooks/useAdvancedMessages";
-import { useUserPresence } from "@/hooks/useUserPresence";
-import { useTypingStatus } from "@/hooks/useTypingStatus";
+import { useEnhancedMessages } from "@/hooks/useEnhancedMessages";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { SocialHeader } from "./SocialHeader";
 import { FeedContent } from "./FeedContent";
 import { ChatList } from "./chat/ChatList";
-import { AdvancedChatModal } from "./chat/AdvancedChatModal";
+import { EnhancedChatModal } from "../chat/enhanced/EnhancedChatModal";
 import { NotificationCenter } from "./NotificationCenter";
 import { useNavigate } from "react-router-dom";
 import { ErrorMessage } from "@/components/ui/error-message";
@@ -21,25 +19,21 @@ const SocialHub = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { posts, isLoadingPosts, postsError, refetchPosts } = usePosts();
-  const { useChatUsers, getTotalUnreadCount } = useAdvancedMessages();
-  const { updateMyPresence } = useUserPresence();
-  const { sendTypingStatus } = useTypingStatus();
   
   const [editingPost, setEditingPost] = useState<any>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+
+  // Enhanced messages hook for real-time functionality
+  const { 
+    useChatUsers, 
+    getTotalUnreadCount 
+  } = useAdvancedMessages();
   
   const chatUsersQuery = useChatUsers();
   const totalUnreadMessages = getTotalUnreadCount();
   const chatUsers = chatUsersQuery.data || [];
-
-  // Marcar usuário como online quando entrar na página
-  useEffect(() => {
-    if (user) {
-      updateMyPresence('online');
-    }
-  }, [user, updateMyPresence]);
 
   // Verificar autenticação
   useEffect(() => {
@@ -182,7 +176,7 @@ const SocialHub = () => {
       </Tabs>
 
       {selectedChatUser && (
-        <AdvancedChatModal 
+        <EnhancedChatModal 
           isOpen={isChatOpen}
           onOpenChange={setIsChatOpen}
           recipientId={selectedChatUser.id}
