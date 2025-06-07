@@ -1,10 +1,11 @@
 
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
 export const useTypingIndicator = () => {
   const { user } = useAuth();
+  const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
 
   const sendTypingStatus = useCallback(async (otherUserId: string, isTyping: boolean) => {
     if (!user) return;
@@ -20,7 +21,43 @@ export const useTypingIndicator = () => {
     }
   }, [user]);
 
+  const isUserTyping = useCallback((userId: string) => {
+    return typingUsers[userId] || false;
+  }, [typingUsers]);
+
+  // Subscribe to typing status changes
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('typing_status_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'typing_status',
+          filter: `conversation_with_user_id.eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Typing status update:', payload);
+          if (payload.new) {
+            setTypingUsers(prev => ({
+              ...prev,
+              [payload.new.user_id]: payload.new.is_typing
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   return {
-    sendTypingStatus
+    sendTypingStatus,
+    isUserTyping
   };
 };

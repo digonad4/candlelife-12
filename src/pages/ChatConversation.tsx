@@ -38,7 +38,8 @@ const ChatConversation = () => {
   const sendMessageMutation = useSendMessage();
   const markAsRead = useMarkConversationAsRead();
 
-  const messages = conversationQuery.data || [];
+  // Handle conversation data properly
+  const messages = Array.isArray(conversationQuery.data) ? conversationQuery.data : conversationQuery.data?.messages || [];
   const chatUsers = chatUsersQuery.data || [];
   const recipient = chatUsers.find(u => u.id === userId);
 
