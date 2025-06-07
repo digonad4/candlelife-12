@@ -114,7 +114,7 @@ export const useEnhancedMessages = () => {
           message_status: (msg.message_status as 'sending' | 'sent' | 'delivered' | 'read') || 'sent',
           edited_at: msg.edited_at || undefined,
           reactions: [], // Default empty array since column doesn't exist yet
-          message_type: 'text', // Default to text since column doesn't exist yet
+          message_type: 'text' as const, // Cast to specific type
           attachment_url: msg.attachment_url || undefined,
           file_name: undefined, // Will be available after migration
           file_size: undefined, // Will be available after migration

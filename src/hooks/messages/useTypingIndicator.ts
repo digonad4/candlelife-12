@@ -41,10 +41,11 @@ export const useTypingIndicator = () => {
         },
         (payload) => {
           console.log('Typing status update:', payload);
-          if (payload.new) {
+          if (payload.new && typeof payload.new === 'object') {
+            const newData = payload.new as { user_id: string; is_typing: boolean };
             setTypingUsers(prev => ({
               ...prev,
-              [payload.new.user_id]: payload.new.is_typing
+              [newData.user_id]: newData.is_typing
             }));
           }
         }
