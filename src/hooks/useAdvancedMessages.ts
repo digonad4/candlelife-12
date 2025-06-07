@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './use-toast';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
+import { useMessagesRealtime } from './realtime/useMessagesRealtime';
 
 interface Message {
   id: string;
@@ -48,33 +48,8 @@ export const useAdvancedMessages = () => {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const typingTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  // Subscription para mensagens em tempo real
-  useRealtimeSubscription({
-    channelName: 'messages-realtime',
-    filters: [
-      {
-        event: '*',
-        schema: 'public', 
-        table: 'messages',
-        filter: user ? `or(sender_id.eq.${user.id},recipient_id.eq.${user.id})` : undefined
-      }
-    ],
-    onSubscriptionChange: (payload) => {
-      console.log('📨 Realtime message update:', payload);
-      
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({
-        queryKey: ['chat-users']
-      });
-      
-      if (activeConversation) {
-        queryClient.invalidateQueries({
-          queryKey: ['conversation', activeConversation]
-        });
-      }
-    },
-    dependencies: [user?.id, activeConversation]
-  });
+  // Use the consolidated realtime system
+  useMessagesRealtime();
 
   // Query para buscar usuários do chat
   const useChatUsers = () => useQuery({
@@ -148,7 +123,7 @@ export const useAdvancedMessages = () => {
           id: profile.id,
           username: profile.username,
           avatar_url: profile.avatar_url || undefined,
-          unread_count: unreadCount || 0,
+          unread_count: unreadCount,
           last_message: lastMessage,
           last_message_at: lastMessageData?.created_at
         };
