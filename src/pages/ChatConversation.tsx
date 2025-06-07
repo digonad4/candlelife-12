@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAdvancedMessages } from "@/hooks/useAdvancedMessages";
+import { useEnhancedMessages } from "@/hooks/useEnhancedMessages";
 import { useAuth } from "@/context/AuthContext";
 import { useNative } from "@/hooks/useNative";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { ArrowLeft, Send, MoreVertical, Loader2, Circle, Settings } from "lucide
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { EnhancedChatModal } from "@/components/chat/enhanced/EnhancedChatModal";
+import { useAdvancedMessages } from "@/hooks/useAdvancedMessages";
+import { useTypingIndicator } from "@/hooks/messages/useTypingIndicator";
 
 const ChatConversation = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -26,26 +28,30 @@ const ChatConversation = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { 
-    useChatUsers, 
-    useConversation, 
+    setActiveConversation,
+    useConversation,
     useSendMessage,
     useMarkConversationAsRead,
-    setActiveConversation
-  } = useAdvancedMessages();
+    isConnected
+  } = useEnhancedMessages();
+
+  const { useChatUsers } = useAdvancedMessages();
+  const { sendTypingStatus, isUserTyping } = useTypingIndicator();
 
   const chatUsersQuery = useChatUsers();
   const conversationQuery = useConversation(userId || "");
   const sendMessageMutation = useSendMessage();
   const markAsRead = useMarkConversationAsRead();
 
-  // Handle conversation data properly
-  const messages = Array.isArray(conversationQuery.data) ? conversationQuery.data : conversationQuery.data?.messages || [];
+  const messages = conversationQuery.data || [];
   const chatUsers = chatUsersQuery.data || [];
   const recipient = chatUsers.find(u => u.id === userId);
+  const isRecipientTyping = isUserTyping(userId || "");
 
   // Set active conversation and mark as read
   useEffect(() => {
     if (userId && user?.id) {
+      console.log('📱 Setting active conversation:', userId);
       setActiveConversation(userId);
       
       const timer = setTimeout(() => {
@@ -70,11 +76,33 @@ const ChatConversation = () => {
     }
   }, [messages]);
 
+  // Handle typing status
+  useEffect(() => {
+    let typingTimeout: NodeJS.Timeout;
+
+    if (message.trim() && userId) {
+      sendTypingStatus(userId, true);
+      
+      typingTimeout = setTimeout(() => {
+        sendTypingStatus(userId, false);
+      }, 3000);
+    } else if (userId) {
+      sendTypingStatus(userId, false);
+    }
+
+    return () => {
+      if (typingTimeout) clearTimeout(typingTimeout);
+    };
+  }, [message, userId, sendTypingStatus]);
+
   const handleSendMessage = async () => {
     if (!message.trim() || !userId) return;
 
     try {
       hapticFeedback('light');
+      
+      // Stop typing indicator
+      sendTypingStatus(userId, false);
       
       await sendMessageMutation.mutateAsync({
         recipientId: userId,
@@ -163,14 +191,18 @@ const ChatConversation = () => {
                 )}
               </Avatar>
               {/* Status online indicator */}
-              <Circle className="absolute -bottom-1 -right-1 h-3 w-3 fill-green-500 text-green-500" />
+              {isConnected && (
+                <Circle className="absolute -bottom-1 -right-1 h-3 w-3 fill-green-500 text-green-500" />
+              )}
             </div>
             
             <div className="flex-1">
               <h2 className="font-medium text-lg">
                 {recipient?.username || "Usuário"}
               </h2>
-              <p className="text-xs text-green-500">Online</p>
+              <p className="text-xs text-green-500">
+                {isConnected ? "Online" : "Desconectado"}
+              </p>
             </div>
             
             <Button 
@@ -218,6 +250,20 @@ const ChatConversation = () => {
                 </div>
               ))
             )}
+            
+            {/* Typing indicator */}
+            {isRecipientTyping && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-2xl px-4 py-2 rounded-bl-md">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>

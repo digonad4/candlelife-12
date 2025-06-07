@@ -32,7 +32,10 @@ export const useRealtimeChat = ({
       supabase.removeChannel(channelRef.current);
     }
 
-    const channel = supabase.channel(`chat_${user.id}_${Date.now()}`, {
+    const channelName = `chat_${user.id}_${recipientId || 'global'}_${Date.now()}`;
+    console.log('🔧 Setting up realtime channel:', channelName);
+
+    const channel = supabase.channel(channelName, {
       config: {
         presence: { key: user.id }
       }
@@ -45,40 +48,54 @@ export const useRealtimeChat = ({
         event: '*',
         schema: 'public',
         table: 'messages',
-        filter: recipientId ? `or(and(sender_id.eq.${user.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${user.id}))` : `or(sender_id.eq.${user.id},recipient_id.eq.${user.id})`
+        filter: recipientId 
+          ? `or(and(sender_id.eq.${user.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${user.id}))` 
+          : `or(sender_id.eq.${user.id},recipient_id.eq.${user.id})`
       },
       (payload) => {
-        console.log('💬 Realtime message:', payload);
+        console.log('💬 Realtime message event:', payload);
         
-        if (payload.eventType === 'INSERT' && onNewMessage) {
-          onNewMessage(payload.new);
-        } else if (payload.eventType === 'UPDATE' && onMessageUpdate) {
-          onMessageUpdate(payload.new);
+        if (payload.eventType === 'INSERT') {
+          console.log('📩 New message received:', payload.new);
+          onNewMessage?.(payload.new);
+          
+          // Invalidate relevant queries
+          queryClient.invalidateQueries({ queryKey: ['chat-users'] });
+          queryClient.invalidateQueries({ queryKey: ['conversation'] });
+          if (recipientId) {
+            queryClient.invalidateQueries({ queryKey: ['conversation', recipientId] });
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          console.log('📝 Message updated:', payload.new);
+          onMessageUpdate?.(payload.new);
+          
+          // Invalidate conversation queries
+          queryClient.invalidateQueries({ queryKey: ['conversation'] });
+          if (recipientId) {
+            queryClient.invalidateQueries({ queryKey: ['conversation', recipientId] });
+          }
         }
-
-        // Invalidate chat queries
-        queryClient.invalidateQueries({ queryKey: ['chat-users'] });
-        queryClient.invalidateQueries({ queryKey: ['conversation'] });
-        queryClient.invalidateQueries({ queryKey: ['messages'] });
       }
     );
 
     // Subscribe to typing status
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'typing_status',
-        filter: `conversation_with_user_id.eq.${user.id}`
-      },
-      (payload) => {
-        console.log('⌨️ Typing status:', payload);
-        if (onTypingUpdate) {
-          onTypingUpdate(payload.new);
+    if (recipientId) {
+      channel.on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'typing_status',
+          filter: `conversation_with_user_id.eq.${user.id}`
+        },
+        (payload) => {
+          console.log('⌨️ Typing status update:', payload);
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            onTypingUpdate?.(payload.new);
+          }
         }
-      }
-    );
+      );
+    }
 
     // Subscribe to presence updates
     channel.on(
@@ -90,13 +107,11 @@ export const useRealtimeChat = ({
       },
       (payload) => {
         console.log('👤 Presence update:', payload);
-        if (onPresenceUpdate) {
-          onPresenceUpdate(payload.new);
-        }
+        onPresenceUpdate?.(payload.new);
       }
     );
 
-    // Track presence
+    // Handle presence events
     channel.on('presence', { event: 'sync' }, () => {
       const presenceState = channel.presenceState();
       console.log('🔄 Presence sync:', presenceState);
@@ -112,23 +127,32 @@ export const useRealtimeChat = ({
 
     // Subscribe to channel
     channel.subscribe(async (status) => {
-      console.log('📡 Realtime status:', status);
+      console.log('📡 Realtime channel status:', status);
       setIsConnected(status === 'SUBSCRIBED');
       
       if (status === 'SUBSCRIBED') {
+        console.log('✅ Realtime connected successfully');
+        
         // Update user presence
-        await supabase.rpc('update_user_presence', {
-          p_user_id: user.id,
-          p_status: 'online',
-          p_conversation_id: recipientId || undefined
-        });
+        try {
+          await supabase.rpc('update_user_presence', {
+            p_user_id: user.id,
+            p_status: 'online',
+            p_conversation_id: recipientId || undefined
+          });
 
-        // Track presence in channel
-        await channel.track({
-          user_id: user.id,
-          online_at: new Date().toISOString(),
-          conversation_id: recipientId || undefined
-        });
+          // Track presence in channel
+          await channel.track({
+            user_id: user.id,
+            online_at: new Date().toISOString(),
+            conversation_id: recipientId || undefined
+          });
+        } catch (error) {
+          console.error('❌ Error updating presence:', error);
+        }
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        console.log('❌ Realtime connection error or closed:', status);
+        setIsConnected(false);
       }
     });
 
@@ -140,7 +164,9 @@ export const useRealtimeChat = ({
 
     return () => {
       if (channelRef.current) {
+        console.log('🧹 Cleaning up realtime channel');
         supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
   }, [setupRealtimeSubscription]);
@@ -149,21 +175,29 @@ export const useRealtimeChat = ({
   useEffect(() => {
     const handleBeforeUnload = async () => {
       if (user?.id) {
-        await supabase.rpc('update_user_presence', {
-          p_user_id: user.id,
-          p_status: 'offline'
-        });
+        try {
+          await supabase.rpc('update_user_presence', {
+            p_user_id: user.id,
+            p_status: 'offline'
+          });
+        } catch (error) {
+          console.error('Error updating presence on unload:', error);
+        }
       }
     };
 
     const handleVisibilityChange = async () => {
       if (user?.id) {
-        const status = document.hidden ? 'away' : 'online';
-        await supabase.rpc('update_user_presence', {
-          p_user_id: user.id,
-          p_status: status,
-          p_conversation_id: recipientId || undefined
-        });
+        try {
+          const status = document.hidden ? 'away' : 'online';
+          await supabase.rpc('update_user_presence', {
+            p_user_id: user.id,
+            p_status: status,
+            p_conversation_id: recipientId || undefined
+          });
+        } catch (error) {
+          console.error('Error updating presence on visibility change:', error);
+        }
       }
     };
 

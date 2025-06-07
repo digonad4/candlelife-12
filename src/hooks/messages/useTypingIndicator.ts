@@ -11,13 +11,15 @@ export const useTypingIndicator = () => {
     if (!user) return;
 
     try {
+      console.log('⌨️ Sending typing status:', { otherUserId, isTyping });
+      
       await supabase.rpc('update_typing_status', {
         p_user_id: user.id,
         p_conversation_with_user_id: otherUserId,
         p_is_typing: isTyping
       });
     } catch (error) {
-      console.error('Error updating typing status:', error);
+      console.error('❌ Error updating typing status:', error);
     }
   }, [user]);
 
@@ -29,8 +31,10 @@ export const useTypingIndicator = () => {
   useEffect(() => {
     if (!user) return;
 
+    console.log('🎯 Setting up typing status subscription for user:', user.id);
+
     const channel = supabase
-      .channel('typing_status_changes')
+      .channel(`typing_status_${user.id}_${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -40,19 +44,33 @@ export const useTypingIndicator = () => {
           filter: `conversation_with_user_id.eq.${user.id}`
         },
         (payload) => {
-          console.log('Typing status update:', payload);
-          if (payload.new && typeof payload.new === 'object') {
-            const newData = payload.new as { user_id: string; is_typing: boolean };
-            setTypingUsers(prev => ({
-              ...prev,
-              [newData.user_id]: newData.is_typing
-            }));
+          console.log('⌨️ Typing status realtime update:', payload);
+          
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const newData = payload.new as any;
+            if (newData && typeof newData === 'object' && 'user_id' in newData && 'is_typing' in newData) {
+              setTypingUsers(prev => ({
+                ...prev,
+                [newData.user_id]: newData.is_typing
+              }));
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const oldData = payload.old as any;
+            if (oldData && typeof oldData === 'object' && 'user_id' in oldData) {
+              setTypingUsers(prev => ({
+                ...prev,
+                [oldData.user_id]: false
+              }));
+            }
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('⌨️ Typing status channel status:', status);
+      });
 
     return () => {
+      console.log('🧹 Cleaning up typing status subscription');
       supabase.removeChannel(channel);
     };
   }, [user]);
