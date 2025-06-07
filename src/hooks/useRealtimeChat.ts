@@ -23,16 +23,28 @@ export const useRealtimeChat = ({
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const isSetupRef = useRef(false);
+
+  const cleanupChannel = useCallback(() => {
+    if (channelRef.current) {
+      console.log('🧹 Cleaning up realtime channel');
+      try {
+        supabase.removeChannel(channelRef.current);
+      } catch (error) {
+        console.warn('Warning cleaning up channel:', error);
+      }
+      channelRef.current = null;
+      isSetupRef.current = false;
+      setIsConnected(false);
+    }
+  }, []);
 
   const setupRealtimeSubscription = useCallback(() => {
-    if (!user?.id) return;
+    if (!user?.id || isSetupRef.current) return;
 
-    // Cleanup existing channel
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-    }
-
-    const channelName = `chat_${user.id}_${recipientId || 'global'}_${Date.now()}`;
+    cleanupChannel();
+    
+    const channelName = `chat_${user.id}_${recipientId || 'global'}`;
     console.log('🔧 Setting up realtime channel:', channelName);
 
     const channel = supabase.channel(channelName, {
@@ -59,9 +71,8 @@ export const useRealtimeChat = ({
           console.log('📩 New message received:', payload.new);
           onNewMessage?.(payload.new);
           
-          // Invalidate relevant queries
+          // Invalidate queries
           queryClient.invalidateQueries({ queryKey: ['chat-users'] });
-          queryClient.invalidateQueries({ queryKey: ['conversation'] });
           if (recipientId) {
             queryClient.invalidateQueries({ queryKey: ['conversation', recipientId] });
           }
@@ -69,8 +80,6 @@ export const useRealtimeChat = ({
           console.log('📝 Message updated:', payload.new);
           onMessageUpdate?.(payload.new);
           
-          // Invalidate conversation queries
-          queryClient.invalidateQueries({ queryKey: ['conversation'] });
           if (recipientId) {
             queryClient.invalidateQueries({ queryKey: ['conversation', recipientId] });
           }
@@ -97,41 +106,14 @@ export const useRealtimeChat = ({
       );
     }
 
-    // Subscribe to presence updates
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'user_presence'
-      },
-      (payload) => {
-        console.log('👤 Presence update:', payload);
-        onPresenceUpdate?.(payload.new);
-      }
-    );
-
-    // Handle presence events
-    channel.on('presence', { event: 'sync' }, () => {
-      const presenceState = channel.presenceState();
-      console.log('🔄 Presence sync:', presenceState);
-    });
-
-    channel.on('presence', { event: 'join' }, ({ newPresences }) => {
-      console.log('✅ User joined:', newPresences);
-    });
-
-    channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
-      console.log('❌ User left:', leftPresences);
-    });
-
     // Subscribe to channel
     channel.subscribe(async (status) => {
       console.log('📡 Realtime channel status:', status);
-      setIsConnected(status === 'SUBSCRIBED');
       
       if (status === 'SUBSCRIBED') {
         console.log('✅ Realtime connected successfully');
+        setIsConnected(true);
+        isSetupRef.current = true;
         
         // Update user presence
         try {
@@ -140,36 +122,26 @@ export const useRealtimeChat = ({
             p_status: 'online',
             p_conversation_id: recipientId || undefined
           });
-
-          // Track presence in channel
-          await channel.track({
-            user_id: user.id,
-            online_at: new Date().toISOString(),
-            conversation_id: recipientId || undefined
-          });
         } catch (error) {
           console.error('❌ Error updating presence:', error);
         }
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
         console.log('❌ Realtime connection error or closed:', status);
         setIsConnected(false);
+        isSetupRef.current = false;
       }
     });
 
     channelRef.current = channel;
-  }, [user?.id, recipientId, onNewMessage, onMessageUpdate, onTypingUpdate, onPresenceUpdate, queryClient]);
+  }, [user?.id, recipientId, onNewMessage, onMessageUpdate, onTypingUpdate, queryClient, cleanupChannel]);
 
   useEffect(() => {
-    setupRealtimeSubscription();
+    if (user?.id && !isSetupRef.current) {
+      setupRealtimeSubscription();
+    }
 
-    return () => {
-      if (channelRef.current) {
-        console.log('🧹 Cleaning up realtime channel');
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-    };
-  }, [setupRealtimeSubscription]);
+    return cleanupChannel;
+  }, [user?.id, recipientId, setupRealtimeSubscription, cleanupChannel]);
 
   // Update presence when going offline
   useEffect(() => {

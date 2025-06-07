@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Send, MoreVertical, Loader2, Circle, Settings } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Circle, Settings } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { EnhancedChatModal } from "@/components/chat/enhanced/EnhancedChatModal";
@@ -155,7 +155,7 @@ const ChatConversation = () => {
     return (
       <div className="flex flex-col h-screen max-w-md mx-auto items-center justify-center p-6 safe-area-top">
         <p className="text-destructive mb-4">Erro ao carregar mensagens</p>
-        <Button onClick={() => window.location.reload()}>
+        <Button onClick={() => conversationQuery.refetch()}>
           Tentar novamente
         </Button>
       </div>
@@ -190,7 +190,6 @@ const ChatConversation = () => {
                   </AvatarFallback>
                 )}
               </Avatar>
-              {/* Status online indicator */}
               {isConnected && (
                 <Circle className="absolute -bottom-1 -right-1 h-3 w-3 fill-green-500 text-green-500" />
               )}
