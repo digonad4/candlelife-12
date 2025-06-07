@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './use-toast';
-import { useMessagesRealtime } from './realtime/useMessagesRealtime';
+import { realtimeManager } from '@/services/RealtimeManager';
 
 interface Message {
   id: string;
@@ -47,9 +47,49 @@ export const useAdvancedMessages = () => {
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const typingTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const subscriberIdRef = useRef(`messages-${Math.random().toString(36).substr(2, 9)}`);
 
-  // Use the consolidated realtime system
-  useMessagesRealtime();
+  // Use RealtimeManager for consolidated realtime subscriptions
+  useState(() => {
+    if (!user?.id) return;
+
+    const cleanup = realtimeManager.subscribe(
+      {
+        channelName: 'messages-realtime',
+        filters: [
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages'
+          }
+        ],
+        onSubscriptionChange: (payload) => {
+          console.log("📨 Message change detected:", payload);
+          
+          // Invalidate chat users query to update unread counts
+          queryClient.invalidateQueries({
+            queryKey: ["chat-users"]
+          });
+          
+          // Invalidate specific conversation queries if we have recipient info
+          if (payload.new?.recipient_id || payload.new?.sender_id) {
+            const conversationUserId = payload.new.recipient_id === user?.id 
+              ? payload.new.sender_id 
+              : payload.new.recipient_id;
+              
+            if (conversationUserId) {
+              queryClient.invalidateQueries({
+                queryKey: ["conversation", conversationUserId]
+              });
+            }
+          }
+        }
+      },
+      subscriberIdRef.current
+    );
+
+    return cleanup;
+  });
 
   // Query para buscar usuários do chat
   const useChatUsers = () => useQuery({
