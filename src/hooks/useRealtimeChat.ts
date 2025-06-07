@@ -127,7 +127,7 @@ export const useRealtimeChat = ({
         await channel.track({
           user_id: user.id,
           online_at: new Date().toISOString(),
-          conversation_id: recipientId
+          conversation_id: recipientId || undefined
         });
       }
     });

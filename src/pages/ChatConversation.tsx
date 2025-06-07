@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useEnhancedMessages } from "@/hooks/useEnhancedMessages";
+import { useAdvancedMessages } from "@/hooks/useAdvancedMessages";
 import { useAuth } from "@/context/AuthContext";
 import { useNative } from "@/hooks/useNative";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ const ChatConversation = () => {
     useSendMessage,
     useMarkConversationAsRead,
     setActiveConversation
-  } = useEnhancedMessages();
+  } = useAdvancedMessages();
 
   const chatUsersQuery = useChatUsers();
   const conversationQuery = useConversation(userId || "");

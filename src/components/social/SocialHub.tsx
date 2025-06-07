@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePosts } from "@/hooks/usePosts";
-import { useEnhancedMessages } from "@/hooks/useEnhancedMessages";
+import { useAdvancedMessages } from "@/hooks/useAdvancedMessages";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { SocialHeader } from "./SocialHeader";
@@ -25,7 +25,7 @@ const SocialHub = () => {
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
 
-  // Enhanced messages hook for real-time functionality
+  // Advanced messages hook for real-time functionality
   const { 
     useChatUsers, 
     getTotalUnreadCount 

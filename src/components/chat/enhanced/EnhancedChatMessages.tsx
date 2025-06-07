@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertCircle, Smile, Heart, ThumbsUp, Laugh, Sad, Angry } from "lucide-react";
+import { Loader2, AlertCircle, Smile, Heart, ThumbsUp, Laugh, Frown, Angry } from "lucide-react";
 import { EnhancedMessage } from "@/hooks/useEnhancedMessages";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,7 +21,7 @@ const reactionEmojis = {
   love: { icon: Heart, emoji: "❤️" },
   laugh: { icon: Laugh, emoji: "😂" },
   wow: { icon: Smile, emoji: "😮" },
-  sad: { icon: Sad, emoji: "😢" },
+  sad: { icon: Frown, emoji: "😢" },
   angry: { icon: Angry, emoji: "😡" }
 };
 
@@ -76,7 +76,7 @@ export const EnhancedChatMessages = ({
           {part}
         </mark>
       ) : (
-        part
+        <span key={index}>{part}</span>
       )
     );
   };
@@ -113,7 +113,7 @@ export const EnhancedChatMessages = ({
               onClick={() => onReaction(messageId, reaction)}
             >
               <span className="mr-1">{reactionData?.emoji || reaction}</span>
-              {count}
+              {count as number}
             </Button>
           );
         })}
