@@ -18,7 +18,7 @@ import { useState } from "react";
 export const MobileBottomNavigation = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { hapticFeedback } = useNative();
+  const { hapticFeedback, isNative } = useNative();
   const { getTotalUnreadCount } = useAdvancedMessages();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -44,8 +44,10 @@ export const MobileBottomNavigation = () => {
   if (!isMobile) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 border-t border-border/50 safe-area-bottom">
-      <nav className="flex justify-around items-center py-2 px-4">
+    <div className={`fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 border-t border-border/50 ${
+      isNative ? 'safe-area-bottom pb-2' : 'pb-2'
+    }`}>
+      <nav className="flex justify-around items-center py-3 px-4">
         {mainNavItems.map((item) => {
           const isActive = location.pathname === item.href || 
                           (item.href === "/chat" && location.pathname.startsWith("/chat"));
@@ -55,7 +57,7 @@ export const MobileBottomNavigation = () => {
               to={item.href}
               onClick={handleNavClick}
               className={cn(
-                "flex flex-col items-center justify-center p-3 transition-all duration-200 rounded-xl min-w-[60px] native-transition relative",
+                "flex flex-col items-center justify-center p-2 transition-all duration-200 rounded-xl min-w-[56px] native-transition relative",
                 isActive 
                   ? "text-primary bg-primary/10 scale-105" 
                   : "text-muted-foreground hover:text-foreground hover:bg-accent/50 active:scale-95"
@@ -92,7 +94,7 @@ export const MobileBottomNavigation = () => {
           <DrawerTrigger asChild>
             <button 
               onClick={handleNavClick}
-              className="flex flex-col items-center justify-center p-3 transition-all duration-200 rounded-xl min-w-[60px] text-muted-foreground hover:text-foreground hover:bg-accent/50 active:scale-95 native-transition"
+              className="flex flex-col items-center justify-center p-2 transition-all duration-200 rounded-xl min-w-[56px] text-muted-foreground hover:text-foreground hover:bg-accent/50 active:scale-95 native-transition"
             >
               <Settings className="h-5 w-5 mb-1" />
               <span className="text-xs font-medium">Mais</span>

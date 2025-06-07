@@ -39,13 +39,13 @@ const AppLayout = () => {
             </header>
           )}
           
-          {/* Main content with proper safe areas */}
+          {/* Main content with proper safe areas and mobile spacing */}
           <main className={`flex-1 overflow-auto ${
             isMobile 
-              ? 'mobile-content pb-20' 
+              ? 'mobile-content pb-24 pt-2' 
               : 'p-4 pt-0'
           } ${isNative ? 'safe-area-top' : ''}`}>
-            <div className={!isMobile ? 'p-4' : 'p-4'}>
+            <div className={!isMobile ? 'p-4' : 'p-4 pt-6'}>
               <Outlet />
             </div>
           </main>
