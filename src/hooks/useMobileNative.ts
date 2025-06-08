@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
 import { Keyboard } from '@capacitor/keyboard';
-import { SafeArea } from '@capacitor/safe-area';
 
 interface SafeAreaInsets {
   top: number;
@@ -46,22 +45,46 @@ export const useMobileNative = () => {
 
       if (isNative) {
         try {
-          // Get safe area insets
-          const safeAreaResult = await SafeArea.getSafeAreaInsets();
-          const insets = safeAreaResult.insets;
+          // Get safe area insets using CSS environment variables
+          const getSafeAreaInsets = () => {
+            // Create a temporary element to read CSS env variables
+            const testElement = document.createElement('div');
+            testElement.style.position = 'fixed';
+            testElement.style.top = '0';
+            testElement.style.left = '0';
+            testElement.style.width = '1px';
+            testElement.style.height = '1px';
+            testElement.style.opacity = '0';
+            testElement.style.pointerEvents = 'none';
+            document.body.appendChild(testElement);
+
+            // Set styles to read env values
+            testElement.style.paddingTop = 'env(safe-area-inset-top)';
+            testElement.style.paddingBottom = 'env(safe-area-inset-bottom)';
+            testElement.style.paddingLeft = 'env(safe-area-inset-left)';
+            testElement.style.paddingRight = 'env(safe-area-inset-right)';
+
+            const computedStyle = window.getComputedStyle(testElement);
+            const insets = {
+              top: parseInt(computedStyle.paddingTop) || 0,
+              bottom: parseInt(computedStyle.paddingBottom) || 0,
+              left: parseInt(computedStyle.paddingLeft) || 0,
+              right: parseInt(computedStyle.paddingRight) || 0,
+            };
+
+            document.body.removeChild(testElement);
+            return insets;
+          };
+
+          const insets = getSafeAreaInsets();
           
           // Get status bar info - just check if it's visible
           const statusBarInfo = await StatusBar.getInfo();
-          const statusBarHeight = statusBarInfo.visible ? 24 : 0; // Default height when visible
+          const statusBarHeight = statusBarInfo.visible ? (insets.top || 24) : 0;
           
           setState(prev => ({
             ...prev,
-            safeAreaInsets: {
-              top: insets.top,
-              bottom: insets.bottom,
-              left: insets.left,
-              right: insets.right,
-            },
+            safeAreaInsets: insets,
             statusBarHeight,
           }));
 
