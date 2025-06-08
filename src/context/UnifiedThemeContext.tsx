@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
+import { nativeThemeService } from "@/services/NativeThemeService";
 
 type Theme = "light" | "dark" | "system" | "cyberpunk" | "dracula" | "nord" | "purple" | "green" | "ocean" | "sunset" | "forest" | "coffee" | "pastel" | "neon" | "vintage" | "midnight" | "royal" | "super-hacker" | "supabase";
 
@@ -73,7 +74,7 @@ export const UnifiedThemeProvider = ({ children }: { children: React.ReactNode }
     return currentTheme;
   }, []);
 
-  // Apply theme to document
+  // Apply theme to document and native elements
   useEffect(() => {
     const resolved = resolveTheme(theme);
     setAppliedTheme(resolved);
@@ -93,6 +94,9 @@ export const UnifiedThemeProvider = ({ children }: { children: React.ReactNode }
     } else if (resolved === "light") {
       document.documentElement.classList.add("light");
     }
+
+    // Apply native theme
+    nativeThemeService.applyTheme(resolved);
   }, [theme, resolveTheme]);
 
   // Listen for system theme changes
@@ -116,6 +120,9 @@ export const UnifiedThemeProvider = ({ children }: { children: React.ReactNode }
         } else if (resolved === "light") {
           document.documentElement.classList.add("light");
         }
+
+        // Apply native theme
+        nativeThemeService.applyTheme(resolved);
       };
 
       mediaQuery.addEventListener("change", handleChange);
