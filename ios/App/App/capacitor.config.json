@@ -1,6 +1,6 @@
 {
 	"appId": "com.candlelife.app",
-	"appName": "Candle_Life",
+	"appName": "candle-life",
 	"webDir": "dist",
 	"packageClassList": [
 		"CAPCameraPlugin",

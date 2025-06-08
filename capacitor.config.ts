@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.candlelife.app',
-  appName: 'Candle_Life',
+  appName: 'candle-life',
   webDir: 'dist'
 };
 
