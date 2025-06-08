@@ -25,6 +25,15 @@ export interface EnhancedMessage {
   sender_avatar_url?: string;
 }
 
+export interface ConversationSettings {
+  notifications_enabled: boolean;
+  archived: boolean;
+  pinned: boolean;
+  muted: boolean;
+  nickname?: string;
+  background_image?: string;
+}
+
 export const useEnhancedMessages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -190,6 +199,110 @@ export const useEnhancedMessages = () => {
     }
   });
 
+  // Toggle reaction function
+  const useToggleReaction = () => useMutation({
+    mutationFn: async ({ messageId, reaction }: { messageId: string; reaction: string }) => {
+      if (!user) throw new Error('User not authenticated');
+
+      console.log('👍 Toggling reaction:', { messageId, reaction });
+
+      const { data, error } = await supabase.rpc('toggle_message_reaction', {
+        p_message_id: messageId,
+        p_user_id: user.id,
+        p_reaction_type: reaction
+      });
+
+      if (error) {
+        console.error('❌ Error toggling reaction:', error);
+        throw error;
+      }
+
+      console.log('✅ Reaction toggled successfully:', data);
+      return data;
+    },
+    onSuccess: () => {
+      // Invalidate conversation to refresh reactions
+      if (activeConversation) {
+        queryClient.invalidateQueries({ queryKey: ['conversation', activeConversation] });
+      }
+    },
+    onError: (error) => {
+      console.error('❌ Toggle reaction error:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar reação.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Get conversation settings
+  const useConversationSettings = (otherUserId: string) => useQuery({
+    queryKey: ['conversation-settings', user?.id, otherUserId],
+    queryFn: async (): Promise<ConversationSettings | null> => {
+      if (!user || !otherUserId) return null;
+
+      console.log('⚙️ Fetching conversation settings:', { otherUserId });
+
+      const { data, error } = await supabase.rpc('get_conversation_settings', {
+        p_user_id: user.id,
+        p_other_user_id: otherUserId
+      });
+
+      if (error) {
+        console.error('❌ Error fetching conversation settings:', error);
+        throw error;
+      }
+
+      console.log('✅ Fetched conversation settings:', data);
+      return data as ConversationSettings;
+    },
+    enabled: !!user && !!otherUserId,
+    staleTime: 300000, // 5 minutes
+  });
+
+  // Update conversation settings
+  const useUpdateConversationSettings = () => useMutation({
+    mutationFn: async ({ 
+      otherUserId, 
+      settings 
+    }: { 
+      otherUserId: string; 
+      settings: Partial<ConversationSettings>;
+    }) => {
+      if (!user) throw new Error('User not authenticated');
+
+      console.log('⚙️ Updating conversation settings:', { otherUserId, settings });
+
+      const { error } = await supabase.rpc('update_conversation_settings', {
+        p_user_id: user.id,
+        p_other_user_id: otherUserId,
+        p_settings: settings
+      });
+
+      if (error) {
+        console.error('❌ Error updating conversation settings:', error);
+        throw error;
+      }
+
+      console.log('✅ Conversation settings updated successfully');
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate settings query to refresh UI
+      queryClient.invalidateQueries({ 
+        queryKey: ['conversation-settings', user?.id, variables.otherUserId] 
+      });
+    },
+    onError: (error) => {
+      console.error('❌ Update conversation settings error:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar as configurações.",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Mark conversation as read
   const useMarkConversationAsRead = () => useMutation({
     mutationFn: async (otherUserId: string) => {
@@ -274,6 +387,9 @@ export const useEnhancedMessages = () => {
     // Hooks
     useConversation,
     useSendMessage,
+    useToggleReaction,
+    useConversationSettings,
+    useUpdateConversationSettings,
     useMarkConversationAsRead,
     useClearConversation,
 
