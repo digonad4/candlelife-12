@@ -3,7 +3,7 @@ import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { UserIcon } from "lucide-react";
-import { ChatUser } from "@/types/messages";
+import { ChatUser } from "@/hooks/messages/types";
 
 interface ChatUserItemProps {
   chatUser: ChatUser;
@@ -28,7 +28,7 @@ export const ChatUserItem = ({ chatUser, onClick }: ChatUserItemProps) => {
             </AvatarFallback>
           )}
         </Avatar>
-        {chatUser.unread_count && chatUser.unread_count > 0 && (
+        {chatUser.unread_count > 0 && (
           <Badge 
             variant="destructive" 
             className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0"
@@ -41,9 +41,7 @@ export const ChatUserItem = ({ chatUser, onClick }: ChatUserItemProps) => {
         <p className="font-medium">{chatUser.username}</p>
         {chatUser.last_message && (
           <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-            {typeof chatUser.last_message === 'string' 
-              ? chatUser.last_message 
-              : chatUser.last_message.content}
+            {chatUser.last_message.content}
           </p>
         )}
       </div>

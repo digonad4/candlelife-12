@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, X, Minimize2 } from 'lucide-react';
-import { UnifiedChatModal } from './UnifiedChatModal';
-import { useUnifiedChat } from '@/hooks/useUnifiedChat';
+import { ChatModal } from '@/components/social/chat/ChatModal';
+import { useMessages } from '@/hooks/useMessages';
 import { Badge } from '@/components/ui/badge';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
@@ -37,7 +36,7 @@ export const FloatingChatSystem = ({ isVisible, onToggle }: FloatingChatSystemPr
     currentY: 20
   });
 
-  const { getTotalUnreadCount } = useUnifiedChat();
+  const { getTotalUnreadCount } = useMessages();
   const totalUnreadMessages = getTotalUnreadCount();
 
   useEffect(() => {
@@ -77,8 +76,9 @@ export const FloatingChatSystem = ({ isVisible, onToggle }: FloatingChatSystemPr
     const newX = e.clientX - dragState.startX;
     const newY = e.clientY - dragState.startY;
 
-    const maxX = window.innerWidth - 56;
-    const maxY = window.innerHeight - 56;
+    // Keep within viewport bounds
+    const maxX = window.innerWidth - 56; // button width
+    const maxY = window.innerHeight - 56; // button height
     
     const clampedX = Math.max(0, Math.min(newX, maxX));
     const clampedY = Math.max(0, Math.min(newY, maxY));
@@ -89,6 +89,7 @@ export const FloatingChatSystem = ({ isVisible, onToggle }: FloatingChatSystemPr
   const handleDragEnd = () => {
     setDragState(prev => ({ ...prev, isDragging: false }));
     
+    // Snap to edges
     const centerX = window.innerWidth / 2;
     const snapX = position.x < centerX ? 20 : window.innerWidth - 76;
     
@@ -135,7 +136,7 @@ export const FloatingChatSystem = ({ isVisible, onToggle }: FloatingChatSystemPr
         </Button>
       </div>
 
-      <UnifiedChatModal
+      <ChatModal
         isOpen={isChatOpen}
         onOpenChange={setIsChatOpen}
         recipientId={chatRecipient.id}

@@ -2,7 +2,6 @@
 import { useCallback, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { TypingStatus } from '@/types/messages';
 
 export const useTypingIndicator = () => {
   const { user } = useAuth();
@@ -48,16 +47,16 @@ export const useTypingIndicator = () => {
           console.log('⌨️ Typing status realtime update:', payload);
           
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const newData = payload.new as TypingStatus;
-            if (newData?.user_id && typeof newData.is_typing === 'boolean') {
+            const newData = payload.new as any;
+            if (newData && typeof newData === 'object' && 'user_id' in newData && 'is_typing' in newData) {
               setTypingUsers(prev => ({
                 ...prev,
                 [newData.user_id]: newData.is_typing
               }));
             }
           } else if (payload.eventType === 'DELETE') {
-            const oldData = payload.old as TypingStatus;
-            if (oldData?.user_id) {
+            const oldData = payload.old as any;
+            if (oldData && typeof oldData === 'object' && 'user_id' in oldData) {
               setTypingUsers(prev => ({
                 ...prev,
                 [oldData.user_id]: false

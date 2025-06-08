@@ -1,5 +1,4 @@
-
-import { Message } from "@/types/messages";
+import { Message } from "@/hooks/messages/types";
 import { MessageActions } from "./MessageActions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";

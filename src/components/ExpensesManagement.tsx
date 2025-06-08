@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,14 +33,6 @@ const ExpensesManagement = () => {
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // Use centralized realtime subscription for expenses
-  useRealtimeSubscription({
-    tableName: 'transactions',
-    onDataChange: () => {
-      console.log("📢 Expenses transaction change detected");
-    }
-  });
-
   const { transactions, isLoading, confirmPayments } = useExpenses(
     user?.id,
     startDate,
@@ -51,6 +44,24 @@ const ExpensesManagement = () => {
     10,
     descriptionFilter
   );
+
+  // Usar o novo hook para subscription robusta
+  useRealtimeSubscription({
+    channelName: 'expenses-transactions',
+    filters: [
+      {
+        event: '*',
+        schema: 'public',
+        table: 'transactions',
+        filter: `user_id=eq.${user?.id || ''}`
+      }
+    ],
+    onSubscriptionChange: () => {
+      console.log("📢 Alteração detectada em despesas. Atualizando...");
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    },
+    dependencies: [user?.id]
+  });
 
   const toggleTransactionSelection = (transactionId: string) => {
     setSelectedTransactions((prev) =>
