@@ -140,16 +140,29 @@ export const UnifiedThemeProvider = ({ children }: { children: React.ReactNode }
       
       // If user is authenticated, save their preference to their profile
       if (user) {
-        // Use upsert to insert or update the theme preference
-        const { error } = await supabase
+        // First try to update, if it fails then insert
+        const { error: updateError } = await supabase
           .from('user_themes')
-          .upsert({
-            user_id: user.id,
+          .update({ 
             theme_name: newTheme,
             updated_at: new Date().toISOString()
-          });
+          })
+          .eq('user_id', user.id);
           
-        if (error) throw error;
+        if (updateError) {
+          // If update failed, try to insert
+          const { error: insertError } = await supabase
+            .from('user_themes')
+            .insert({
+              user_id: user.id,
+              theme_name: newTheme,
+              updated_at: new Date().toISOString()
+            });
+            
+          if (insertError && insertError.code !== '23505') {
+            throw insertError;
+          }
+        }
       }
     } catch (error) {
       console.error("Error saving theme preference:", error);
