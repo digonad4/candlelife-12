@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEnhancedMessages } from "@/hooks/useEnhancedMessages";
@@ -26,6 +25,7 @@ const ChatConversation = () => {
   const [isEnhancedModalOpen, setIsEnhancedModalOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const markAsReadTimeoutRef = useRef<NodeJS.Timeout>();
   
   const { 
     setActiveConversation,
@@ -48,26 +48,33 @@ const ChatConversation = () => {
   const recipient = chatUsers.find(u => u.id === userId);
   const isRecipientTyping = isUserTyping(userId || "");
 
-  // Set active conversation and mark as read
+  // Set active conversation and mark as read - fixed to prevent loops
   useEffect(() => {
     if (userId && user?.id) {
       console.log('📱 Setting active conversation:', userId);
       setActiveConversation(userId);
       
-      const timer = setTimeout(() => {
+      // Debounce mark as read to prevent infinite loops
+      if (markAsReadTimeoutRef.current) {
+        clearTimeout(markAsReadTimeoutRef.current);
+      }
+      
+      markAsReadTimeoutRef.current = setTimeout(() => {
         markAsRead.mutate(userId, {
           onError: (error) => {
             console.log("Erro ao marcar conversa como lida:", error);
           }
         });
-      }, 1000);
+      }, 2000); // Increased delay
 
       return () => {
-        clearTimeout(timer);
+        if (markAsReadTimeoutRef.current) {
+          clearTimeout(markAsReadTimeoutRef.current);
+        }
         setActiveConversation(null);
       };
     }
-  }, [userId, user?.id, setActiveConversation, markAsRead]);
+  }, [userId, user?.id, setActiveConversation]); // Removed markAsRead from dependencies
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -200,7 +207,7 @@ const ChatConversation = () => {
                 {recipient?.username || "Usuário"}
               </h2>
               <p className="text-xs text-green-500">
-                {isConnected ? "Online" : "Desconectado"}
+                {isConnected ? "Online" : "Reconectando..."}
               </p>
             </div>
             

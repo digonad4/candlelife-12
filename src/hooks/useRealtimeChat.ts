@@ -24,6 +24,7 @@ export const useRealtimeChat = ({
   const channelRef = useRef<any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const isSetupRef = useRef(false);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   const cleanupChannel = useCallback(() => {
     if (channelRef.current) {
@@ -49,7 +50,18 @@ export const useRealtimeChat = ({
 
     const channel = supabase.channel(channelName, {
       config: {
-        presence: { key: user.id }
+        presence: { key: user.id },
+        broadcast: { self: false },
+        postgres_changes: [
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+            filter: recipientId 
+              ? `or(and(sender_id.eq.${user.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${user.id}))` 
+              : `or(sender_id.eq.${user.id},recipient_id.eq.${user.id})`
+          }
+        ]
       }
     });
 
@@ -59,10 +71,7 @@ export const useRealtimeChat = ({
       {
         event: '*',
         schema: 'public',
-        table: 'messages',
-        filter: recipientId 
-          ? `or(and(sender_id.eq.${user.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${user.id}))` 
-          : `or(sender_id.eq.${user.id},recipient_id.eq.${user.id})`
+        table: 'messages'
       },
       (payload) => {
         console.log('💬 Realtime message event:', payload);
@@ -71,11 +80,14 @@ export const useRealtimeChat = ({
           console.log('📩 New message received:', payload.new);
           onNewMessage?.(payload.new);
           
-          // Invalidate queries
-          queryClient.invalidateQueries({ queryKey: ['chat-users'] });
-          if (recipientId) {
-            queryClient.invalidateQueries({ queryKey: ['conversation', recipientId] });
-          }
+          // Invalidate queries with throttling
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['chat-users'] });
+            if (recipientId) {
+              queryClient.invalidateQueries({ queryKey: ['conversation', recipientId] });
+            }
+          }, 500);
         } else if (payload.eventType === 'UPDATE') {
           console.log('📝 Message updated:', payload.new);
           onMessageUpdate?.(payload.new);
@@ -87,25 +99,6 @@ export const useRealtimeChat = ({
       }
     );
 
-    // Subscribe to typing status
-    if (recipientId) {
-      channel.on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'typing_status',
-          filter: `conversation_with_user_id.eq.${user.id}`
-        },
-        (payload) => {
-          console.log('⌨️ Typing status update:', payload);
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            onTypingUpdate?.(payload.new);
-          }
-        }
-      );
-    }
-
     // Subscribe to channel
     channel.subscribe(async (status) => {
       console.log('📡 Realtime channel status:', status);
@@ -114,73 +107,46 @@ export const useRealtimeChat = ({
         console.log('✅ Realtime connected successfully');
         setIsConnected(true);
         isSetupRef.current = true;
-        
-        // Update user presence
-        try {
-          await supabase.rpc('update_user_presence', {
-            p_user_id: user.id,
-            p_status: 'online',
-            p_conversation_id: recipientId || undefined
-          });
-        } catch (error) {
-          console.error('❌ Error updating presence:', error);
-        }
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
         console.log('❌ Realtime connection error or closed:', status);
         setIsConnected(false);
         isSetupRef.current = false;
+        
+        // Auto-reconnect after 5 seconds
+        setTimeout(() => {
+          if (!isSetupRef.current) {
+            console.log('🔄 Attempting to reconnect...');
+            setupRealtimeSubscription();
+          }
+        }, 5000);
       }
     });
 
     channelRef.current = channel;
-  }, [user?.id, recipientId, onNewMessage, onMessageUpdate, onTypingUpdate, queryClient, cleanupChannel]);
+  }, [user?.id, recipientId, onNewMessage, onMessageUpdate, queryClient, cleanupChannel]);
 
   useEffect(() => {
     if (user?.id && !isSetupRef.current) {
-      setupRealtimeSubscription();
+      // Add a small delay to prevent rapid reconnections
+      const timer = setTimeout(() => {
+        setupRealtimeSubscription();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
     }
 
     return cleanupChannel;
   }, [user?.id, recipientId, setupRealtimeSubscription, cleanupChannel]);
 
-  // Update presence when going offline
+  // Cleanup on unmount
   useEffect(() => {
-    const handleBeforeUnload = async () => {
-      if (user?.id) {
-        try {
-          await supabase.rpc('update_user_presence', {
-            p_user_id: user.id,
-            p_status: 'offline'
-          });
-        } catch (error) {
-          console.error('Error updating presence on unload:', error);
-        }
-      }
-    };
-
-    const handleVisibilityChange = async () => {
-      if (user?.id) {
-        try {
-          const status = document.hidden ? 'away' : 'online';
-          await supabase.rpc('update_user_presence', {
-            p_user_id: user.id,
-            p_status: status,
-            p_conversation_id: recipientId || undefined
-          });
-        } catch (error) {
-          console.error('Error updating presence on visibility change:', error);
-        }
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      cleanupChannel();
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
     };
-  }, [user?.id, recipientId]);
+  }, [cleanupChannel]);
 
   return {
     isConnected,
