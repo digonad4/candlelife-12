@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-=======
-
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -30,18 +26,10 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.75rem;
-<<<<<<< HEAD
     
     --scrollbar-track: hsl(210 40% 96%);
     --scrollbar-thumb: hsl(215.4 16.3% 46.9%);
     --scrollbar-thumb-hover: hsl(221.2 83.2% 53.3%);
-=======
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
 
   .dark {
@@ -63,24 +51,13 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-<<<<<<< HEAD
     --ring: 224.3 76.3% 94.1%;
     
     --scrollbar-track: hsl(217.2 32.6% 17.5%);
     --scrollbar-thumb: hsl(215 20.2% 65.1%);
     --scrollbar-thumb-hover: hsl(217.2 91.2% 59.8%);
-=======
-    --ring: 224.3 76.3% 94.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-}
 
-<<<<<<< HEAD
   /* Cyberpunk theme with neon colors */
   [data-theme="cyberpunk"] {
     --background: 220 27% 8%;
@@ -106,13 +83,7 @@
     --scrollbar-track: hsl(220 27% 15%);
     --scrollbar-thumb: hsl(300 100% 50%);
     --scrollbar-thumb-hover: hsl(180 100% 50%);
-=======
-@layer base {
-  * {
-    @apply border-border;
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 
   /* Super Hacker theme with matrix green */
   [data-theme="super-hacker"] {
@@ -139,19 +110,7 @@
     --scrollbar-track: hsl(120 50% 10%);
     --scrollbar-thumb: hsl(120 100% 50%);
     --scrollbar-thumb-hover: hsl(120 100% 40%);
-=======
-  body {
-    @apply bg-background text-foreground;
   }
-}
-
-/* Safe area classes for mobile apps */
-@layer utilities {
-  .safe-area-top {
-    padding-top: max(env(safe-area-inset-top, 0px), 1rem);
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
-  }
-<<<<<<< HEAD
 
   /* Dracula theme with purple tones */
   [data-theme="dracula"] {
@@ -232,13 +191,7 @@
     --scrollbar-track: hsl(270 3% 93%);
     --scrollbar-thumb: hsl(267 84% 58%);
     --scrollbar-thumb-hover: hsl(285 100% 78%);
-=======
-  
-  .safe-area-bottom {
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 
   /* Green theme with nature greens */
   [data-theme="green"] {
@@ -319,13 +272,7 @@
     --scrollbar-track: hsl(20 30% 15%);
     --scrollbar-thumb: hsl(25 100% 60%);
     --scrollbar-thumb-hover: hsl(15 100% 70%);
-=======
-  
-  .safe-area-left {
-    padding-left: env(safe-area-inset-left, 0px);
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 
   /* Forest theme with deep greens */
   [data-theme="forest"] {
@@ -352,13 +299,7 @@
     --scrollbar-track: hsl(120 25% 15%);
     --scrollbar-thumb: hsl(120 60% 40%);
     --scrollbar-thumb-hover: hsl(140 50% 50%);
-=======
-  
-  .safe-area-right {
-    padding-right: env(safe-area-inset-right, 0px);
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 
   /* Coffee theme with warm browns */
   [data-theme="coffee"] {
@@ -385,16 +326,7 @@
     --scrollbar-track: hsl(30 20% 18%);
     --scrollbar-thumb: hsl(25 60% 45%);
     --scrollbar-thumb-hover: hsl(20 70% 60%);
-=======
-  
-  .safe-area-insets {
-    padding-top: max(env(safe-area-inset-top, 0px), 1rem);
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 
   /* Pastel theme with soft colors */
   [data-theme="pastel"] {
@@ -421,14 +353,7 @@
     --scrollbar-track: hsl(210 25% 90%);
     --scrollbar-thumb: hsl(200 40% 70%);
     --scrollbar-thumb-hover: hsl(280 40% 80%);
-=======
-
-  /* Native app specific styles */
-  .native-app {
-    @apply safe-area-insets;
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 
   /* Neon theme with bright colors */
   [data-theme="neon"] {
@@ -455,13 +380,7 @@
     --scrollbar-track: hsl(280 50% 15%);
     --scrollbar-thumb: hsl(300 100% 60%);
     --scrollbar-thumb-hover: hsl(60 100% 70%);
-=======
-  
-  .native-transition {
-    transition: transform 0.1s ease-in-out;
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 
   /* Vintage theme with sepia tones */
   [data-theme="vintage"] {
@@ -488,13 +407,7 @@
     --scrollbar-track: hsl(40 15% 85%);
     --scrollbar-thumb: hsl(35 50% 45%);
     --scrollbar-thumb-hover: hsl(25 40% 60%);
-=======
-  
-  .native-transition:active {
-    transform: scale(0.98);
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 
   /* Midnight theme with deep blues */
   [data-theme="midnight"] {
@@ -549,10 +462,7 @@
     --scrollbar-thumb: hsl(45 100% 60%);
     --scrollbar-thumb-hover: hsl(280 60% 60%);
   }
-=======
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
 
-<<<<<<< HEAD
   /* Supabase theme - pure black with green accents */
   [data-theme="supabase"] {
     --background: 0 0% 0%;
@@ -578,15 +488,7 @@
     --scrollbar-track: hsl(0 0% 8%);
     --scrollbar-thumb: hsl(142 86% 51%);
     --scrollbar-thumb-hover: hsl(142 86% 61%);
-=======
-  /* Mobile layout utilities */
-  .mobile-header {
-    @apply safe-area-top;
-    min-height: calc(4rem + env(safe-area-inset-top, 0px));
-    padding-top: max(env(safe-area-inset-top, 0px), 1.5rem);
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 }
 
 @layer base {
@@ -602,31 +504,14 @@
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
-=======
-  
-  .mobile-content {
-    @apply safe-area-bottom;
-    min-height: calc(100vh - 7rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 6rem);
   }
-  
-  .mobile-footer {
-    @apply safe-area-bottom;
-    height: calc(5rem + env(safe-area-inset-bottom, 0px));
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
-  }
-<<<<<<< HEAD
 
   ::-webkit-scrollbar-track {
     background: var(--scrollbar-track);
     border-radius: 4px;
     margin: 2px;
   }
-=======
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
 
-<<<<<<< HEAD
   ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
     border-radius: 4px;
@@ -640,21 +525,7 @@
 
   ::-webkit-scrollbar-corner {
     background: var(--scrollbar-track);
-=======
-  /* Prevent content from being hidden behind system UI on mobile */
-  @media (max-width: 768px) {
-    .mobile-title {
-      margin-top: max(env(safe-area-inset-top, 0px), 1.5rem);
-      padding-left: 1rem;
-      padding-right: 1rem;
-    }
-    
-    .mobile-safe-content {
-      padding-bottom: max(env(safe-area-inset-bottom, 0px), 6rem) !important;
-    }
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
   }
-<<<<<<< HEAD
 
   /* Enhanced Firefox scrollbar with theme support */
   * {
@@ -666,11 +537,8 @@
   html {
     scroll-behavior: smooth;
   }
-=======
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
 }
 
-<<<<<<< HEAD
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out;
@@ -707,6 +575,3 @@
     }
   }
 }
-
-=======
->>>>>>> 3797327d60e6ce08ca10aa8ec6ff27311f492b43
