@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChatUser } from "@/types/messages";
+import { ChatUser } from "@/hooks/messages/types";
 import { ChatUserItem } from "./ChatUserItem";
 
 interface ChatUsersListProps {

@@ -6,9 +6,11 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <SidebarProvider defaultOpen={false}>
-    <div className="min-h-screen flex w-full">
-      <App />
-    </div>
-  </SidebarProvider>
+  <React.StrictMode>
+    <SidebarProvider defaultOpen={false}>
+      <div className="min-h-screen flex w-full">
+        <App />
+      </div>
+    </SidebarProvider>
+  </React.StrictMode>
 );

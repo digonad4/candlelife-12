@@ -2,15 +2,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Shield, KeyRound, AlertTriangle, Smartphone, LucideIcon } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Shield, KeyRound, AlertTriangle, LucideIcon } from "lucide-react";
 import { SessionsManager } from "./SessionsManager";
 import { TwoFactorManager } from "./TwoFactorManager";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const SecuritySettings = () => {
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("overview");
 
   type SecurityOptionProps = {
     icon: LucideIcon;
@@ -24,109 +23,71 @@ export const SecuritySettings = () => {
     <div className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
       <div className="flex items-start gap-3">
         <Icon className="w-5 h-5 mt-1 text-primary" />
-        <div className="flex-1">
+        <div>
           <h3 className="font-medium">{title}</h3>
           <p className="text-sm text-muted-foreground">
             {description}
           </p>
         </div>
       </div>
-      <Button variant="outline" size="sm" onClick={onClick}>
+      <Button variant="outline" onClick={onClick}>
         {action}
       </Button>
     </div>
   );
 
-  if (activeSection === "sessions") {
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setActiveSection(null)}
-            >
-              ← Voltar
-            </Button>
-          </div>
-          <CardTitle>Sessões Ativas</CardTitle>
-          <CardDescription>
-            Gerencie os dispositivos que estão conectados à sua conta.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SessionsManager />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (activeSection === "2fa") {
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setActiveSection(null)}
-            >
-              ← Voltar
-            </Button>
-          </div>
-          <CardTitle>Verificação em Duas Etapas</CardTitle>
-          <CardDescription>
-            Configure uma camada extra de segurança para sua conta.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TwoFactorManager />
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="w-5 h-5" />
-          Segurança
-        </CardTitle>
-        <CardDescription>
-          Gerencie suas configurações de segurança e privacidade.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <SecurityOption
-          icon={KeyRound}
-          title="Senha"
-          description="Altere sua senha para manter sua conta segura"
-          action="Alterar"
-          onClick={() => navigate("/change-password")}
-        />
+    <div className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="sessions">Sessões Ativas</TabsTrigger>
+          <TabsTrigger value="2fa">Verificação em Duas Etapas</TabsTrigger>
+        </TabsList>
 
-        <Separator />
+        <TabsContent value="overview" className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Segurança</h2>
+            <p className="text-muted-foreground">
+              Gerencie suas configurações de segurança e privacidade.
+            </p>
+          </div>
 
-        <SecurityOption
-          icon={Smartphone}
-          title="Verificação em duas etapas"
-          description="Adicione uma camada extra de segurança à sua conta"
-          action="Configurar"
-          onClick={() => setActiveSection("2fa")}
-        />
+          <div className="space-y-4">
+            <SecurityOption
+              icon={KeyRound}
+              title="Senha"
+              description="Altere sua senha para manter sua conta segura"
+              action="Alterar senha"
+              onClick={() => navigate("/change-password")}
+            />
 
-        <Separator />
+            <SecurityOption
+              icon={Shield}
+              title="Verificação em duas etapas"
+              description="Adicione uma camada extra de segurança à sua conta"
+              action="Configurar"
+              onClick={() => setActiveTab("2fa")}
+            />
 
-        <SecurityOption
-          icon={AlertTriangle}
-          title="Sessões ativas"
-          description="Visualize e gerencie dispositivos conectados à sua conta"
-          action="Gerenciar"
-          onClick={() => setActiveSection("sessions")}
-        />
-      </CardContent>
-    </Card>
+            <SecurityOption
+              icon={AlertTriangle}
+              title="Sessões ativas"
+              description="Gerencie os dispositivos que estão conectados à sua conta"
+              action="Visualizar"
+              onClick={() => setActiveTab("sessions")}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="sessions">
+          <SessionsManager />
+        </TabsContent>
+
+        <TabsContent value="2fa">
+          <TwoFactorManager />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };

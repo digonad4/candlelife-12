@@ -1,23 +1,30 @@
 
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Clock } from 'lucide-react';
 
 interface MessageStatusProps {
-  status: "sent" | "delivered" | "read";
-  showDelivered?: boolean;
+  status: 'sending' | 'sent' | 'delivered' | 'read';
+  className?: string;
 }
 
-export const MessageStatus = ({ status, showDelivered = true }: MessageStatusProps) => {
-  if (status === "sent") {
-    return <Check className="h-5 w-5 text-muted-foreground/70 flex-shrink-0" />;
-  }
+export const MessageStatus = ({ status, className = "" }: MessageStatusProps) => {
+  const getIcon = () => {
+    switch (status) {
+      case 'sending':
+        return <Clock className="h-3 w-3 text-muted-foreground" />;
+      case 'sent':
+        return <Check className="h-3 w-3 text-muted-foreground" />;
+      case 'delivered':
+        return <CheckCheck className="h-3 w-3 text-muted-foreground" />;
+      case 'read':
+        return <CheckCheck className="h-3 w-3 text-blue-500" />;
+      default:
+        return null;
+    }
+  };
 
-  if (status === "delivered" && showDelivered) {
-    return <CheckCheck className="h-5 w-5 text-muted-foreground/70 flex-shrink-0" />;
-  }
-
-  if (status === "read") {
-    return <CheckCheck className="h-5 w-5 text-blue-500 flex-shrink-0" />;
-  }
-
-  return null;
+  return (
+    <span className={`inline-flex items-center ${className}`}>
+      {getIcon()}
+    </span>
+  );
 };
