@@ -1,10 +1,9 @@
-
 import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle } from "lucide-react";
 import { MessageItem } from "@/components/social/chat/MessageItem";
-import { Message } from "@/hooks/messages/types";
+import { Message } from "@/types/messages";
 
 interface ChatMessagesProps {
   messages: Message[];

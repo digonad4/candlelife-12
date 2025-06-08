@@ -43,28 +43,11 @@ export const usePosts = () => {
     }
   }, [postsError, toast]);
 
-  // Usar o novo hook para subscription robusta
+  // Use a single subscription for posts (which will handle all social feed changes)
   useRealtimeSubscription({
-    channelName: 'posts-realtime',
-    filters: [
-      {
-        event: '*',
-        schema: 'public',
-        table: 'posts'
-      },
-      {
-        event: '*',
-        schema: 'public',
-        table: 'comments'
-      },
-      {
-        event: '*',
-        schema: 'public',
-        table: 'reactions'
-      }
-    ],
-    onSubscriptionChange: () => {
-      // Invalidar a query de posts quando houver mudanças
+    tableName: 'posts',
+    onDataChange: () => {
+      console.log("📢 Social feed changes detected");
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
     dependencies: [user?.id]
