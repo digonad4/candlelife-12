@@ -255,7 +255,29 @@ export const useEnhancedMessages = () => {
       }
 
       console.log('✅ Fetched conversation settings:', data);
-      return data as ConversationSettings;
+      
+      // Safely parse the JSON response and ensure it matches ConversationSettings interface
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const settings = data as Record<string, any>;
+        return {
+          notifications_enabled: Boolean(settings.notifications_enabled ?? true),
+          archived: Boolean(settings.archived ?? false),
+          pinned: Boolean(settings.pinned ?? false),
+          muted: Boolean(settings.muted ?? false),
+          nickname: settings.nickname || undefined,
+          background_image: settings.background_image || undefined
+        };
+      }
+      
+      // Return default settings if data is null or invalid
+      return {
+        notifications_enabled: true,
+        archived: false,
+        pinned: false,
+        muted: false,
+        nickname: undefined,
+        background_image: undefined
+      };
     },
     enabled: !!user && !!otherUserId,
     staleTime: 300000, // 5 minutes
