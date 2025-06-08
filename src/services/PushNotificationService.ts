@@ -89,17 +89,17 @@ class PushNotificationService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Save FCM token to push_tokens table
+      // Save FCM token to push_tokens table with correct structure
       const { error } = await supabase
         .from('push_tokens')
         .upsert({
           user_id: user.id,
           token: token,
           platform: Capacitor.getPlatform(),
-          device_info: {
+          device_info: JSON.stringify({
             platform: Capacitor.getPlatform(),
             isNative: Capacitor.isNativePlatform()
-          },
+          }),
           updated_at: new Date().toISOString()
         });
 
@@ -132,17 +132,6 @@ class PushNotificationService {
               sound: 'default',
               smallIcon: 'ic_launcher_foreground',
               iconColor: '#8B5CF6',
-              actionTypeId: 'OPEN_CHAT',
-              actions: [
-                {
-                  id: 'open',
-                  title: 'Abrir'
-                },
-                {
-                  id: 'dismiss',
-                  title: 'Dispensar'
-                }
-              ]
             }
           ]
         });

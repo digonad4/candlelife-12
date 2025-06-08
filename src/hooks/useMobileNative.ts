@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
 import { Keyboard } from '@capacitor/keyboard';
-import { SafeArea } from '@capacitor/status-bar';
+import { SafeArea } from '@capacitor/safe-area';
 
 interface SafeAreaInsets {
   top: number;
@@ -50,8 +50,9 @@ export const useMobileNative = () => {
           const safeAreaResult = await SafeArea.getSafeAreaInsets();
           const insets = safeAreaResult.insets;
           
-          // Get status bar info
+          // Get status bar info - just check if it's visible
           const statusBarInfo = await StatusBar.getInfo();
+          const statusBarHeight = statusBarInfo.visible ? 24 : 0; // Default height when visible
           
           setState(prev => ({
             ...prev,
@@ -61,11 +62,11 @@ export const useMobileNative = () => {
               left: insets.left,
               right: insets.right,
             },
-            statusBarHeight: statusBarInfo.height || 0,
+            statusBarHeight,
           }));
 
           // Set up keyboard listeners
-          const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (info) => {
+          const keyboardWillShowListener = await Keyboard.addListener('keyboardWillShow', (info) => {
             setState(prev => ({
               ...prev,
               keyboardHeight: info.keyboardHeight,
@@ -77,7 +78,7 @@ export const useMobileNative = () => {
             document.documentElement.style.setProperty('--safe-area-inset-bottom', '0px');
           });
 
-          const keyboardWillHide = Keyboard.addListener('keyboardWillHide', () => {
+          const keyboardWillHideListener = await Keyboard.addListener('keyboardWillHide', () => {
             setState(prev => ({
               ...prev,
               keyboardHeight: 0,
@@ -94,18 +95,18 @@ export const useMobileNative = () => {
           document.documentElement.style.setProperty('--safe-area-inset-bottom', `${insets.bottom}px`);
           document.documentElement.style.setProperty('--safe-area-inset-left', `${insets.left}px`);
           document.documentElement.style.setProperty('--safe-area-inset-right', `${insets.right}px`);
-          document.documentElement.style.setProperty('--status-bar-height', `${statusBarInfo.height || 0}px`);
+          document.documentElement.style.setProperty('--status-bar-height', `${statusBarHeight}px`);
 
           console.log('🚀 Native features initialized:', {
             safeArea: insets,
-            statusBarHeight: statusBarInfo.height,
+            statusBarHeight,
             platform,
           });
 
           // Return cleanup function
           return () => {
-            keyboardWillShow.remove();
-            keyboardWillHide.remove();
+            keyboardWillShowListener.remove();
+            keyboardWillHideListener.remove();
           };
         } catch (error) {
           console.error('❌ Error initializing native features:', error);
