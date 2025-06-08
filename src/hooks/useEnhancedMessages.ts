@@ -1,141 +1,171 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './use-toast';
-import { useRealtimeChat } from './useRealtimeChat';
+import { messageKeys } from '@/lib/query-keys';
+import { Message, ChatUser, MessageStatus, MessageType } from '@/types/messages';
 
-export interface EnhancedMessage {
-  id: string;
-  content: string;
-  sender_id: string;
-  recipient_id: string;
-  created_at: string;
-  read: boolean;
-  message_status: 'sending' | 'sent' | 'delivered' | 'read';
-  edited_at?: string;
-  reactions: any[];
-  message_type: 'text' | 'image' | 'file' | 'audio' | 'video' | 'location';
-  attachment_url?: string;
-  file_name?: string;
-  file_size?: number;
-  duration?: number;
-  sender_username?: string;
-  sender_avatar_url?: string;
+// Export types that enhanced components expect
+export interface EnhancedMessage extends Message {}
+
+export interface ConversationSettings {
+  id?: string;
+  user_id?: string;
+  other_user_id?: string;
+  notifications_enabled: boolean;
+  archived: boolean;
+  pinned: boolean;
+  muted: boolean;
+  nickname: string;
+  background_image: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const useEnhancedMessages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isConnected, setIsConnected] = useState(false);
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
+  const channelRef = useRef<any>(null);
 
-  // Realtime setup with proper callbacks
-  const { isConnected } = useRealtimeChat({
-    recipientId: activeConversation || undefined,
-    onNewMessage: useCallback((message) => {
-      console.log('🔔 Enhanced messages: New message received:', message);
-      
-      // Show notification if not from current user
-      if (message.sender_id !== user?.id) {
-        if (!activeConversation || message.sender_id !== activeConversation || document.hidden) {
-          showNotification(message);
-        }
-      }
-      
-      // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['chat-users'] });
-      if (activeConversation) {
-        queryClient.invalidateQueries({ queryKey: ['conversation', activeConversation] });
-      }
-    }, [user?.id, activeConversation, queryClient]),
+  // Setup realtime listener for new messages
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase.channel(`messages_${user.id}`);
     
-    onMessageUpdate: useCallback((message) => {
-      console.log('📝 Enhanced messages: Message updated:', message);
-      const otherUserId = message.sender_id === user?.id ? message.recipient_id : message.sender_id;
-      queryClient.invalidateQueries({ queryKey: ['conversation', otherUserId] });
-    }, [user?.id, queryClient])
-  });
+    channel.on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: `recipient_id=eq.${user.id}`
+    }, (payload) => {
+      queryClient.invalidateQueries({ queryKey: messageKeys.chatUsers() });
+      queryClient.invalidateQueries({ queryKey: messageKeys.conversation(payload.new.sender_id) });
+    });
 
-  // Get conversation with enhanced features
-  const useConversation = useCallback((otherUserId: string, searchTerm?: string) => {
+    channel.subscribe((status) => {
+      setIsConnected(status === 'SUBSCRIBED');
+    });
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+    };
+  }, [user?.id, queryClient]);
+
+  // Get chat users
+  const useChatUsers = () => {
     return useQuery({
-      queryKey: ['conversation', otherUserId, searchTerm],
+      queryKey: messageKeys.chatUsers(),
+      queryFn: async (): Promise<ChatUser[]> => {
+        if (!user?.id) return [];
+
+        const { data: messages, error } = await supabase
+          .from('messages')
+          .select('sender_id, recipient_id')
+          .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const userIds = new Set<string>();
+        messages?.forEach((msg: any) => {
+          if (msg.sender_id !== user.id) userIds.add(msg.sender_id);
+          if (msg.recipient_id !== user.id) userIds.add(msg.recipient_id);
+        });
+
+        if (userIds.size === 0) return [];
+
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url, created_at, updated_at')
+          .in('id', Array.from(userIds));
+
+        if (profileError) throw profileError;
+
+        const chatUsers: ChatUser[] = await Promise.all(
+          (profiles || []).map(async (profile: any) => {
+            const { count } = await supabase
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('recipient_id', user.id)
+              .eq('sender_id', profile.id)
+              .eq('read', false);
+
+            return {
+              id: profile.id,
+              username: profile.username || 'Usuário',
+              full_name: profile.username || undefined,
+              avatar_url: profile.avatar_url || undefined,
+              email: profile.username || undefined,
+              created_at: profile.created_at || new Date().toISOString(),
+              updated_at: profile.updated_at || new Date().toISOString(),
+              unread_count: count || 0
+            };
+          })
+        );
+
+        return chatUsers;
+      },
+      enabled: !!user,
+      staleTime: 30000,
+    });
+  };
+
+  // Get conversation messages
+  const useConversation = (otherUserId: string, searchTerm?: string) => {
+    return useQuery({
+      queryKey: messageKeys.conversationWithSearch(otherUserId, searchTerm || ''),
       queryFn: async (): Promise<EnhancedMessage[]> => {
-        if (!user || !otherUserId) {
-          console.log('❌ No user or otherUserId provided');
-          return [];
+        if (!user || !otherUserId) return [];
+
+        let query = supabase
+          .from('messages')
+          .select('*')
+          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
+          .order('created_at', { ascending: true });
+
+        if (searchTerm) {
+          query = query.ilike('content', `%${searchTerm}%`);
         }
 
-        console.log('🔍 Fetching conversation with:', otherUserId, searchTerm ? `(search: ${searchTerm})` : '');
+        const { data, error } = await query;
 
-        try {
-          let query = supabase
-            .from('messages')
-            .select(`
-              id,
-              content,
-              sender_id,
-              recipient_id,
-              created_at,
-              read,
-              message_status,
-              edited_at,
-              attachment_url,
-              profiles:sender_id(username, avatar_url)
-            `)
-            .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
-            .eq('deleted_by_recipient', false)
-            .order('created_at', { ascending: false })
-            .limit(100);
+        if (error) throw error;
 
-          if (searchTerm) {
-            query = query.ilike('content', `%${searchTerm}%`);
-          }
+        const messages: EnhancedMessage[] = (data || []).map((msg: any) => ({
+          id: msg.id,
+          content: msg.content,
+          sender_id: msg.sender_id,
+          recipient_id: msg.recipient_id,
+          created_at: msg.created_at,
+          read: msg.read || false,
+          message_status: msg.message_status || MessageStatus.SENT,
+          message_type: MessageType.TEXT,
+          attachment_url: msg.attachment_url || undefined,
+          deleted_by_recipient: false,
+          reactions: [],
+          sender_username: undefined,
+          sender_avatar_url: undefined,
+          file_name: undefined,
+          file_size: undefined
+        }));
 
-          const { data, error } = await query;
-
-          if (error) {
-            console.error('❌ Error fetching conversation:', error);
-            throw error;
-          }
-
-          const messages: EnhancedMessage[] = (data || []).map(msg => ({
-            id: msg.id,
-            content: msg.content,
-            sender_id: msg.sender_id,
-            recipient_id: msg.recipient_id,
-            created_at: msg.created_at,
-            read: msg.read,
-            message_status: (msg.message_status as 'sending' | 'sent' | 'delivered' | 'read') || 'sent',
-            edited_at: msg.edited_at || undefined,
-            reactions: [],
-            message_type: 'text' as const,
-            attachment_url: msg.attachment_url || undefined,
-            file_name: undefined,
-            file_size: undefined,
-            duration: undefined,
-            sender_username: Array.isArray(msg.profiles) && msg.profiles.length > 0 ? msg.profiles[0].username : undefined,
-            sender_avatar_url: Array.isArray(msg.profiles) && msg.profiles.length > 0 ? msg.profiles[0].avatar_url : undefined
-          })).reverse();
-
-          console.log('✅ Fetched', messages.length, 'messages for conversation');
-          return messages;
-        } catch (error) {
-          console.error('❌ Error in conversation query:', error);
-          throw error;
-        }
+        return messages;
       },
       enabled: !!user && !!otherUserId,
-      staleTime: 30000, // 30 seconds instead of 0
-      refetchOnWindowFocus: false,
-      retry: 2, // Reduced retries
-      retryDelay: 1000,
     });
-  }, [user]);
+  };
 
-  // Send message with enhanced features
+  // Send message mutation
   const useSendMessage = () => useMutation({
     mutationFn: async ({ 
       recipientId, 
@@ -143,8 +173,7 @@ export const useEnhancedMessages = () => {
       messageType = 'text',
       attachmentUrl,
       fileName,
-      fileSize,
-      duration
+      fileSize
     }: { 
       recipientId: string; 
       content: string; 
@@ -152,11 +181,8 @@ export const useEnhancedMessages = () => {
       attachmentUrl?: string;
       fileName?: string;
       fileSize?: number;
-      duration?: number;
     }) => {
       if (!user) throw new Error('User not authenticated');
-
-      console.log('📤 Sending message:', { recipientId, content: content.substring(0, 50) + '...' });
 
       const { data, error } = await supabase
         .from('messages')
@@ -164,93 +190,93 @@ export const useEnhancedMessages = () => {
           sender_id: user.id,
           recipient_id: recipientId,
           content,
+          message_status: 'sent',
           attachment_url: attachmentUrl
         })
         .select()
         .single();
 
-      if (error) {
-        console.error('❌ Error sending message:', error);
-        throw error;
-      }
-
-      console.log('✅ Message sent successfully:', data.id);
+      if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      console.log('📤 Message sent, realtime will update UI');
-    },
-    onError: (error) => {
-      console.error('❌ Send message error:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível enviar a mensagem. Tente novamente.",
-        variant: "destructive",
-      });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: messageKeys.chatUsers() });
+      queryClient.invalidateQueries({ queryKey: messageKeys.conversation(data.recipient_id) });
     }
   });
 
-  // Mark conversation as read - fixed to prevent infinite loops
+  // Toggle reaction mutation (placeholder)
+  const useToggleReaction = () => useMutation({
+    mutationFn: async ({ messageId, reaction }: { messageId: string; reaction: string }) => {
+      // Placeholder - reactions not implemented in database yet
+      console.log('Toggle reaction:', messageId, reaction);
+    }
+  });
+
+  // Mark conversation as read
   const useMarkConversationAsRead = () => useMutation({
     mutationFn: async (otherUserId: string) => {
       if (!user) throw new Error('User not authenticated');
 
-      console.log('📖 Marking conversation as read with:', otherUserId);
+      const { error } = await supabase
+        .from('messages')
+        .update({ read: true })
+        .eq('recipient_id', user.id)
+        .eq('sender_id', otherUserId)
+        .eq('read', false);
 
-      const { error } = await supabase.rpc('mark_conversation_as_read_v2', {
-        p_recipient_id: user.id,
-        p_sender_id: otherUserId
-      });
-
-      if (error) {
-        console.error('❌ Error marking as read:', error);
-        throw error;
-      }
-
-      console.log('✅ Conversation marked as read');
+      if (error) throw error;
     },
     onSuccess: () => {
-      // Only invalidate chat-users, not the current conversation to prevent loops
-      queryClient.invalidateQueries({ queryKey: ['chat-users'] });
+      queryClient.invalidateQueries({ queryKey: messageKeys.chatUsers() });
     }
   });
 
-  // Show notification function
-  const showNotification = useCallback(async (message: any) => {
-    if (!('Notification' in window)) return;
-
-    if (Notification.permission === 'default') {
-      await Notification.requestPermission();
+  // Clear conversation mutation (placeholder)
+  const useClearConversation = () => useMutation({
+    mutationFn: async (otherUserId: string) => {
+      // Placeholder - clear conversation not implemented yet
+      console.log('Clear conversation:', otherUserId);
     }
+  });
 
-    if (Notification.permission === 'granted') {
-      const notification = new Notification('Nova mensagem', {
-        body: message.content,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
-      });
+  // Conversation settings query (placeholder)
+  const useConversationSettings = (otherUserId: string) => {
+    return useQuery({
+      queryKey: ['conversation-settings', otherUserId],
+      queryFn: async (): Promise<ConversationSettings | null> => {
+        // Placeholder - conversation settings not implemented yet
+        return {
+          notifications_enabled: true,
+          archived: false,
+          pinned: false,
+          muted: false,
+          nickname: '',
+          background_image: ''
+        };
+      },
+      enabled: !!user && !!otherUserId
+    });
+  };
 
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-
-      setTimeout(() => notification.close(), 5000);
+  // Update conversation settings mutation (placeholder)
+  const useUpdateConversationSettings = () => useMutation({
+    mutationFn: async ({ otherUserId, settings }: { otherUserId: string; settings: Partial<ConversationSettings> }) => {
+      // Placeholder - update conversation settings not implemented yet
+      console.log('Update conversation settings:', otherUserId, settings);
     }
-  }, []);
+  });
 
   return {
-    // State
-    activeConversation,
-    setActiveConversation,
     isConnected,
-
-    // Hooks
+    useChatUsers,
     useConversation,
     useSendMessage,
+    useToggleReaction,
     useMarkConversationAsRead,
-
-    // Functions
-    showNotification
+    useClearConversation,
+    useConversationSettings,
+    useUpdateConversationSettings,
+    setActiveConversation
   };
 };
