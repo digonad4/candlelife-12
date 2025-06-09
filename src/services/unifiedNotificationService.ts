@@ -1,6 +1,6 @@
 
 import { Message, ChatUser } from '@/types/messages';
-import { enhancedNotificationSoundService } from './enhancedNotificationSound';
+import { advancedNotificationSoundService } from './advancedNotificationSound';
 
 export interface UnifiedNotificationData {
   id: string;
@@ -78,7 +78,7 @@ class UnifiedNotificationService {
     this.saveToStorage();
     this.notifyListeners();
     this.showSystemNotification(newNotification);
-    this.playSound();
+    this.playSound(newNotification.type);
   }
 
   addMessageNotification(message: Message, senderInfo: ChatUser) {
@@ -182,16 +182,16 @@ class UnifiedNotificationService {
     }
   }
 
-  private async playSound() {
+  private async playSound(notificationType: string = 'message') {
     if (!this.soundEnabled) return;
     
-    console.log('🔊 Playing enhanced notification sound');
-    await enhancedNotificationSoundService.play();
+    console.log(`🔊 Playing advanced notification sound for: ${notificationType}`);
+    await advancedNotificationSoundService.play(notificationType);
   }
 
   setSoundEnabled(enabled: boolean) {
     this.soundEnabled = enabled;
-    enhancedNotificationSoundService.setEnabled(enabled);
+    advancedNotificationSoundService.setEnabled(enabled);
   }
 
   setPushEnabled(enabled: boolean) {
@@ -200,7 +200,36 @@ class UnifiedNotificationService {
 
   // Método para testar som
   async testSound() {
-    await enhancedNotificationSoundService.testSound();
+    await advancedNotificationSoundService.testSound();
+  }
+
+  // Métodos para gerenciar sons personalizados
+  async uploadCustomSound(file: File): Promise<string> {
+    return await advancedNotificationSoundService.uploadCustomSound(file);
+  }
+
+  removeCustomSound(soundId: string) {
+    advancedNotificationSoundService.removeCustomSound(soundId);
+  }
+
+  setNotificationSound(soundId: string) {
+    advancedNotificationSoundService.setCurrentSound(soundId);
+  }
+
+  getCurrentSound() {
+    return advancedNotificationSoundService.getCurrentSound();
+  }
+
+  getPredefinedSounds() {
+    return advancedNotificationSoundService.getPredefinedSounds();
+  }
+
+  getCustomSounds() {
+    return advancedNotificationSoundService.getCustomSounds();
+  }
+
+  async previewSound(soundId: string) {
+    await advancedNotificationSoundService.previewSound(soundId);
   }
 }
 
