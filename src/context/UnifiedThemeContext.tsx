@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
-import { nativeThemeService } from "@/services/NativeThemeService";
 
 type Theme = "light" | "dark" | "system" | "cyberpunk" | "dracula" | "nord" | "purple" | "green" | "ocean" | "sunset" | "forest" | "coffee" | "pastel" | "neon" | "vintage" | "midnight" | "royal" | "super-hacker" | "supabase";
 
@@ -74,7 +73,7 @@ export const UnifiedThemeProvider = ({ children }: { children: React.ReactNode }
     return currentTheme;
   }, []);
 
-  // Apply theme to document and native elements
+  // Apply theme to document
   useEffect(() => {
     const resolved = resolveTheme(theme);
     setAppliedTheme(resolved);
@@ -94,9 +93,6 @@ export const UnifiedThemeProvider = ({ children }: { children: React.ReactNode }
     } else if (resolved === "light") {
       document.documentElement.classList.add("light");
     }
-
-    // Apply native theme
-    nativeThemeService.applyTheme(resolved);
   }, [theme, resolveTheme]);
 
   // Listen for system theme changes
@@ -120,9 +116,6 @@ export const UnifiedThemeProvider = ({ children }: { children: React.ReactNode }
         } else if (resolved === "light") {
           document.documentElement.classList.add("light");
         }
-
-        // Apply native theme
-        nativeThemeService.applyTheme(resolved);
       };
 
       mediaQuery.addEventListener("change", handleChange);
@@ -140,29 +133,16 @@ export const UnifiedThemeProvider = ({ children }: { children: React.ReactNode }
       
       // If user is authenticated, save their preference to their profile
       if (user) {
-        // First try to update, if it fails then insert
-        const { error: updateError } = await supabase
+        // Use upsert to insert or update the theme preference
+        const { error } = await supabase
           .from('user_themes')
-          .update({ 
+          .upsert({
+            user_id: user.id,
             theme_name: newTheme,
             updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
+          });
           
-        if (updateError) {
-          // If update failed, try to insert
-          const { error: insertError } = await supabase
-            .from('user_themes')
-            .insert({
-              user_id: user.id,
-              theme_name: newTheme,
-              updated_at: new Date().toISOString()
-            });
-            
-          if (insertError && insertError.code !== '23505') {
-            throw insertError;
-          }
-        }
+        if (error) throw error;
       }
     } catch (error) {
       console.error("Error saving theme preference:", error);

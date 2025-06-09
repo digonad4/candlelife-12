@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useSimpleChat } from "@/hooks/useSimpleChat";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNative } from "@/hooks/useNative";
-import { useMobileNative } from "@/hooks/useMobileNative";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,8 +27,7 @@ const ChatConversationPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { hapticFeedback, isNative } = useNative();
-  const { safeAreaInsets, applySafeAreaPadding, isKeyboardOpen, keyboardHeight } = useMobileNative();
+  const { hapticFeedback } = useNative();
   
   const [message, setMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -151,23 +149,10 @@ const ChatConversationPage = () => {
 
   const groupedMessages = groupMessagesByDate();
 
-  // Calculate dynamic heights for native layout
-  const headerHeight = isNative ? safeAreaInsets.top + 56 : 56; // 56px is the header content height
-  const inputAreaHeight = isNative && isKeyboardOpen ? keyboardHeight + 80 : 80; // 80px is the input area height
-  const availableHeight = isNative 
-    ? `calc(100vh - ${headerHeight}px - ${inputAreaHeight}px)`
-    : `calc(100vh - ${headerHeight}px - 80px)`;
-
   return (
-    <div 
-      className="flex flex-col h-screen w-full max-w-full mx-auto bg-background"
-      style={isNative ? applySafeAreaPadding('all') : {}}
-    >
+    <div className="flex flex-col h-screen w-full max-w-full mx-auto bg-background">
       {/* Fixed Header */}
-      <div 
-        className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50 px-4 py-3 flex-shrink-0"
-        style={isNative ? { paddingTop: `calc(0.75rem + ${safeAreaInsets.top}px)` } : {}}
-      >
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50 px-4 py-3 flex-shrink-0 safe-area-top">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -222,11 +207,7 @@ const ChatConversationPage = () => {
       </div>
 
       {/* Messages Area with Scroll */}
-      <ScrollArea 
-        className="flex-1 px-4 min-h-0" 
-        ref={scrollAreaRef}
-        style={{ height: availableHeight }}
-      >
+      <ScrollArea className="flex-1 px-4 min-h-0" ref={scrollAreaRef}>
         <div className="space-y-4 py-4">
           {groupedMessages.length === 0 ? (
             <div className="text-center py-8">
@@ -302,13 +283,7 @@ const ChatConversationPage = () => {
       </ScrollArea>
 
       {/* Fixed Input Area */}
-      <div 
-        className="sticky bottom-0 bg-background/95 backdrop-blur-md border-t border-border/50 p-4 flex-shrink-0"
-        style={isNative ? { 
-          paddingBottom: `calc(1rem + ${safeAreaInsets.bottom}px)`,
-          marginBottom: isKeyboardOpen ? `${keyboardHeight}px` : '0px'
-        } : {}}
-      >
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-md border-t border-border/50 p-4 flex-shrink-0 safe-area-bottom">
         <div className="flex items-center gap-3 w-full">
           <Input
             value={message}
