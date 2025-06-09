@@ -1,4 +1,3 @@
-
 import { Message, ChatUser } from '@/types/messages';
 import { advancedNotificationSoundService } from './advancedNotificationSound';
 
@@ -183,10 +182,17 @@ class UnifiedNotificationService {
   }
 
   private async playSound(notificationType: string = 'message') {
-    if (!this.soundEnabled) return;
+    if (!this.soundEnabled) {
+      console.log('🔇 Sound disabled for notifications');
+      return;
+    }
     
     console.log(`🔊 Playing advanced notification sound for: ${notificationType}`);
-    await advancedNotificationSoundService.play(notificationType);
+    try {
+      await advancedNotificationSoundService.play(notificationType);
+    } catch (error) {
+      console.warn('Failed to play notification sound:', error);
+    }
   }
 
   setSoundEnabled(enabled: boolean) {
@@ -200,6 +206,7 @@ class UnifiedNotificationService {
 
   // Método para testar som
   async testSound() {
+    console.log('🧪 Testing unified notification sound');
     await advancedNotificationSoundService.testSound();
   }
 

@@ -179,14 +179,17 @@ class AdvancedNotificationSoundService {
       
       // Verificar se é um som customizado
       if (this.customSounds.has(this.currentSound)) {
+        console.log(`🎵 Playing custom sound: ${this.currentSound}`);
         const soundUrl = this.customSounds.get(this.currentSound)!;
         await this.playCustomSound(soundUrl);
       } else if (this.predefinedSounds[this.currentSound as keyof typeof this.predefinedSounds]) {
         // Som pré-definido
+        console.log(`🎼 Playing predefined sound: ${this.currentSound}`);
         const soundConfig = this.predefinedSounds[this.currentSound as keyof typeof this.predefinedSounds];
         await this.createSynthesizedSound(soundConfig);
       } else {
         // Fallback para som padrão
+        console.log(`🔄 Fallback to default sound`);
         await this.createSynthesizedSound(this.predefinedSounds.default);
       }
       
