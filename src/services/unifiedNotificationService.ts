@@ -207,7 +207,13 @@ class UnifiedNotificationService {
   // Método para testar som
   async testSound() {
     console.log('🧪 Testing unified notification sound');
-    await advancedNotificationSoundService.testSound();
+    try {
+      await advancedNotificationSoundService.testSound();
+      console.log('✅ Test sound completed successfully');
+    } catch (error) {
+      console.warn('❌ Test sound failed:', error);
+      throw error;
+    }
   }
 
   // Métodos para gerenciar sons personalizados

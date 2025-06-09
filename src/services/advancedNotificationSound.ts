@@ -74,11 +74,13 @@ class AdvancedNotificationSoundService {
       if (stored) {
         const sounds = JSON.parse(stored);
         this.customSounds = new Map(Object.entries(sounds));
+        console.log('📁 Loaded custom sounds:', this.customSounds.size);
       }
       
       const selectedSound = localStorage.getItem('selected_notification_sound');
       if (selectedSound) {
         this.currentSound = selectedSound;
+        console.log('🔧 Loaded current sound:', this.currentSound);
       }
     } catch (error) {
       console.warn('Failed to load custom sounds:', error);
@@ -90,6 +92,7 @@ class AdvancedNotificationSoundService {
       const soundsObj = Object.fromEntries(this.customSounds);
       localStorage.setItem('custom_notification_sounds', JSON.stringify(soundsObj));
       localStorage.setItem('selected_notification_sound', this.currentSound);
+      console.log('💾 Saved custom sounds and current sound:', this.currentSound);
     } catch (error) {
       console.warn('Failed to save custom sounds:', error);
     }
@@ -158,14 +161,57 @@ class AdvancedNotificationSoundService {
   }
 
   private async playCustomSound(soundUrl: string) {
-    try {
-      const audio = new Audio(soundUrl);
-      audio.volume = 0.6;
-      await audio.play();
-    } catch (error) {
-      console.warn('Failed to play custom sound:', error);
-      throw error;
-    }
+    return new Promise<void>((resolve, reject) => {
+      try {
+        console.log('🎵 Creating audio element for custom sound');
+        const audio = new Audio(soundUrl);
+        audio.volume = 0.6;
+        audio.preload = 'auto';
+        
+        // Handlers para garantir que a Promise seja resolvida/rejeitada
+        const handleSuccess = () => {
+          console.log('✅ Custom sound played successfully');
+          cleanup();
+          resolve();
+        };
+        
+        const handleError = (error: any) => {
+          console.warn('❌ Failed to play custom sound:', error);
+          cleanup();
+          reject(error);
+        };
+        
+        const cleanup = () => {
+          audio.removeEventListener('ended', handleSuccess);
+          audio.removeEventListener('error', handleError);
+          audio.removeEventListener('canplaythrough', onCanPlay);
+        };
+        
+        const onCanPlay = () => {
+          audio.play().then(handleSuccess).catch(handleError);
+        };
+        
+        audio.addEventListener('ended', handleSuccess);
+        audio.addEventListener('error', handleError);
+        audio.addEventListener('canplaythrough', onCanPlay);
+        
+        // Tentar reproduzir imediatamente se já carregado
+        if (audio.readyState >= 3) {
+          audio.play().then(handleSuccess).catch(handleError);
+        }
+        
+        // Timeout para evitar travamento
+        setTimeout(() => {
+          if (audio.paused) {
+            handleError(new Error('Audio playback timeout'));
+          }
+        }, 5000);
+        
+      } catch (error) {
+        console.warn('Failed to create audio element:', error);
+        reject(error);
+      }
+    });
   }
 
   async play(soundType: string = 'message') {
@@ -176,11 +222,13 @@ class AdvancedNotificationSoundService {
 
     try {
       console.log(`🔊 Playing notification sound: ${this.currentSound} for ${soundType}`);
+      console.log(`📊 Available custom sounds:`, Array.from(this.customSounds.keys()));
       
       // Verificar se é um som customizado
       if (this.customSounds.has(this.currentSound)) {
         console.log(`🎵 Playing custom sound: ${this.currentSound}`);
         const soundUrl = this.customSounds.get(this.currentSound)!;
+        console.log(`🔗 Sound URL:`, soundUrl.substring(0, 50) + '...');
         await this.playCustomSound(soundUrl);
       } else if (this.predefinedSounds[this.currentSound as keyof typeof this.predefinedSounds]) {
         // Som pré-definido
