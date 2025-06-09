@@ -14,17 +14,23 @@ import {
   Trash2, 
   Download,
   Music,
-  Waveform,
+  AudioWaveform,
   Settings,
   TestTube
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { advancedNotificationSoundService } from '@/services/advancedNotificationSound';
 
+interface PredefinedSound {
+  name: string;
+  frequency: number | number[];
+  duration: number;
+}
+
 export const NotificationSoundSettings = () => {
   const { toast } = useToast();
   const [currentSound, setCurrentSound] = useState('default');
-  const [predefinedSounds, setPredefinedSounds] = useState({});
+  const [predefinedSounds, setPredefinedSounds] = useState<Record<string, PredefinedSound>>({});
   const [customSounds, setCustomSounds] = useState<Array<{id: string, url: string, name: string}>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [previewingSound, setPreviewingSound] = useState<string | null>(null);
@@ -135,7 +141,7 @@ export const NotificationSoundSettings = () => {
             <div>
               <Label className="text-base font-medium">Som Atual</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                {predefinedSounds[currentSound as keyof typeof predefinedSounds]?.name || 
+                {predefinedSounds[currentSound]?.name || 
                  customSounds.find(s => s.id === currentSound)?.name || 
                  'Som Padrão'}
               </p>
@@ -164,7 +170,7 @@ export const NotificationSoundSettings = () => {
         <CardContent>
           <RadioGroup value={currentSound} onValueChange={handleSoundChange}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(predefinedSounds).map(([soundId, sound]: [string, any]) => (
+              {Object.entries(predefinedSounds).map(([soundId, sound]) => (
                 <div key={soundId} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value={soundId} id={soundId} />
                   <div className="flex-1">
@@ -184,7 +190,7 @@ export const NotificationSoundSettings = () => {
                     disabled={previewingSound === soundId}
                   >
                     {previewingSound === soundId ? (
-                      <Waveform className="h-4 w-4 animate-pulse" />
+                      <AudioWaveform className="h-4 w-4 animate-pulse" />
                     ) : (
                       <Play className="h-4 w-4" />
                     )}
@@ -266,7 +272,7 @@ export const NotificationSoundSettings = () => {
                           disabled={previewingSound === sound.id}
                         >
                           {previewingSound === sound.id ? (
-                            <Waveform className="h-4 w-4 animate-pulse" />
+                            <AudioWaveform className="h-4 w-4 animate-pulse" />
                           ) : (
                             <Play className="h-4 w-4" />
                           )}
