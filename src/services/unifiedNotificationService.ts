@@ -1,6 +1,6 @@
 
 import { Message, ChatUser } from '@/types/messages';
-import { enhancedNotificationSoundService } from './enhancedNotificationSound';
+import { advancedNotificationSoundService } from './advancedNotificationSound';
 
 export interface UnifiedNotificationData {
   id: string;
@@ -185,13 +185,13 @@ class UnifiedNotificationService {
   private async playSound() {
     if (!this.soundEnabled) return;
     
-    console.log('🔊 Playing enhanced notification sound');
-    await enhancedNotificationSoundService.play();
+    console.log('🔊 Playing advanced notification sound');
+    await advancedNotificationSoundService.play();
   }
 
   setSoundEnabled(enabled: boolean) {
     this.soundEnabled = enabled;
-    enhancedNotificationSoundService.setEnabled(enabled);
+    advancedNotificationSoundService.setEnabled(enabled);
   }
 
   setPushEnabled(enabled: boolean) {
@@ -200,7 +200,7 @@ class UnifiedNotificationService {
 
   // Método para testar som
   async testSound() {
-    await enhancedNotificationSoundService.testSound();
+    await advancedNotificationSoundService.testSound();
   }
 }
 
